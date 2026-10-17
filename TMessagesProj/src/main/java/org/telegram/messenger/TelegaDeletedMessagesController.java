@@ -34,7 +34,7 @@ public final class TelegaDeletedMessagesController {
                 .getBoolean(KEEP_KEY, true);
     }
 
-    public static boolean saveMessage(int account, long dialogId, TLRPC.Message message) {
+    public static synchronized boolean saveMessage(int account, long dialogId, TLRPC.Message message) {
         Context context = ApplicationLoader.applicationContext;
         if (context == null || message == null || message.id <= 0 || !isEnabled()
                 || message instanceof TLRPC.TL_messageService
@@ -100,7 +100,7 @@ public final class TelegaDeletedMessagesController {
         }
     }
 
-    public static void clearMessagesUpTo(int account, long dialogId, int maxMessageId) {
+    public static synchronized void clearMessagesUpTo(int account, long dialogId, int maxMessageId) {
         Context context = ApplicationLoader.applicationContext;
         if (context == null) {
             return;
