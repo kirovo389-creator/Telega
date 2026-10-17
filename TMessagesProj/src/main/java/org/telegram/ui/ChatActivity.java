@@ -39645,6 +39645,9 @@ public class ChatActivity extends BaseFragment implements
 
         @Override
         public void didPressSideButton(ChatMessageCell cell) {
+            if (cell == null || cell.getMessageObject() == null || cell.getMessageObject().telegaDeleted) {
+                return;
+            }
             if (getParentActivity() == null) {
                 return;
             }
@@ -40587,6 +40590,9 @@ public class ChatActivity extends BaseFragment implements
 
         @Override
         public boolean didLongPressToDoButton(ChatMessageCell cell, TLRPC.TodoItem task) {
+            if (cell == null || cell.getMessageObject() == null || cell.getMessageObject().telegaDeleted) {
+                return false;
+            }
             if (getParentActivity() == null || getContext() == null) {
                 return false;
             }
@@ -40929,7 +40935,7 @@ public class ChatActivity extends BaseFragment implements
         @Override
         public void didPressVoteButtons(ChatMessageCell cell, ArrayList<TLRPC.PollAnswer> buttons, int showCount, int x, int y) {
             final MessageObject message = cell.getMessageObject();
-            if (message == null) {
+            if (message == null || message.telegaDeleted) {
                 return;
             }
 
@@ -40983,6 +40989,9 @@ public class ChatActivity extends BaseFragment implements
 
         @Override
         public boolean didPressToDoButton(ChatMessageCell cell, TLRPC.TodoItem task, boolean enable) {
+            if (cell.getMessageObject() == null || cell.getMessageObject().telegaDeleted) {
+                return false;
+            }
             if (cell.getMessageObject().isForwarded()) {
                 final long fromId = DialogObject.getPeerDialogId(cell.getMessageObject().getFromPeer());
                 BulletinFactory.of(ChatActivity.this)
@@ -41019,6 +41028,10 @@ public class ChatActivity extends BaseFragment implements
 
         @Override
         public void didLongPress(ChatMessageCell cell, float x, float y) {
+            MessageObject messageObject = cell.getMessageObject();
+            if (messageObject != null && messageObject.telegaDeleted) {
+                return;
+            }
             createMenu(cell, false, false, x, y, false);
             startMultiselect(chatListView.getChildAdapterPosition(cell));
         }
@@ -41268,6 +41281,10 @@ public class ChatActivity extends BaseFragment implements
 
         @Override
         public void didPressReplyMessage(ChatMessageCell cell, int id, float x, float y, boolean longpress) {
+            MessageObject retainedMessage = cell.getMessageObject();
+            if (retainedMessage != null && retainedMessage.telegaDeleted) {
+                return;
+            }
             if (!canPerformActions()) {
                 if (!longpress) {
                     if (actionBar.isActionModeShowed() || isReport()) {
@@ -42277,6 +42294,9 @@ public class ChatActivity extends BaseFragment implements
                 message = group.messages.get(0);
             } else {
                 message = cell.getMessageObject();
+            }
+            if (message == null || message.telegaDeleted) {
+                return;
             }
             int maxReadId;
             long linkedChatId;
@@ -45655,7 +45675,7 @@ public class ChatActivity extends BaseFragment implements
         } else {
             return;
         }
-        if (messageObject == null) return;
+        if (messageObject == null || messageObject.telegaDeleted) return;
         if (getUserConfig().getClientUserId() == getDialogId() && messageObject.areTags() && !getUserConfig().isPremium()) {
             if (longpress) return;
             new PremiumFeatureBottomSheet(ChatActivity.this, PremiumPreviewFragment.PREMIUM_FEATURE_SAVED_TAGS, true).show();
