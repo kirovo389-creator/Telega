@@ -20659,11 +20659,14 @@ public class ChatActivity extends BaseFragment implements
             }
             int messageId = object.getId();
             MessageObject existing = messagesDict[0].get(messageId);
-            if (existing != null && existing.getDialogId() == dialog_id) {
+            if (existing != null && existing.getDialogId() == dialog_id && messages.contains(existing)) {
                 existing.deleted = true;
                 existing.telegaDeleted = true;
                 changed++;
                 continue;
+            }
+            if (existing != null && existing.getDialogId() == dialog_id) {
+                messagesDict[0].remove(messageId);
             }
 
             boolean alreadyInList = false;
@@ -20682,6 +20685,7 @@ public class ChatActivity extends BaseFragment implements
 
             object.deleted = true;
             object.telegaDeleted = true;
+            object.stableId = lastStableId++;
             int insertionIndex = messages.size();
             for (int i = 0; i < messages.size(); i++) {
                 MessageObject current = messages.get(i);
