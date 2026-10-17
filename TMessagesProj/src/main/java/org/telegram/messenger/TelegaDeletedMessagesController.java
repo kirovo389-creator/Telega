@@ -93,6 +93,8 @@ public final class TelegaDeletedMessagesController {
                     if (message == null || message.id <= 0) {
                         continue;
                     }
+                    // dialog_id is populated from chat context, not guaranteed to be in TL serialization.
+                    message.dialog_id = dialogId;
 
                     MessageObject object = new MessageObject(account, message, true, false);
                     object.deleted = true;
