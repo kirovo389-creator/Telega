@@ -20687,17 +20687,21 @@ public class ChatActivity extends BaseFragment implements
                 messagesDict[0].remove(messageId);
             }
 
-            boolean alreadyInList = false;
+            MessageObject messageInList = null;
             for (MessageObject current : messages) {
                 if (current != null && current.messageOwner != null
                         && current.getId() == messageId
                         && current.getDialogId() == dialog_id
                         && !current.isDateObject) {
-                    alreadyInList = true;
+                    messageInList = current;
                     break;
                 }
             }
-            if (alreadyInList) {
+            if (messageInList != null) {
+                messageInList.deleted = true;
+                messageInList.telegaDeleted = true;
+                messagesDict[0].put(messageId, messageInList);
+                changed++;
                 continue;
             }
 
