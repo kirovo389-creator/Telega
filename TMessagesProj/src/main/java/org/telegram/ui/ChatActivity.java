@@ -22487,6 +22487,8 @@ public class ChatActivity extends BaseFragment implements
                 return;
             }
             int max_id = (Integer) args[1];
+            org.telegram.messenger.TelegaDeletedMessagesController
+                    .clearMessagesUpTo(currentAccount, did, max_id);
             if (!pinnedMessageIds.isEmpty()) {
                 pinnedMessageIds.clear();
                 pinnedMessageObjects.clear();
