@@ -39,6 +39,14 @@ public final class TelegaDeletedMessagesController {
         if (context == null || message == null || message.id <= 0 || !isEnabled()) {
             return;
         }
+        // Thread replies and topic service actions must not be restored in the parent chat.
+        if (message.reply_to != null && message.reply_to.forum_topic) {
+            return;
+        }
+        if (message.action instanceof TLRPC.TL_messageActionTopicCreate
+                || message.action instanceof TLRPC.TL_messageActionTopicEdit) {
+            return;
+        }
 
         try {
             SerializedData serialized = new SerializedData();
