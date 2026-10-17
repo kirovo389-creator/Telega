@@ -20652,18 +20652,26 @@ public class ChatActivity extends BaseFragment implements
             previous = candidate;
         }
 
-        int inserted = 0;
+        int changed = 0;
         for (MessageObject object : archived) {
             if (object == null || object.messageOwner == null || object.getId() <= 0) {
                 continue;
             }
             int messageId = object.getId();
-            if (messagesDict[0].get(messageId) != null || messagesDict[1].get(messageId) != null) {
+            MessageObject existing = messagesDict[0].get(messageId);
+            if (existing != null) {
+                existing.deleted = true;
+                existing.telegaDeleted = true;
+                changed++;
                 continue;
             }
+
             boolean alreadyInList = false;
             for (MessageObject current : messages) {
-                if (current != null && current.getId() == messageId && !current.isDateObject) {
+                if (current != null && current.messageOwner != null
+                        && current.getId() == messageId
+                        && current.getDialogId() == dialog_id
+                        && !current.isDateObject) {
                     alreadyInList = true;
                     break;
                 }
@@ -20708,10 +20716,10 @@ public class ChatActivity extends BaseFragment implements
             if (!dayMessages.contains(object)) {
                 dayMessages.add(object);
             }
-            inserted++;
+            changed++;
         }
 
-        if (inserted > 0 && chatAdapter != null) {
+        if (changed > 0 && chatAdapter != null) {
             chatAdapter.updateRowsSafe();
             chatAdapter.notifyDataSetChanged(true);
             updateVisibleRows();
