@@ -36,7 +36,8 @@ public final class TelegaDeletedMessagesController {
 
     public static synchronized boolean saveMessage(int account, long dialogId, TLRPC.Message message) {
         Context context = ApplicationLoader.applicationContext;
-        if (context == null || message == null || message.id <= 0 || !isEnabled()
+        if (context == null || message == null || message.id <= 0 || dialogId == 0
+                || dialogId == UserConfig.getInstance(account).getClientUserId() || !isEnabled()
                 || message instanceof TLRPC.TL_messageService
                 || DialogObject.isEncryptedDialog(dialogId) || MessageObject.isEphemeral(message)) {
             return false;
