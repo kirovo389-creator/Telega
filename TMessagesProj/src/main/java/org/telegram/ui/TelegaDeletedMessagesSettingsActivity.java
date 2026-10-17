@@ -83,7 +83,7 @@ public class TelegaDeletedMessagesSettingsActivity extends BaseFragment {
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
         TextView explanation = new TextView(context);
-        explanation.setText("Когда функция работает, сохранённые сообщения должны оставаться в чате с прозрачностью 30% и подписью «Удалено» вместо времени.");
+        explanation.setText("Сообщения сохраняются локально на этом устройстве и остаются в чате после удаления с прозрачностью 30% и подписью «🗑 Удалено». На сервер копии не отправляются.");
         explanation.setTextSize(13);
         explanation.setLineSpacing(dp(3), 1f);
         explanation.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
