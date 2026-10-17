@@ -9290,8 +9290,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 for (int j = 0; j < dialogObjects.size(); j++) {
                     MessageObject candidate = dialogObjects.get(j);
                     if (candidate != null && candidate.getId() == id
-                            && (dialogId == 0 || candidate.getDialogId() == dialogId
-                            || dialogId > 0 && candidate.getDialogId() == -dialogId)) {
+                            && (dialogId == 0 || candidate.getDialogId() == dialogId)) {
                         object = candidate;
                         break;
                     }
@@ -9299,8 +9298,7 @@ public class MessagesController extends BaseController implements NotificationCe
             }
             if (object == null) {
                 MessageObject candidate = dialogMessagesByIds.get(id);
-                if (candidate != null && (dialogId == 0 || candidate.getDialogId() == dialogId
-                        || dialogId > 0 && candidate.getDialogId() == -dialogId)) {
+                if (candidate != null && (dialogId == 0 || candidate.getDialogId() == dialogId)) {
                     object = candidate;
                 }
             }
@@ -9309,9 +9307,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 continue;
             }
             long actualDialogId = object.getDialogId();
-            if (actualDialogId == 0
-                    || dialogId != 0 && actualDialogId != dialogId
-                    && !(dialogId > 0 && actualDialogId == -dialogId)
+            if (actualDialogId == 0 || dialogId != 0 && actualDialogId != dialogId
                     || DialogObject.isEncryptedDialog(actualDialogId)) {
                 continue;
             }
