@@ -48,9 +48,17 @@ public final class TelegaDeletedMessagesController {
             JSONArray updated = new JSONArray();
             for (int i = 0; i < current.length(); i++) {
                 JSONObject entry = current.optJSONObject(i);
-                if (entry != null && entry.optInt("id", 0) != message.id) {
-                    updated.put(entry);
+                if (entry == null) {
+                    continue;
                 }
+                if (entry.optInt("id", 0) == message.id) {
+                    // Prefer the first copy captured before deletion; it may be newer than the DB row.
+                    if (!entry.optString("data").isEmpty()) {
+                        return;
+                    }
+                    continue;
+                }
+                updated.put(entry);
             }
 
             JSONObject entry = new JSONObject();
