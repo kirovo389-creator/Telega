@@ -35196,7 +35196,7 @@ public class ChatActivity extends BaseFragment implements
                     cell.setChecked(false, false, true);
                 }
 
-                if (messageObject != null && (!messageObject.deleted || cell.linkedChatId != linkedChatId) && !suppressUpdateMessageObject) {
+                if (messageObject != null && (!messageObject.deleted || messageObject.telegaDeleted || cell.linkedChatId != linkedChatId) && !suppressUpdateMessageObject) {
                     cell.setIsUpdating(true);
                     cell.linkedChatId = chatInfo != null ? chatInfo.linked_chat_id : 0;
                     cell.setMessageObject(messageObject, cell.getCurrentMessagesGroup(), cell.isPinnedBottom(), cell.isPinnedTop(), cell.isFirstInChat(), cell.isLastInChatList());
