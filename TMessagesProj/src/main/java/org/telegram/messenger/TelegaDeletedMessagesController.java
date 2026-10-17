@@ -36,7 +36,8 @@ public final class TelegaDeletedMessagesController {
 
     public static void saveMessage(int account, long dialogId, TLRPC.Message message) {
         Context context = ApplicationLoader.applicationContext;
-        if (context == null || message == null || message.id <= 0 || !isEnabled()) {
+        if (context == null || message == null || message.id <= 0 || !isEnabled()
+                || DialogObject.isEncryptedDialog(dialogId) || MessageObject.isEphemeral(message)) {
             return;
         }
         // Thread replies and topic service actions must not be restored in the parent chat.
