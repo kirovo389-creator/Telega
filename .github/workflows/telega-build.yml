@@ -29,22 +29,15 @@ jobs:
           set -euo pipefail
           GOOD_COMMIT="e0956597f8657b7b503b3d7ff0f71bd8247909ac"
           TARGET="TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java"
-
-          echo "Restoring $TARGET from $GOOD_COMMIT"
           git show "${GOOD_COMMIT}:${TARGET}" > "$TARGET"
           test -s "$TARGET"
-          echo "Restored size: $(wc -c < "$TARGET")"
-
           python3 scripts/patch_soft_delete.py
 
       - name: Set unique package, app name and rising version (Telega)
         run: |
           set -euo pipefail
-
-          # Must fit in signed 32-bit int (max 2147483647).
-          # YYMMDDHHMM overflows; use unix timestamp (~1.76e9 in 2026) — always rising.
           VERSION_CODE=$(date -u +%s)
-          VERSION_NAME="13.0.3-telega.$(date -u +%Y%m%d-%H%M)"
+          VERSION_NAME="13.0.4-telega.$(date -u +%Y%m%d-%H%M)"
           sed -i "s/^APP_VERSION_CODE=.*/APP_VERSION_CODE=${VERSION_CODE}/" gradle.properties
           sed -i "s/^APP_VERSION_NAME=.*/APP_VERSION_NAME=${VERSION_NAME}/" gradle.properties
           sed -i 's/^APP_PACKAGE=.*/APP_PACKAGE=org.telega.messenger/' gradle.properties
@@ -89,28 +82,86 @@ jobs:
                   data["client"] = clients
                   p.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
                   print("added telega client to", p)
-              else:
-                  print("ok", p, "packages:", sorted(existing))
 
-          for p in [
-              Path("TMessagesProj_App/src/main/AndroidManifest.xml"),
-              Path("TMessagesProj/src/main/AndroidManifest.xml"),
-          ]:
+          for p in [Path("TMessagesProj_App/src/main/AndroidManifest.xml"), Path("TMessagesProj/src/main/AndroidManifest.xml")]:
               if not p.exists():
                   continue
               t = p.read_text(encoding="utf-8")
-              t2 = t
-              if OLD_PKG in t2:
-                  t2 = t2.replace(f'{OLD_PKG}.provider', f'{NEW_PKG}.provider')
-                  t2 = t2.replace(f'{OLD_PKG}.passthrough', f'{NEW_PKG}.passthrough')
-                  t2 = t2.replace(f'{OLD_PKG}.channel_content', f'{NEW_PKG}.channel_content')
-                  t2 = t2.replace(f'{OLD_PKG}.notification', f'{NEW_PKG}.notification')
+              t2 = t.replace(f'{OLD_PKG}.provider', f'{NEW_PKG}.provider')
+              t2 = t2.replace(f'{OLD_PKG}.passthrough', f'{NEW_PKG}.passthrough')
+              t2 = t2.replace(f'{OLD_PKG}.channel_content', f'{NEW_PKG}.channel_content')
+              t2 = t2.replace(f'{OLD_PKG}.notification', f'{NEW_PKG}.notification')
               if t2 != t:
                   p.write_text(t2, encoding="utf-8")
-                  print("updated authorities in", p)
-
           print("Package set to", NEW_PKG)
           PY
+
+      - name: Brand Telegram to Telega in UI strings
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          count = 0
+          for p in Path("TMessagesProj/src/main/res").rglob("strings.xml"):
+              t = p.read_text(encoding="utf-8")
+              # protect domains/urls
+              placeholders = {}
+              def protect(m):
+                  k = f"__URL{len(placeholders)}__"
+                  placeholders[k] = m.group(0)
+                  return k
+              t2 = re.sub(r'https?://[^\s<"\']+', protect, t)
+              t2 = re.sub(r'\btelegram\.(org|me|dog)\b', protect, t2, flags=re.I)
+              t2 = re.sub(r'\bTelegram\b', 'Telega', t2)
+              t2 = re.sub(r'\btelegram\b', 'telega', t2)
+              for k, v in placeholders.items():
+                  t2 = t2.replace(k, v)
+              if t2 != t:
+                  p.write_text(t2, encoding="utf-8")
+                  count += 1
+          print(f"Updated {count} strings.xml files")
+          PY
+
+      - name: Replace launcher icons
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick >/dev/null
+          curl -fsSL -o /tmp/telega_icon.jpg "https://i.pinimg.com/originals/e1/83/5f/e1835f37dcc43d30b95ffcefbcd1ba24.jpg"
+          # make square opaque PNG base
+          convert /tmp/telega_icon.jpg -resize 1024x1024^ -gravity center -extent 1024x1024 /tmp/telega_1024.png
+
+          make_icon() {
+            local size="$1" out="$2"
+            convert /tmp/telega_1024.png -resize "${size}x${size}" "$out"
+          }
+
+          # mipmap launchers
+          declare -A S=( [mdpi]=48 [hdpi]=72 [xhdpi]=96 [xxhdpi]=144 [xxxhdpi]=192 )
+          for dens in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            sz=${S[$dens]}
+            dir="TMessagesProj/src/main/res/mipmap-${dens}"
+            mkdir -p "$dir"
+            make_icon "$sz" "$dir/ic_launcher.png"
+            make_icon "$sz" "$dir/ic_launcher_round.png"
+            # also clip backgrounds if present
+            if [ -f "$dir/icon_background_clip.png" ]; then
+              make_icon "$sz" "$dir/icon_background_clip.png"
+              make_icon "$sz" "$dir/icon_background_clip_round.png"
+            fi
+          done
+
+          # drawable dens for ic_launcher_dr
+          declare -A D=( [mdpi]=48 [hdpi]=72 [xhdpi]=96 [xxhdpi]=144 [xxxhdpi]=192 )
+          for dens in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            sz=${D[$dens]}
+            dir="TMessagesProj/src/main/res/drawable-${dens}"
+            mkdir -p "$dir"
+            make_icon "$sz" "$dir/ic_launcher_dr.png"
+            # remove old webp to prefer png if both exist — gradle picks one
+            rm -f "$dir/ic_launcher_dr.webp" || true
+          done
+
+          echo "Launcher icons replaced"
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -128,7 +179,6 @@ jobs:
 
           SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager 2>/dev/null | sort -V | tail -n 1 || true)"
           if [ -z "$SDKMANAGER" ] || [ ! -x "$SDKMANAGER" ]; then
-            echo "Downloading cmdline-tools..."
             mkdir -p "$HOME/android-sdk/cmdline-tools"
             curl -fsSL -o /tmp/cmdtools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
             unzip -q /tmp/cmdtools.zip -d "$HOME/android-sdk/cmdline-tools"
@@ -139,20 +189,13 @@ jobs:
             echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
             export ANDROID_HOME ANDROID_SDK_ROOT="$ANDROID_HOME"
           fi
-          echo "Using sdkmanager: $SDKMANAGER"
 
           yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null 2>&1 || true
           "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --install \
-            "platforms;android-35" \
-            "platforms;android-36" \
-            "build-tools;35.0.0" \
-            "build-tools;36.0.0" \
-            "ndk;27.0.12077973" \
-            "ndk;27.2.12479018" \
-            "cmake;3.22.1" || true
-
+            "platforms;android-35" "platforms;android-36" \
+            "build-tools;35.0.0" "build-tools;36.0.0" \
+            "ndk;27.0.12077973" "ndk;27.2.12479018" "cmake;3.22.1" || true
           chmod +x gradlew || true
-          echo "SDK setup done"
 
       - name: Build APK (afatRelease)
         run: |
@@ -179,10 +222,9 @@ jobs:
           set -euo pipefail
           APK="$(find TMessagesProj_App TMessagesProj -type f -name '*.apk' 2>/dev/null | head -n 1)"
           test -n "$APK"
-          echo "Found APK: $APK"
           cp "$APK" Telega.apk
           TAG="telega-$(date -u +%Y%m%d-%H%M%S)"
           VER=$(grep '^APP_VERSION_CODE=' gradle.properties | cut -d= -f2)
           gh release create "$TAG" "Telega.apk#Telega.apk" \
             --title "Telega $TAG (v$VER)" \
-            --notes "Telega (org.telega.messenger) versionCode $VER\n\n• Soft-delete «Удалено»\n• Настройки Telega → Сообщения\n• История правок со стрелкой и анимацией"
+            --notes "• Иконка Telega\n• Настройки Telega первыми (iOS-style)\n• История правок вверх\n• Telegram→Telega в интерфейсе"
