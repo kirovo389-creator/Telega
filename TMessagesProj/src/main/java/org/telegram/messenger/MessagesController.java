@@ -9270,6 +9270,50 @@ public class MessagesController extends BaseController implements NotificationCe
         return inputWallPaper;
     }
 
+    private void saveTelegaDeletedMessages(long dialogId, ArrayList<Integer> ids) {
+        if (!TelegaDeletedMessagesController.isEnabled() || ids == null || ids.isEmpty()) {
+            return;
+        }
+        if (dialogId != 0 && DialogObject.isEncryptedDialog(dialogId)) {
+            return;
+        }
+
+        ArrayList<MessageObject> dialogObjects = dialogId == 0 ? null : dialogMessage.get(dialogId);
+        for (int i = 0; i < ids.size(); i++) {
+            Integer id = ids.get(i);
+            if (id == null || id <= 0) {
+                continue;
+            }
+
+            MessageObject object = null;
+            if (dialogObjects != null) {
+                for (int j = 0; j < dialogObjects.size(); j++) {
+                    MessageObject candidate = dialogObjects.get(j);
+                    if (candidate != null && candidate.getId() == id) {
+                        object = candidate;
+                        break;
+                    }
+                }
+            }
+            if (object == null) {
+                MessageObject candidate = dialogMessagesByIds.get(id);
+                if (candidate != null && (dialogId == 0 || candidate.getDialogId() == dialogId)) {
+                    object = candidate;
+                }
+            }
+
+            if (object == null || object.messageOwner == null || object.isEphemeral()) {
+                continue;
+            }
+            long actualDialogId = object.getDialogId();
+            if (actualDialogId == 0 || dialogId != 0 && actualDialogId != dialogId
+                    || DialogObject.isEncryptedDialog(actualDialogId)) {
+                continue;
+            }
+            TelegaDeletedMessagesController.saveMessage(currentAccount, actualDialogId, object.messageOwner);
+        }
+    }
+
     public void markDialogMessageAsDeleted(long dialogId, ArrayList<Integer> messages) {
         ArrayList<MessageObject> objs = dialogMessage.get(dialogId);
         if (objs != null) {
@@ -9335,6 +9379,7 @@ public class MessagesController extends BaseController implements NotificationCe
             } else if (welcomeMessages) {
                 getMessagesStorage().markMessagesAsDeleted(dialogId, messages, true, false, ChatActivity.MODE_WELCOME_MESSAGES, topicId);
             } else {
+                saveTelegaDeletedMessages(dialogId, messages);
                 if (channelId == 0) {
                     for (int a = 0; a < messages.size(); a++) {
                         Integer id = messages.get(a);
@@ -17583,6 +17628,7 @@ public class MessagesController extends BaseController implements NotificationCe
     protected void deleteMessagesByPush(long dialogId, ArrayList<Integer> ids, long channelId) {
         getMessagesStorage().getStorageQueue().postRunnable(() -> {
             AndroidUtilities.runOnUIThread(() -> {
+                saveTelegaDeletedMessages(dialogId, ids);
                 getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, ids, channelId, false);
                 if (channelId == 0) {
                     for (int b = 0, size2 = ids.size(); b < size2; b++) {
@@ -21136,6 +21182,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     if (arrayList == null) {
                         continue;
                     }
+                    saveTelegaDeletedMessages(dialogId, arrayList);
                     getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, arrayList, -dialogId, false);
                     if (dialogId == 0) {
                         for (int b = 0, size2 = arrayList.size(); b < size2; b++) {
