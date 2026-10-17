@@ -14644,11 +14644,10 @@ public class MessagesStorage extends BaseController {
                         if (data != null) {
                             TLRPC.Message message = TLRPC.Message.TLdeserialize(data, data.readInt32(false), false);
                             message.readAttachPath(data, currentUser);
-                            boolean keepTelegaForMessage = keepTelegaForDialog
-                                    && message != null && !MessageObject.isEphemeral(message);
-                            if (keepTelegaForMessage) {
+                            boolean keepTelegaForMessage = false;
+                            if (keepTelegaForDialog && message != null && !MessageObject.isEphemeral(message)) {
                                 message.dialog_id = did;
-                                TelegaDeletedMessagesController.saveMessage(currentAccount, did, message);
+                                keepTelegaForMessage = TelegaDeletedMessagesController.saveMessage(currentAccount, did, message);
                             }
                             if (deletedMessages != null
                                     && (!keepTelegaForMessage || DialogObject.isEncryptedDialog(did) || deleteFiles || did == currentUser)) {
