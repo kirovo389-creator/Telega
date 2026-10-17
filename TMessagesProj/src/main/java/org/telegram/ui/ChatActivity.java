@@ -20611,6 +20611,7 @@ public class ChatActivity extends BaseFragment implements
     private void restoreTelegaDeletedMessages(Object... args) {
         if (!org.telegram.messenger.TelegaDeletedMessagesController.isEnabled()
                 || currentEncryptedChat != null
+                || mergeDialogId != 0
                 || chatMode != MODE_DEFAULT
                 || isTopic
                 || threadMessageId != 0
@@ -20619,6 +20620,8 @@ public class ChatActivity extends BaseFragment implements
                 || chatAdapter.isFrozen
                 || args == null
                 || args.length <= 14
+                || !(args[0] instanceof Long)
+                || (Long) args[0] != dialog_id
                 || !(args[10] instanceof Integer)
                 || !(args[14] instanceof Integer)
                 || (Integer) args[10] != classGuid
@@ -20652,6 +20655,7 @@ public class ChatActivity extends BaseFragment implements
             previous = candidate;
         }
 
+        final boolean archiveAscending = ascending;
         java.util.Collections.sort(archived, (left, right) -> {
             if (left == null || left.messageOwner == null) {
                 return right == null || right.messageOwner == null ? 0 : 1;
@@ -20663,7 +20667,7 @@ public class ChatActivity extends BaseFragment implements
             if (comparison == 0) {
                 comparison = Integer.compare(left.getId(), right.getId());
             }
-            return ascending ? comparison : -comparison;
+            return archiveAscending ? comparison : -comparison;
         });
 
         int changed = 0;
