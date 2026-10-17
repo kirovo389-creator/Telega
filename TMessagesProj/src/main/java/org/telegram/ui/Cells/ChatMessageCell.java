@@ -18539,7 +18539,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         }
 
         final boolean isInWelcomeMessages = delegate != null && delegate.getChatMode() == ChatActivity.MODE_WELCOME_MESSAGES;
-        if ((messageObject.messageOwner.flags & TLRPC.MESSAGE_FLAG_HAS_VIEWS) != 0 && !isInWelcomeMessages) {
+        if ((messageObject.messageOwner.flags & TLRPC.MESSAGE_FLAG_HAS_VIEWS) != 0 && !isInWelcomeMessages && !currentMessageObject.telegaDeleted) {
             currentViewsString = String.format("%s", LocaleController.formatShortNumber(Math.max(1, messageObject.messageOwner.views), null));
             viewsTextWidth = (int) Math.ceil(Theme.chat_timePaint.measureText(currentViewsString));
             float drawableWidth = Theme.chat_msgInViewsDrawable.getIntrinsicWidth() * (Theme.chat_timePaint.getTextSize() - dp(2)) / Theme.chat_msgInViewsDrawable.getIntrinsicHeight();
@@ -18550,7 +18550,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             currentUnlockString = str.length() >= 2 ? str.substring(0, 1).toUpperCase(Locale.ROOT) + str.substring(1).toLowerCase(Locale.ROOT) : str;
             unlockTextWidth = (int) Math.ceil(Theme.chat_unlockExtendedMediaTextPaint.measureText(currentUnlockString));
         }
-        if (isChat && isMegagroup && (!isThreadChat || isMonoForum) && hasReplies) {
+        if (isChat && isMegagroup && (!isThreadChat || isMonoForum) && hasReplies && !currentMessageObject.telegaDeleted) {
             currentRepliesString = String.format("%s", LocaleController.formatShortNumber(getRepliesCount(), null));
             repliesTextWidth = (int) Math.ceil(Theme.chat_timePaint.measureText(currentRepliesString));
             float drawableWidth = Theme.chat_msgInRepliesDrawable.getIntrinsicWidth() * (Theme.chat_timePaint.getTextSize() - dp(2)) / Theme.chat_msgInRepliesDrawable.getIntrinsicHeight();
@@ -18663,7 +18663,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
     protected boolean checkNeedDrawShareButton(MessageObject messageObject) {
         if (isReportChat) return false;
-        if (currentMessageObject.deleted && !currentMessageObject.deletedByThanos && !currentMessageObject.telegaDeleted) return false;
+        if (currentMessageObject.deleted && !currentMessageObject.deletedByThanos) return false;
         if (currentMessageObject.isSponsored()) return false;
         if (currentMessageObject.isEphemeral()) return false;
         if (currentMessagesGroup != null && currentPosition != null) {
