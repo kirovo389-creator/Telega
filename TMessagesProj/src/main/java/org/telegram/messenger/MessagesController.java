@@ -9303,7 +9303,8 @@ public class MessagesController extends BaseController implements NotificationCe
                 }
             }
 
-            if (object == null || object.messageOwner == null || object.isEphemeral()) {
+            if (object == null || object.messageOwner == null || object.isEphemeral()
+                    || object.getTopicId() != 0) {
                 continue;
             }
             long actualDialogId = object.getDialogId();
