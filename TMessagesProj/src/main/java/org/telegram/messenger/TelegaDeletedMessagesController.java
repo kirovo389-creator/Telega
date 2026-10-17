@@ -19,6 +19,10 @@ public final class TelegaDeletedMessagesController {
     private static final String PREFERENCES = "telega_settings";
     private static final String KEEP_KEY = "keep_deleted_messages";
     private static final String DATA_PREFIX = "telega_deleted_messages_";
+
+    private static String getDataKey(int account, long dialogId) {
+        return DATA_PREFIX + account + "_" + dialogId;
+    }
     private static final int MAX_MESSAGES_PER_DIALOG = 200;
 
     private TelegaDeletedMessagesController() {
@@ -43,7 +47,7 @@ public final class TelegaDeletedMessagesController {
             serialized.cleanup();
 
             SharedPreferences preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE);
-            String key = DATA_PREFIX + dialogId;
+            String key = getDataKey(account, dialogId);
             JSONArray current = new JSONArray(preferences.getString(key, "[]"));
             JSONArray updated = new JSONArray();
             for (int i = 0; i < current.length(); i++) {
@@ -93,7 +97,7 @@ public final class TelegaDeletedMessagesController {
 
         try {
             SharedPreferences preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE);
-            JSONArray stored = new JSONArray(preferences.getString(DATA_PREFIX + dialogId, "[]"));
+            JSONArray stored = new JSONArray(preferences.getString(getDataKey(account, dialogId), "[]"));
             MessagesController controller = MessagesController.getInstance(account);
             for (int i = 0; i < stored.length(); i++) {
                 JSONObject entry = stored.optJSONObject(i);
