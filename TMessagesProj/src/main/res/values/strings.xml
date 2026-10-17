@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="TelegaSettings">Telega settings</string>
+    <string name="TelegaSettingsComingSoon">Telega-specific options will appear here.</string>
     <string name="AppName">Telega</string>
     <string name="AppNameBeta">Telegram Beta</string>
     <string name="LanguageName">English</string>
