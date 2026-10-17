@@ -20608,6 +20608,29 @@ public class ChatActivity extends BaseFragment implements
         }
     }
 
+    private void markTelegaDeletedMessage(MessageObject object) {
+        if (object == null || object.messageOwner == null) {
+            return;
+        }
+        long retainedGroupId = object.getGroupId();
+        if (retainedGroupId != 0) {
+            MessageObject.GroupedMessages retainedGroup = groupedMessagesMap.get(retainedGroupId);
+            if (retainedGroup != null) {
+                retainedGroup.messages.remove(object);
+                if (retainedGroup.messages.isEmpty()) {
+                    groupedMessagesMap.remove(retainedGroupId);
+                } else {
+                    retainedGroup.calculate();
+                }
+            }
+        }
+        object.messageOwner.grouped_id = 0;
+        object.localGroupId = 0;
+        object.localSentGroupId = 0;
+        object.deleted = true;
+        object.telegaDeleted = true;
+    }
+
     private void restoreTelegaDeletedMessages(Object... args) {
         if (!org.telegram.messenger.TelegaDeletedMessagesController.isEnabled()
                 || currentEncryptedChat != null
@@ -20686,9 +20709,8 @@ public class ChatActivity extends BaseFragment implements
             int messageId = object.getId();
             MessageObject existing = messagesDict[archiveIndex].get(messageId);
             if (existing != null && existing.getDialogId() == archivedDialogId && messages.contains(existing)) {
-                boolean needsUpdate = !existing.deleted || !existing.telegaDeleted;
-                existing.deleted = true;
-                existing.telegaDeleted = true;
+                boolean needsUpdate = !existing.deleted || !existing.telegaDeleted || existing.getGroupId() != 0;
+                markTelegaDeletedMessage(existing);
                 if (needsUpdate) {
                     changed++;
                 }
@@ -20709,9 +20731,8 @@ public class ChatActivity extends BaseFragment implements
                 }
             }
             if (messageInList != null) {
-                boolean needsUpdate = !messageInList.deleted || !messageInList.telegaDeleted;
-                messageInList.deleted = true;
-                messageInList.telegaDeleted = true;
+                boolean needsUpdate = !messageInList.deleted || !messageInList.telegaDeleted || messageInList.getGroupId() != 0;
+                markTelegaDeletedMessage(messageInList);
                 messagesDict[archiveIndex].put(messageId, messageInList);
                 if (needsUpdate) {
                     changed++;
@@ -26667,23 +26688,7 @@ public class ChatActivity extends BaseFragment implements
                         && obj.messageOwner != null
                         && !obj.isEphemeral()
                         && org.telegram.messenger.TelegaDeletedMessagesController.saveMessage(currentAccount, obj.getDialogId(), obj.messageOwner)) {
-                    long retainedGroupId = obj.getGroupId();
-                    if (retainedGroupId != 0) {
-                        MessageObject.GroupedMessages retainedGroup = groupedMessagesMap.get(retainedGroupId);
-                        if (retainedGroup != null) {
-                            retainedGroup.messages.remove(obj);
-                            if (retainedGroup.messages.isEmpty()) {
-                                groupedMessagesMap.remove(retainedGroupId);
-                            } else {
-                                retainedGroup.calculate();
-                            }
-                        }
-                        obj.messageOwner.grouped_id = 0;
-                        obj.localGroupId = 0;
-                        obj.localSentGroupId = 0;
-                    }
-                    obj.deleted = true;
-                    obj.telegaDeleted = true;
+                    markTelegaDeletedMessage(obj);
                     updated = true;
                     continue;
                 }
