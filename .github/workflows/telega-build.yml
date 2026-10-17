@@ -17,7 +17,7 @@ concurrency:
 jobs:
   sync-build-release:
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -87,27 +87,27 @@ jobs:
             "build-tools;35.0.0" \
             "build-tools;36.0.0" \
             "ndk;27.0.12077973" \
+            "ndk;27.2.12479018" \
             "cmake;3.22.1" || true
 
           chmod +x gradlew || true
           echo "SDK setup done. ANDROID_HOME=$ANDROID_HOME"
-          ls -la "$ANDROID_HOME" || true
 
-      - name: Build standalone APK
+      - name: Build APK (afatRelease)
         run: |
           set -euo pipefail
           export ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
           echo "Building with ANDROID_HOME=$ANDROID_HOME"
-          ./gradlew --no-daemon --stacktrace assembleStandalone
+          ./gradlew --no-daemon --stacktrace :TMessagesProj_App:assembleAfatRelease
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Telega-APK
           path: |
-            TMessagesProj/build/outputs/apk/**/*.apk
             TMessagesProj_App/build/outputs/apk/**/*.apk
+            TMessagesProj/build/outputs/apk/**/*.apk
           if-no-files-found: error
           retention-days: 14
 
@@ -116,7 +116,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          APK="$(find TMessagesProj TMessagesProj_App -type f -name '*.apk' 2>/dev/null | head -n 1)"
+          APK="$(find TMessagesProj_App TMessagesProj -type f -name '*.apk' 2>/dev/null | head -n 1)"
           test -n "$APK"
           echo "Found APK: $APK"
           TAG="telega-$(date -u +%Y%m%d-%H%M%S)"
