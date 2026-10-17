@@ -9271,14 +9271,13 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     private void saveTelegaDeletedMessages(long dialogId, ArrayList<Integer> ids) {
-        if (!TelegaDeletedMessagesController.isEnabled() || ids == null || ids.isEmpty()) {
-            return;
-        }
-        if (dialogId != 0 && DialogObject.isEncryptedDialog(dialogId)) {
+        if (!TelegaDeletedMessagesController.isEnabled() || ids == null || ids.isEmpty()
+                || dialogId == 0 || dialogId == getUserConfig().getClientUserId()
+                || DialogObject.isEncryptedDialog(dialogId)) {
             return;
         }
 
-        ArrayList<MessageObject> dialogObjects = dialogId == 0 ? null : dialogMessage.get(dialogId);
+        ArrayList<MessageObject> dialogObjects = dialogMessage.get(dialogId);
         for (int i = 0; i < ids.size(); i++) {
             Integer id = ids.get(i);
             if (id == null || id <= 0) {
