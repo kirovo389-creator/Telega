@@ -20611,7 +20611,6 @@ public class ChatActivity extends BaseFragment implements
     private void restoreTelegaDeletedMessages(Object... args) {
         if (!org.telegram.messenger.TelegaDeletedMessagesController.isEnabled()
                 || currentEncryptedChat != null
-                || mergeDialogId != 0
                 || chatMode != MODE_DEFAULT
                 || isTopic
                 || threadMessageId != 0
@@ -20621,7 +20620,7 @@ public class ChatActivity extends BaseFragment implements
                 || args == null
                 || args.length <= 14
                 || !(args[0] instanceof Long)
-                || (Long) args[0] != dialog_id
+                || ((Long) args[0] != dialog_id && (mergeDialogId == 0 || (Long) args[0] != mergeDialogId))
                 || !(args[10] instanceof Integer)
                 || !(args[14] instanceof Integer)
                 || (Integer) args[10] != classGuid
@@ -20631,6 +20630,10 @@ public class ChatActivity extends BaseFragment implements
 
         ArrayList<MessageObject> archived = org.telegram.messenger.TelegaDeletedMessagesController
                 .loadMessages(currentAccount, dialog_id);
+        if (mergeDialogId != 0) {
+            archived.addAll(org.telegram.messenger.TelegaDeletedMessagesController
+                    .loadMessages(currentAccount, mergeDialogId));
+        }
         if (archived.isEmpty()) {
             return;
         }
@@ -20675,23 +20678,28 @@ public class ChatActivity extends BaseFragment implements
             if (object == null || object.messageOwner == null || object.getId() <= 0) {
                 continue;
             }
+            long archivedDialogId = object.getDialogId();
+            if (archivedDialogId != dialog_id && (mergeDialogId == 0 || archivedDialogId != mergeDialogId)) {
+                continue;
+            }
+            int archiveIndex = mergeDialogId != 0 && archivedDialogId == mergeDialogId ? 1 : 0;
             int messageId = object.getId();
-            MessageObject existing = messagesDict[0].get(messageId);
-            if (existing != null && existing.getDialogId() == dialog_id && messages.contains(existing)) {
+            MessageObject existing = messagesDict[archiveIndex].get(messageId);
+            if (existing != null && existing.getDialogId() == archivedDialogId && messages.contains(existing)) {
                 existing.deleted = true;
                 existing.telegaDeleted = true;
                 changed++;
                 continue;
             }
-            if (existing != null && existing.getDialogId() == dialog_id) {
-                messagesDict[0].remove(messageId);
+            if (existing != null && existing.getDialogId() == archivedDialogId) {
+                messagesDict[archiveIndex].remove(messageId);
             }
 
             MessageObject messageInList = null;
             for (MessageObject current : messages) {
                 if (current != null && current.messageOwner != null
                         && current.getId() == messageId
-                        && current.getDialogId() == dialog_id
+                        && current.getDialogId() == archivedDialogId
                         && !current.isDateObject) {
                     messageInList = current;
                     break;
@@ -20700,7 +20708,7 @@ public class ChatActivity extends BaseFragment implements
             if (messageInList != null) {
                 messageInList.deleted = true;
                 messageInList.telegaDeleted = true;
-                messagesDict[0].put(messageId, messageInList);
+                messagesDict[archiveIndex].put(messageId, messageInList);
                 changed++;
                 continue;
             }
@@ -20766,7 +20774,7 @@ public class ChatActivity extends BaseFragment implements
             object.stableId = lastStableId++;
             int safeInsertionIndex = Math.max(0, Math.min(insertionIndex, messages.size()));
             messages.add(safeInsertionIndex, object);
-            messagesDict[0].put(messageId, object);
+            messagesDict[archiveIndex].put(messageId, object);
 
             if (!dayMessages.contains(object)) {
                 int dayInsertionIndex = dayMessages.size();
@@ -26643,8 +26651,7 @@ public class ChatActivity extends BaseFragment implements
                 updateReplyMessageOwners(mid, null);
             }
             if (obj != null) {
-                if (loadIndex == 0
-                        && org.telegram.messenger.TelegaDeletedMessagesController.isEnabled()
+                if (org.telegram.messenger.TelegaDeletedMessagesController.isEnabled()
                         && chatMode == MODE_DEFAULT
                         && thanos
                         && currentEncryptedChat == null
@@ -26653,7 +26660,7 @@ public class ChatActivity extends BaseFragment implements
                         && obj.getId() > 0
                         && obj.messageOwner != null
                         && !obj.isEphemeral()
-                        && org.telegram.messenger.TelegaDeletedMessagesController.saveMessage(currentAccount, dialog_id, obj.messageOwner)) {
+                        && org.telegram.messenger.TelegaDeletedMessagesController.saveMessage(currentAccount, obj.getDialogId(), obj.messageOwner)) {
                     long retainedGroupId = obj.getGroupId();
                     if (retainedGroupId != 0) {
                         MessageObject.GroupedMessages retainedGroup = groupedMessagesMap.get(retainedGroupId);
