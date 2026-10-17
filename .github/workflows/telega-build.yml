@@ -66,28 +66,39 @@ jobs:
           export ANDROID_HOME ANDROID_SDK_ROOT="$ANDROID_HOME"
 
           SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager 2>/dev/null | sort -V | tail -n 1 || true)"
-          if [ -z "$SDKMANAGER" ]; then
-            echo "sdkmanager not found, downloading cmdline-tools..."
-            mkdir -p "$ANDROID_HOME/cmdline-tools"
+          if [ -z "$SDKMANAGER" ] || [ ! -x "$SDKMANAGER" ]; then
+            echo "Downloading cmdline-tools..."
+            mkdir -p "$HOME/android-sdk/cmdline-tools"
             curl -fsSL -o /tmp/cmdtools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-            unzip -q /tmp/cmdtools.zip -d "$ANDROID_HOME/cmdline-tools"
-            mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
-            SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+            unzip -q /tmp/cmdtools.zip -d "$HOME/android-sdk/cmdline-tools"
+            mv "$HOME/android-sdk/cmdline-tools/cmdline-tools" "$HOME/android-sdk/cmdline-tools/latest"
+            SDKMANAGER="$HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager"
+            ANDROID_HOME="$HOME/android-sdk"
+            echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+            echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+            export ANDROID_HOME ANDROID_SDK_ROOT="$ANDROID_HOME"
           fi
           echo "Using sdkmanager: $SDKMANAGER"
-          chmod +x "$SDKMANAGER"
 
-          yes | "$SDKMANAGER" --licenses >/dev/null || true
-          "$SDKMANAGER" --install "platforms;android-35" "platforms;android-36" "build-tools;35.0.0" "build-tools;36.0.0" "ndk;27.0.12077973" "ndk;27.2.12479018" "cmake;3.22.1" || true
+          yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --install \
+            "platforms;android-35" \
+            "platforms;android-36" \
+            "build-tools;35.0.0" \
+            "build-tools;36.0.0" \
+            "ndk;27.0.12077973" \
+            "cmake;3.22.1" || true
 
-          chmod +x gradlew
-          echo "SDK setup done"
+          chmod +x gradlew || true
+          echo "SDK setup done. ANDROID_HOME=$ANDROID_HOME"
+          ls -la "$ANDROID_HOME" || true
 
       - name: Build standalone APK
         run: |
           set -euo pipefail
           export ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          echo "Building with ANDROID_HOME=$ANDROID_HOME"
           ./gradlew --no-daemon --stacktrace assembleStandalone
 
       - name: Upload APK artifact
