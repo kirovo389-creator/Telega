@@ -54,6 +54,11 @@ public final class TelegaDeletedMessagesController {
                 if (entry.optInt("id", 0) == message.id) {
                     // Prefer the first copy captured before deletion; it may be newer than the DB row.
                     if (!entry.optString("data").isEmpty()) {
+                        String existingAttachPath = entry.optString("attachPath", "");
+                        if (existingAttachPath.isEmpty() && message.attachPath != null && !message.attachPath.isEmpty()) {
+                            entry.put("attachPath", message.attachPath);
+                            preferences.edit().putString(key, current.toString()).apply();
+                        }
                         return;
                     }
                     continue;
