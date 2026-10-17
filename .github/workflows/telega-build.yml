@@ -41,10 +41,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Always higher than previous builds so Android treats APK as update
-          # Format: YYMMDDHHMM -> e.g. 2610171520 (fits in 32-bit int)
-          VERSION_CODE=$(date -u +%y%m%d%H%M)
-          VERSION_NAME="13.0.3-telega.${VERSION_CODE}"
+          # Must fit in signed 32-bit int (max 2147483647).
+          # YYMMDDHHMM overflows; use unix timestamp (~1.76e9 in 2026) — always rising.
+          VERSION_CODE=$(date -u +%s)
+          VERSION_NAME="13.0.3-telega.$(date -u +%Y%m%d-%H%M)"
           sed -i "s/^APP_VERSION_CODE=.*/APP_VERSION_CODE=${VERSION_CODE}/" gradle.properties
           sed -i "s/^APP_VERSION_NAME=.*/APP_VERSION_NAME=${VERSION_NAME}/" gradle.properties
           sed -i 's/^APP_PACKAGE=.*/APP_PACKAGE=org.telega.messenger/' gradle.properties
@@ -185,4 +185,4 @@ jobs:
           VER=$(grep '^APP_VERSION_CODE=' gradle.properties | cut -d= -f2)
           gh release create "$TAG" "Telega.apk#Telega.apk" \
             --title "Telega $TAG (v$VER)" \
-            --notes "Telega (org.telega.messenger) versionCode $VER\n\n• Soft-delete «Удалено»\n• Настройки Telega → Сообщения\n• История правок сообщений (локально)"
+            --notes "Telega (org.telega.messenger) versionCode $VER\n\n• Soft-delete «Удалено»\n• Настройки Telega → Сообщения\n• История правок со стрелкой и анимацией"
