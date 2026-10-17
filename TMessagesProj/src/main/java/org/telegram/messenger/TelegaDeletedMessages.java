@@ -4,9 +4,9 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 /**
- * Keeps a local tombstone for messages deleted by another participant.
- * The original message remains in Telegram's local message storage so the
- * chat can display its content with a deleted marker instead of removing it.
+ * Soft-delete tombstones for messages deleted by another participant.
+ * The original message stays in local storage and is shown with reduced opacity
+ * and a red "Удалено" label instead of the send time.
  */
 public final class TelegaDeletedMessages {
     private static final String PREFS = "telega_deleted_messages";
