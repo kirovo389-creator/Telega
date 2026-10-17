@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
-"""Apply Telega soft-delete + settings + edit-history patches."""
+"""Apply Telega soft-delete + settings + edit-history UI patches."""
 from pathlib import Path
 
 def patch_chat_message_cell():
     path = Path("TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java")
     text = path.read_text(encoding="utf-8")
 
+    # --- soft delete time/alpha ---
     old_time = (
         "        if (TelegaDeletedMessages.isDeleted(messageObject.currentAccount, messageObject.getDialogId(), messageObject.getId(), messageObject.messageOwner == null || messageObject.messageOwner.peer_id == null || messageObject.messageOwner.peer_id.channel_id == 0)) {\n"
         "            currentTimeString = TextUtils.concat(\"    \", currentTimeString);\n"
         "        }"
     )
-
     new_time = (
         "        if (org.telegram.messenger.TelegaSettings.isShowDeletedMessages() && TelegaDeletedMessages.isDeleted(messageObject.currentAccount, messageObject.getDialogId(), messageObject.getId(), messageObject.messageOwner == null || messageObject.messageOwner.peer_id == null || messageObject.messageOwner.peer_id.channel_id == 0)) {\n"
-        "            // Soft-deleted: red label instead of time + mild transparency\n"
         "            currentTimeString = \"    \u0423\u0434\u0430\u043b\u0435\u043d\u043e\";\n"
         "            if (Math.abs(getAlpha() - 0.85f) > 0.01f) {\n"
         "                setAlpha(0.85f);\n"
@@ -23,12 +22,11 @@ def patch_chat_message_cell():
         "            setAlpha(1f);\n"
         "        }"
     )
-
     if old_time in text:
         text = text.replace(old_time, new_time, 1)
         print("Patched timeString + alpha 0.85")
     else:
-        print("WARNING: timeString block not found (may already be patched)")
+        print("WARNING: timeString block not found")
 
     old_icon = (
         "        if (currentMessageObject != null\n"
@@ -49,7 +47,6 @@ def patch_chat_message_cell():
         "            deletedIcon.clearColorFilter();\n"
         "        }"
     )
-
     new_icon = (
         "        if (currentMessageObject != null\n"
         "                && org.telegram.messenger.TelegaSettings.isShowDeletedMessages()\n"
@@ -69,7 +66,6 @@ def patch_chat_message_cell():
         "                canvas.restore();\n"
         "            }\n"
         "            Theme.chat_timePaint.setColor(oldColor);\n"
-        "\n"
         "            android.graphics.drawable.Drawable deletedIcon = getResources().getDrawable(R.drawable.msg_delete).mutate();\n"
         "            deletedIcon.setColorFilter(android.graphics.Color.rgb(226, 58, 65), android.graphics.PorterDuff.Mode.SRC_IN);\n"
         "            int iconSize = dp(11);\n"
@@ -81,12 +77,74 @@ def patch_chat_message_cell():
         "            deletedIcon.clearColorFilter();\n"
         "        }"
     )
-
     if old_icon in text:
         text = text.replace(old_icon, new_icon, 1)
-        print("Patched red icon + label redraw")
+        print("Patched red icon")
     else:
-        print("WARNING: icon block not found (may already be patched)")
+        print("WARNING: icon block not found")
+
+    # --- edit history helper field ---
+    if "telegaEditHistoryHelper" not in text:
+        # insert field near totalHeight
+        anchor_field = "    public int totalHeight;"
+        if anchor_field in text:
+            text = text.replace(
+                anchor_field,
+                anchor_field + "\n    private org.telegram.ui.Components.TelegaEditHistoryHelper telegaEditHistoryHelper;\n    private int telegaEditHistoryTop;",
+                1,
+            )
+            print("Added telegaEditHistoryHelper field")
+
+    # measure: after text totalHeight for text messages
+    measure_anchor = "                    totalHeight = messageObject.textHeight() + dp(19.5f) + namesOffset;"
+    measure_insert = (
+        measure_anchor + "\n"
+        "                    if (telegaEditHistoryHelper == null) {\n"
+        "                        telegaEditHistoryHelper = new org.telegram.ui.Components.TelegaEditHistoryHelper(this);\n"
+        "                    }\n"
+        "                    telegaEditHistoryHelper.bind(messageObject, Math.max(dp(100), getMaxNameWidth()));\n"
+        "                    if (telegaEditHistoryHelper.hasContent()) {\n"
+        "                        totalHeight += telegaEditHistoryHelper.getHeight() + dp(6);\n"
+        "                    }"
+    )
+    if measure_anchor in text and "telegaEditHistoryHelper.bind" not in text:
+        text = text.replace(measure_anchor, measure_insert, 1)
+        print("Patched measure for edit history")
+    else:
+        print("measure edit history already patched or anchor missing")
+
+    # draw: after drawContent(canvas, false);
+    draw_anchor = "        drawContent(canvas, false);"
+    draw_insert = (
+        draw_anchor + "\n"
+        "        if (telegaEditHistoryHelper != null && telegaEditHistoryHelper.hasContent()) {\n"
+        "            int bgLeft = currentBackgroundDrawable != null ? currentBackgroundDrawable.getBounds().left + dp(10) : dp(10);\n"
+        "            int bgTop = currentBackgroundDrawable != null ? currentBackgroundDrawable.getBounds().top + dp(8) + namesOffset : dp(8);\n"
+        "            telegaEditHistoryTop = bgTop;\n"
+        "            telegaEditHistoryHelper.draw(canvas, bgLeft, bgTop);\n"
+        "        }"
+    )
+    if draw_anchor in text and "telegaEditHistoryHelper.draw" not in text:
+        text = text.replace(draw_anchor, draw_insert, 1)
+        print("Patched draw for edit history")
+    else:
+        print("draw edit history already patched or anchor missing")
+
+    # touch: early in onTouchEvent after null checks
+    touch_anchor = "        if (checkTextSelection(event)) {\n            return true;\n        }"
+    touch_insert = (
+        "        if (telegaEditHistoryHelper != null && telegaEditHistoryHelper.hasContent()) {\n"
+        "            if (telegaEditHistoryHelper.onTouchEvent(event)) {\n"
+        "                return true;\n"
+        "            }\n"
+        "        }\n"
+        + touch_anchor
+    )
+    if touch_anchor in text and "telegaEditHistoryHelper.onTouchEvent" not in text:
+        text = text.replace(touch_anchor, touch_insert, 1)
+        print("Patched touch for edit history")
+    else:
+        print("touch edit history already patched or anchor missing")
 
     path.write_text(text, encoding="utf-8")
     print(f"ChatMessageCell size after patch: {path.stat().st_size}")
@@ -121,6 +179,24 @@ def patch_messages_controller():
     else:
         print("edit-history capture already present or anchor missing")
 
+    old1 = (
+        "                    } else {\n"
+        "                        // The private-chat deletion update does not carry a dialog id.\n"
+        "                        // Store a global tombstone so the message is still marked after reload.\n"
+        "                        TelegaDeletedMessages.markDeleted(currentAccount, 0, messageId);\n"
+        "                        interfaceUpdateMask |= UPDATE_MASK_MESSAGE_TEXT;\n"
+        "                    }"
+    )
+    new1 = (
+        "                    } else {\n"
+        "                        TelegaDeletedMessages.markDeleted(currentAccount, 0, messageId);\n"
+        "                        if (messageObject != null) {\n"
+        "                            messageObject.deleted = true;\n"
+        "                        }\n"
+        "                        interfaceUpdateMask |= UPDATE_MASK_MESSAGE_TEXT;\n"
+        "                    }"
+    )
+    # keep original matching for soft-delete blocks
     old1 = (
         "                    } else {\n"
         "                        // The private-chat deletion update does not carry a dialog id.\n"
