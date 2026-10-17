@@ -70,6 +70,7 @@ import android.text.TextUtils;
 import android.text.style.CharacterStyle;
 import android.text.style.ClickableSpan;
 import android.text.style.DynamicDrawableSpan;
+import android.text.style.ForegroundColorSpan;
 import android.text.style.LeadingMarginSpan;
 import android.text.style.StrikethroughSpan;
 import android.text.style.URLSpan;
@@ -18531,7 +18532,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
         }
         if (currentMessageObject.telegaDeleted) {
-            currentTimeString = "🗑 Удалено";
+            SpannableString deletedLabel = new SpannableString("🗑 Удалено");
+            deletedLabel.setSpan(new ForegroundColorSpan(0xFFE53935), 0, 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            currentTimeString = deletedLabel;
+            signString = null;
         }
         timeTextWidth = timeWidth = (int) Math.ceil(Theme.chat_timePaint.measureText(currentTimeString, 0, currentTimeString == null ? 0 : currentTimeString.length()));
         if (currentMessageObject.scheduled && currentMessageObject.messageOwner.date == 0x7FFFFFFE || currentMessageObject.notime) {
