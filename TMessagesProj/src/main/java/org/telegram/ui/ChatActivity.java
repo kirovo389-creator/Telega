@@ -20632,7 +20632,7 @@ public class ChatActivity extends BaseFragment implements
             return;
         }
 
-        boolean ascending = true;
+        boolean ascending = reversed;
         MessageObject previous = null;
         for (int i = 0; i < messages.size(); i++) {
             MessageObject candidate = messages.get(i);
@@ -20651,6 +20651,20 @@ public class ChatActivity extends BaseFragment implements
             }
             previous = candidate;
         }
+
+        java.util.Collections.sort(archived, (left, right) -> {
+            if (left == null || left.messageOwner == null) {
+                return right == null || right.messageOwner == null ? 0 : 1;
+            }
+            if (right == null || right.messageOwner == null) {
+                return -1;
+            }
+            int comparison = Integer.compare(left.messageOwner.date, right.messageOwner.date);
+            if (comparison == 0) {
+                comparison = Integer.compare(left.getId(), right.getId());
+            }
+            return ascending ? comparison : -comparison;
+        });
 
         int changed = 0;
         for (MessageObject object : archived) {
@@ -20748,7 +20762,7 @@ public class ChatActivity extends BaseFragment implements
                     if (comparison == 0) {
                         comparison = Integer.compare(object.getId(), dayObject.getId());
                     }
-                    if (comparison < 0) {
+                    if ((ascending && comparison < 0) || (!ascending && comparison > 0)) {
                         dayInsertionIndex = i;
                         break;
                     }
