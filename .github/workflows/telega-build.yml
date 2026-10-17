@@ -20,6 +20,158 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Restore ChatMessageCell from good commit + apply soft-delete UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          GOOD_COMMIT="e0956597f8657b7b503b3d7ff0f71bd8247909ac"
+          TARGET="TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java"
+
+          echo "Restoring $TARGET from $GOOD_COMMIT ..."
+          git show "$GOOD_COMMIT:$TARGET" > "$TARGET"
+          test -s "$TARGET"
+          echo "Restored size: $(wc -c < "$TARGET") bytes"
+
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java")
+          text = path.read_text(encoding="utf-8")
+
+          # 1) timeString -> "Удалено" + mild alpha 0.85
+          old_time = '''        if (TelegaDeletedMessages.isDeleted(messageObject.currentAccount, messageObject.getDialogId(), messageObject.getId(), messageObject.messageOwner == null || messageObject.messageOwner.peer_id == null || messageObject.messageOwner.peer_id.channel_id == 0)) {
+            currentTimeString = TextUtils.concat("    ", currentTimeString);
+        }'''
+
+          new_time = '''        if (TelegaDeletedMessages.isDeleted(messageObject.currentAccount, messageObject.getDialogId(), messageObject.getId(), messageObject.messageOwner == null || messageObject.messageOwner.peer_id == null || messageObject.messageOwner.peer_id.channel_id == 0)) {
+            // Soft-deleted: red "Удалено" instead of time + mild 15% transparency
+            currentTimeString = "    Удалено";
+            if (Math.abs(getAlpha() - 0.85f) > 0.01f) {
+                setAlpha(0.85f);
+            }
+        } else if (Math.abs(getAlpha() - 0.85f) < 0.01f) {
+            setAlpha(1f);
+        }'''
+
+          if old_time in text:
+              text = text.replace(old_time, new_time, 1)
+              print("Patched timeString + alpha")
+          else:
+              print("WARNING: timeString block not found")
+
+          # 2) red redraw of the label + icon
+          old_icon = '''        if (currentMessageObject != null
+                && TelegaDeletedMessages.isDeleted(
+                        currentMessageObject.currentAccount,
+                        currentMessageObject.getDialogId(),
+                        currentMessageObject.getId(),
+                        currentMessageObject.messageOwner == null
+                                || currentMessageObject.messageOwner.peer_id == null
+                                || currentMessageObject.messageOwner.peer_id.channel_id == 0)) {
+            android.graphics.drawable.Drawable deletedIcon = getResources().getDrawable(R.drawable.msg_delete).mutate();
+            deletedIcon.setColorFilter(android.graphics.Color.rgb(226, 58, 65), android.graphics.PorterDuff.Mode.SRC_IN);
+            int iconSize = dp(11);
+            int iconLeft = (int) (drawTimeX + dp(1));
+            int iconTop = (int) (drawTimeY + Math.max(0, (timeLayout.getHeight() - iconSize) / 2f));
+            deletedIcon.setBounds(iconLeft, iconTop, iconLeft + iconSize, iconTop + iconSize);
+            deletedIcon.draw(canvas);
+            deletedIcon.clearColorFilter();
+        }'''
+
+          new_icon = '''        if (currentMessageObject != null
+                && TelegaDeletedMessages.isDeleted(
+                        currentMessageObject.currentAccount,
+                        currentMessageObject.getDialogId(),
+                        currentMessageObject.getId(),
+                        currentMessageObject.messageOwner == null
+                                || currentMessageObject.messageOwner.peer_id == null
+                                || currentMessageObject.messageOwner.peer_id.channel_id == 0)) {
+            // Force red color for "Удалено" label
+            int oldColor = Theme.chat_timePaint.getColor();
+            Theme.chat_timePaint.setColor(android.graphics.Color.rgb(226, 58, 65));
+            if (timeLayout != null) {
+                canvas.save();
+                canvas.translate(drawTimeX, drawTimeY);
+                SpoilerEffect.layoutDrawMaybe(timeLayout, canvas);
+                canvas.restore();
+            }
+            Theme.chat_timePaint.setColor(oldColor);
+
+            android.graphics.drawable.Drawable deletedIcon = getResources().getDrawable(R.drawable.msg_delete).mutate();
+            deletedIcon.setColorFilter(android.graphics.Color.rgb(226, 58, 65), android.graphics.PorterDuff.Mode.SRC_IN);
+            int iconSize = dp(11);
+            int iconLeft = (int) (drawTimeX + dp(1));
+            int iconTop = (int) (drawTimeY + Math.max(0, (timeLayout != null ? timeLayout.getHeight() : dp(12)) - iconSize) / 2f));
+            deletedIcon.setBounds(iconLeft, iconTop, iconLeft + iconSize, iconTop + iconSize);
+            deletedIcon.draw(canvas);
+            deletedIcon.clearColorFilter();
+        }'''
+
+          if old_icon in text:
+              text = text.replace(old_icon, new_icon, 1)
+              print("Patched red icon + label redraw")
+          else:
+              print("WARNING: icon block not found")
+
+          path.write_text(text, encoding="utf-8")
+          print("ChatMessageCell patched successfully, size:", path.stat().st_size)
+          PY
+
+      - name: Ensure MessagesController soft-delete sets deleted=true
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java")
+          text = path.read_text(encoding="utf-8")
+          changed = False
+
+          old1 = '''                    } else {
+                        // The private-chat deletion update does not carry a dialog id.
+                        // Store a global tombstone so the message is still marked after reload.
+                        TelegaDeletedMessages.markDeleted(currentAccount, 0, messageId);
+                        interfaceUpdateMask |= UPDATE_MASK_MESSAGE_TEXT;
+                    }'''
+          new1 = '''                    } else {
+                        // The private-chat deletion update does not carry a dialog id.
+                        // Store a global tombstone so the message is still marked after reload.
+                        TelegaDeletedMessages.markDeleted(currentAccount, 0, messageId);
+                        if (messageObject != null) {
+                            messageObject.deleted = true;
+                        }
+                        interfaceUpdateMask |= UPDATE_MASK_MESSAGE_TEXT;
+                    }'''
+          if old1 in text:
+              text = text.replace(old1, new1, 1)
+              changed = True
+              print("Patched private soft-delete")
+
+          old2 = '''                    } else {
+                        // Channel message IDs are only unique within that channel.
+                        // Keep the tombstone scoped to this dialog to avoid ID collisions.
+                        TelegaDeletedMessages.markDeleted(currentAccount, dialogId, messageId);
+                        interfaceUpdateMask |= UPDATE_MASK_MESSAGE_TEXT;
+                    }'''
+          new2 = '''                    } else {
+                        // Channel message IDs are only unique within that channel.
+                        // Keep the tombstone scoped to this dialog to avoid ID collisions.
+                        TelegaDeletedMessages.markDeleted(currentAccount, dialogId, messageId);
+                        if (messageObject != null) {
+                            messageObject.deleted = true;
+                        }
+                        interfaceUpdateMask |= UPDATE_MASK_MESSAGE_TEXT;
+                    }'''
+          if old2 in text:
+              text = text.replace(old2, new2, 1)
+              changed = True
+              print("Patched channel soft-delete")
+
+          if changed:
+              path.write_text(text, encoding="utf-8")
+              print("MessagesController updated")
+          else:
+              print("MessagesController already patched or blocks not found")
+          PY
+
       - name: Set visible app name to Telega
         shell: bash
         run: |
@@ -77,4 +229,4 @@ jobs:
           APK="$(find TMessagesProj/build/outputs/apk -type f -name '*.apk' | head -n 1)"
           test -n "$APK"
           TAG="telega-$(date -u +%Y%m%d-%H%M%S)"
-          gh release create "$TAG" "$APK#Telega APK" --title "Telega build $TAG" --notes "Automated APK build from upstream Telegram Android source. GPL license and source are included in this repository."
+          gh release create "$TAG" "$APK#Telega APK" --title "Telega build $TAG" --notes "Telega with soft-deleted messages: remains visible, mild transparency (0.85), red label «Удалено». GPL license and source included."
