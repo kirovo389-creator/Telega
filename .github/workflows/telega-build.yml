@@ -17,14 +17,37 @@ concurrency:
 jobs:
   sync-build-release:
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Restore ChatMessageCell and apply soft-delete UI
+      - name: Slim project (only main app modules)
+        run: |
+          set -euo pipefail
+          # Drop Huawei / HockeyApp / Standalone / Tests from Gradle graph — big speedup
+          cat > settings.gradle <<'EOF'
+          include ':TMessagesProj'
+          include ':TMessagesProj_App'
+          include ':jlatexmath'
+          project(':jlatexmath').projectDir = file('TMessagesProj/lib/jlatexmath/jlatexmath')
+
+          dependencyResolutionManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+
+          gradle.ext.androidxMediaModulePrefix = 'TMessagesProj_Modules:media3:media-'
+          apply from: file("TMessagesProj_Modules/media/core_settings.gradle")
+          EOF
+          echo "settings.gradle now:"
+          cat settings.gradle
+
+      - name: Restore ChatMessageCell and apply Telega patches
         run: |
           set -euo pipefail
           GOOD_COMMIT="e0956597f8657b7b503b3d7ff0f71bd8247909ac"
@@ -33,135 +56,187 @@ jobs:
           test -s "$TARGET"
           python3 scripts/patch_soft_delete.py
 
-      - name: Set unique package, app name and rising version (Telega)
+          # Also capture OWN edits in SendMessagesHelper
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("TMessagesProj/src/main/java/org/telegram/messenger/SendMessagesHelper.java")
+          if not p.exists():
+              print("SendMessagesHelper missing"); raise SystemExit(0)
+          t = p.read_text(encoding="utf-8")
+          if "TelegaEditedMessages.addPreviousVersion" in t:
+              print("SendMessagesHelper already patched")
+          else:
+              # public int editMessage(MessageObject messageObject, String message,
+              anchor = "    public int editMessage(MessageObject messageObject, String message, boolean searchLinks, final BaseFragment fragment, ArrayList<TLRPC.MessageEntity> entities, int scheduleDate, int scheduleRepeatPeriod) {"
+              insert = anchor + """
+          // Telega: remember previous text before local edit is sent
+          try {
+              if (messageObject != null && messageObject.messageOwner != null
+                      && messageObject.messageOwner.message != null && message != null
+                      && !messageObject.messageOwner.message.equals(message)) {
+                  org.telegram.messenger.TelegaEditedMessages.addPreviousVersion(
+                          currentAccount, messageObject.getDialogId(), messageObject.getId(),
+                          messageObject.messageOwner.message);
+              }
+          } catch (Throwable ignore) {}
+  """
+              if anchor in t:
+                  t = t.replace(anchor, insert, 1)
+                  p.write_text(t, encoding="utf-8")
+                  print("Patched SendMessagesHelper for own edits")
+              else:
+                  print("WARNING: editMessage(String) anchor not found")
+          PY
+
+      - name: Package, version, branding, black plane icon
         run: |
           set -euo pipefail
           VERSION_CODE=$(date -u +%s)
-          VERSION_NAME="13.0.4-telega.$(date -u +%Y%m%d-%H%M)"
+          VERSION_NAME="13.0.5-telega.$(date -u +%Y%m%d-%H%M)"
           sed -i "s/^APP_VERSION_CODE=.*/APP_VERSION_CODE=${VERSION_CODE}/" gradle.properties
           sed -i "s/^APP_VERSION_NAME=.*/APP_VERSION_NAME=${VERSION_NAME}/" gradle.properties
           sed -i 's/^APP_PACKAGE=.*/APP_PACKAGE=org.telega.messenger/' gradle.properties
-          grep -E 'APP_PACKAGE|APP_VERSION' gradle.properties
 
           python3 - <<'PY'
           from pathlib import Path
           import re, json, copy
 
-          NEW_PKG = "org.telega.messenger"
-          OLD_PKG = "org.telegram.messenger"
+          NEW_PKG, OLD_PKG = "org.telega.messenger", "org.telegram.messenger"
 
-          for p in [Path("TMessagesProj/src/main/AndroidManifest.xml")] + list(Path("TMessagesProj/src/main/res").glob("values*/strings.xml")):
-              if not p.exists():
-                  continue
-              t = p.read_text(encoding="utf-8")
-              t = re.sub(
-                  r'(<string\s+name="(?:AppName|app_name|app_name_short)"[^>]*>)[^<]*(</string>)',
-                  r'\1Telega\2',
-                  t,
-              )
-              t = re.sub(r'android:label="Telegram"', 'android:label="Telega"', t)
-              p.write_text(t, encoding="utf-8")
+          # Adaptive icons: pure black bg + white plane fg
+          for name, content in {
+              "TMessagesProj/src/main/res/mipmap-anydpi-v26/ic_launcher.xml":
+          '''<?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@drawable/telega_icon_bg" />
+              <foreground android:drawable="@drawable/telega_icon_fg" />
+              <monochrome android:drawable="@drawable/icon_plane" />
+          </adaptive-icon>
+          ''',
+              "TMessagesProj/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml":
+          '''<?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@drawable/telega_icon_bg" />
+              <foreground android:drawable="@drawable/telega_icon_fg" />
+              <monochrome android:drawable="@drawable/icon_plane" />
+          </adaptive-icon>
+          ''',
+              "TMessagesProj/src/main/res/drawable/icon_background.xml":
+          '''<?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+              <solid android:color="#FF000000" />
+          </shape>
+          ''',
+              "TMessagesProj/src/main/res/drawable/icon_background_round.xml":
+          '''<?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+              <solid android:color="#FF000000" />
+          </shape>
+          ''',
+          }.items():
+              Path(name).write_text(content, encoding="utf-8")
+              print("wrote", name)
 
+          # Generate composite launcher PNGs: black + white plane (no photo bg)
+          try:
+              from PIL import Image, ImageDraw
+          except ImportError:
+              import subprocess, sys
+              subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "pillow"])
+              from PIL import Image, ImageDraw
+
+          def make_plane(size):
+              img = Image.new("RGBA", (size, size), (0, 0, 0, 255))
+              d = ImageDraw.Draw(img)
+              cx = cy = size // 2
+              s = size * 0.34
+              # clean paper-plane polygon
+              pts = [
+                  (cx + s * 0.62, cy),
+                  (cx - s * 0.55, cy - s * 0.48),
+                  (cx - s * 0.12, cy),
+                  (cx - s * 0.55, cy + s * 0.48),
+              ]
+              d.polygon(pts, fill=(255, 255, 255, 255))
+              # fold notch
+              notch = [
+                  (cx - s * 0.12, cy),
+                  (cx + s * 0.08, cy + s * 0.04),
+                  (cx - s * 0.12, cy + s * 0.18),
+              ]
+              d.polygon(notch, fill=(0, 0, 0, 255))
+              return img
+
+          dens = {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}
+          for dens_name, sz in dens.items():
+              icon = make_plane(sz)
+              for folder, names in [
+                  (f"TMessagesProj/src/main/res/mipmap-{dens_name}",
+                   ["ic_launcher.png", "ic_launcher_round.png"]),
+                  (f"TMessagesProj/src/main/res/drawable-{dens_name}",
+                   ["ic_launcher_dr.png"]),
+              ]:
+                  Path(folder).mkdir(parents=True, exist_ok=True)
+                  for n in names:
+                      icon.save(f"{folder}/{n}")
+                  # drop competing webp
+                  for n in ["ic_launcher_dr.webp"]:
+                      wp = Path(folder) / n
+                      if wp.exists():
+                          wp.unlink()
+          print("Generated black+plane launcher icons")
+
+          # Package / providers
           for p in Path(".").rglob("google-services.json"):
-              if "build" in p.parts:
-                  continue
+              if "build" in p.parts: continue
               data = json.loads(p.read_text(encoding="utf-8"))
               clients = data.get("client", [])
-              existing = set()
-              base = None
+              existing, base = set(), None
               for c in clients:
                   pkg = c.get("client_info", {}).get("android_client_info", {}).get("package_name")
-                  if pkg:
-                      existing.add(pkg)
-                  if pkg == OLD_PKG:
-                      base = c
+                  if pkg: existing.add(pkg)
+                  if pkg == OLD_PKG: base = c
               if NEW_PKG not in existing and base is not None:
                   extra = copy.deepcopy(base)
                   extra["client_info"]["android_client_info"]["package_name"] = NEW_PKG
                   clients.append(extra)
                   data["client"] = clients
-                  p.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-                  print("added telega client to", p)
+                  p.write_text(json.dumps(data, indent=2)+"\n", encoding="utf-8")
 
           for p in [Path("TMessagesProj_App/src/main/AndroidManifest.xml"), Path("TMessagesProj/src/main/AndroidManifest.xml")]:
-              if not p.exists():
-                  continue
+              if not p.exists(): continue
               t = p.read_text(encoding="utf-8")
-              t2 = t.replace(f'{OLD_PKG}.provider', f'{NEW_PKG}.provider')
-              t2 = t2.replace(f'{OLD_PKG}.passthrough', f'{NEW_PKG}.passthrough')
-              t2 = t2.replace(f'{OLD_PKG}.channel_content', f'{NEW_PKG}.channel_content')
-              t2 = t2.replace(f'{OLD_PKG}.notification', f'{NEW_PKG}.notification')
-              if t2 != t:
-                  p.write_text(t2, encoding="utf-8")
-          print("Package set to", NEW_PKG)
-          PY
+              t2 = t.replace(f"{OLD_PKG}.provider", f"{NEW_PKG}.provider")
+              t2 = t2.replace(f"{OLD_PKG}.passthrough", f"{NEW_PKG}.passthrough")
+              t2 = t2.replace(f"{OLD_PKG}.channel_content", f"{NEW_PKG}.channel_content")
+              t2 = t2.replace(f"{OLD_PKG}.notification", f"{NEW_PKG}.notification")
+              t2 = t2.replace('android:label="Telegram"', 'android:label="Telega"')
+              p.write_text(t2, encoding="utf-8")
 
-      - name: Brand Telegram to Telega in UI strings
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          count = 0
+          # Aggressive UI branding: all strings.xml
+          nfiles = 0
           for p in Path("TMessagesProj/src/main/res").rglob("strings.xml"):
               t = p.read_text(encoding="utf-8")
-              # protect domains/urls
-              placeholders = {}
+              ph = {}
               def protect(m):
-                  k = f"__URL{len(placeholders)}__"
-                  placeholders[k] = m.group(0)
-                  return k
+                  k = f"__P{len(ph)}__"; ph[k] = m.group(0); return k
               t2 = re.sub(r'https?://[^\s<"\']+', protect, t)
-              t2 = re.sub(r'\btelegram\.(org|me|dog)\b', protect, t2, flags=re.I)
+              t2 = re.sub(r'\btelegram\.(org|me|dog|desktop)\b', protect, t2, flags=re.I)
+              t2 = re.sub(r'\bt\.me\b', protect, t2)
               t2 = re.sub(r'\bTelegram\b', 'Telega', t2)
               t2 = re.sub(r'\btelegram\b', 'telega', t2)
-              for k, v in placeholders.items():
+              t2 = re.sub(
+                  r'(<string\s+name="(?:AppName|app_name|app_name_short)"[^>]*>)[^<]*(</string>)',
+                  r'\1Telega\2', t2)
+              for k,v in ph.items():
                   t2 = t2.replace(k, v)
               if t2 != t:
-                  p.write_text(t2, encoding="utf-8")
-                  count += 1
-          print(f"Updated {count} strings.xml files")
+                  p.write_text(t2, encoding="utf-8"); nfiles += 1
+          print(f"Branded {nfiles} strings.xml → Telega")
+          print("VERSION", VERSION_CODE if False else open("gradle.properties").read())
           PY
 
-      - name: Replace launcher icons
-        run: |
-          set -euo pipefail
-          sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick >/dev/null
-          curl -fsSL -o /tmp/telega_icon.jpg "https://i.pinimg.com/originals/e1/83/5f/e1835f37dcc43d30b95ffcefbcd1ba24.jpg"
-          # make square opaque PNG base
-          convert /tmp/telega_icon.jpg -resize 1024x1024^ -gravity center -extent 1024x1024 /tmp/telega_1024.png
-
-          make_icon() {
-            local size="$1" out="$2"
-            convert /tmp/telega_1024.png -resize "${size}x${size}" "$out"
-          }
-
-          # mipmap launchers
-          declare -A S=( [mdpi]=48 [hdpi]=72 [xhdpi]=96 [xxhdpi]=144 [xxxhdpi]=192 )
-          for dens in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-            sz=${S[$dens]}
-            dir="TMessagesProj/src/main/res/mipmap-${dens}"
-            mkdir -p "$dir"
-            make_icon "$sz" "$dir/ic_launcher.png"
-            make_icon "$sz" "$dir/ic_launcher_round.png"
-            # also clip backgrounds if present
-            if [ -f "$dir/icon_background_clip.png" ]; then
-              make_icon "$sz" "$dir/icon_background_clip.png"
-              make_icon "$sz" "$dir/icon_background_clip_round.png"
-            fi
-          done
-
-          # drawable dens for ic_launcher_dr
-          declare -A D=( [mdpi]=48 [hdpi]=72 [xhdpi]=96 [xxhdpi]=144 [xxxhdpi]=192 )
-          for dens in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-            sz=${D[$dens]}
-            dir="TMessagesProj/src/main/res/drawable-${dens}"
-            mkdir -p "$dir"
-            make_icon "$sz" "$dir/ic_launcher_dr.png"
-            # remove old webp to prefer png if both exist — gradle picks one
-            rm -f "$dir/ic_launcher_dr.webp" || true
-          done
-
-          echo "Launcher icons replaced"
+          grep -E 'APP_PACKAGE|APP_VERSION' gradle.properties
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -176,7 +251,6 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
           export ANDROID_HOME ANDROID_SDK_ROOT="$ANDROID_HOME"
-
           SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager 2>/dev/null | sort -V | tail -n 1 || true)"
           if [ -z "$SDKMANAGER" ] || [ ! -x "$SDKMANAGER" ]; then
             mkdir -p "$HOME/android-sdk/cmdline-tools"
@@ -189,7 +263,6 @@ jobs:
             echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
             export ANDROID_HOME ANDROID_SDK_ROOT="$ANDROID_HOME"
           fi
-
           yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null 2>&1 || true
           "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --install \
             "platforms;android-35" "platforms;android-36" \
@@ -197,13 +270,16 @@ jobs:
             "ndk;27.0.12077973" "ndk;27.2.12479018" "cmake;3.22.1" || true
           chmod +x gradlew || true
 
-      - name: Build APK (afatRelease)
+      - name: Build APK (afatRelease only)
         run: |
           set -euo pipefail
           export ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
-          grep -E 'APP_PACKAGE|APP_VERSION' gradle.properties
-          ./gradlew --no-daemon --stacktrace :TMessagesProj_App:assembleAfatRelease
+          # Parallel workers, no daemon, only needed task
+          ./gradlew --no-daemon --parallel --build-cache \
+            -Prelease \
+            :TMessagesProj_App:assembleAfatRelease \
+            --stacktrace
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -211,7 +287,6 @@ jobs:
           name: Telega-APK
           path: |
             TMessagesProj_App/build/outputs/apk/**/*.apk
-            TMessagesProj/build/outputs/apk/**/*.apk
           if-no-files-found: error
           retention-days: 14
 
@@ -220,11 +295,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          APK="$(find TMessagesProj_App TMessagesProj -type f -name '*.apk' 2>/dev/null | head -n 1)"
+          APK="$(find TMessagesProj_App -type f -name '*.apk' 2>/dev/null | head -n 1)"
           test -n "$APK"
           cp "$APK" Telega.apk
           TAG="telega-$(date -u +%Y%m%d-%H%M%S)"
           VER=$(grep '^APP_VERSION_CODE=' gradle.properties | cut -d= -f2)
           gh release create "$TAG" "Telega.apk#Telega.apk" \
             --title "Telega $TAG (v$VER)" \
-            --notes "• Иконка Telega\n• Настройки Telega первыми (iOS-style)\n• История правок вверх\n• Telegram→Telega в интерфейсе"
+            --notes "• Чёрная иконка + белый самолётик\n• Ускоренная сборка (без Huawei/Hockey/Standalone)\n• Telegram→Telega в строках\n• Правки сообщений (свои + чужие)\n• Настройки Telega"
