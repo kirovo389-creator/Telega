@@ -56,6 +56,8 @@ jobs:
       - name: Branding package version icon
         run: |
           set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq python3-pil python3-pil.imagetk || true
           VERSION_CODE=$(date -u +%s)
           VERSION_NAME="13.0.5-telega.$(date -u +%Y%m%d-%H%M)"
           sed -i "s/^APP_VERSION_CODE=.*/APP_VERSION_CODE=${VERSION_CODE}/" gradle.properties
