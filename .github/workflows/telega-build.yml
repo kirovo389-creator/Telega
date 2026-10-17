@@ -1,8 +1,6 @@
 name: Sync and build Telega
 
 on:
-  push:
-    branches: [main, master]
   workflow_dispatch:
 
 permissions:
@@ -22,16 +20,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Copy complete upstream Telegram source
-        shell: bash
-        run: |
-          set -euo pipefail
-          cp .github/workflows/telega-build.yml /tmp/telega-build.yml
-          git clone --recursive --depth 1 --shallow-submodules https://github.com/DrKLO/Telegram.git /tmp/telegram-upstream
-          rsync -a --delete --exclude='.git/' --exclude='.github/' /tmp/telegram-upstream/ ./
-          mkdir -p .github/workflows
-          cp /tmp/telega-build.yml .github/workflows/telega-build.yml
-
       - name: Set visible app name to Telega
         shell: bash
         run: |
@@ -48,18 +36,6 @@ jobs:
               text = re.sub(r'android:label="Telegram"', 'android:label="Telega"', text)
               path.write_text(text, encoding="utf-8")
           PY
-
-      - name: Commit copied source
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          if ! git diff --cached --quiet; then
-            git commit -m "Import upstream Telegram Android source for Telega"
-            git push
-          fi
 
       - name: Set up Java
         uses: actions/setup-java@v4
