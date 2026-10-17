@@ -100,7 +100,6 @@ def patch_messages_controller():
     text = path.read_text(encoding="utf-8")
     changed = False
 
-    # Capture previous text on edit
     old_edit = "                    getSendMessagesHelper().onMessageEdited(message);"
     new_edit = (
         "                    // Telega: store previous version before edit is applied\n"
@@ -194,14 +193,13 @@ def patch_settings_activity():
         print("SettingsActivity already has Telega entry")
         return
 
-    # Add settings row after language
     anchor = (
         '        items.add(SettingCell.Factory.of(10, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.settings_language, getString(R.string.SettingsLanguage), LocaleController.getCurrentLanguageName()));\n'
     )
     insert = (
         anchor
         + '        items.add(UItem.asShadow(null));\n'
-        + '        items.add(SettingCell.Factory.of(90, IconBackgroundColors.GREEN.top, IconBackgroundColors.GREEN.bottom, R.drawable.msg_settings_old, "\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 Telega", "\u0423\u0434\u0430\u043b\u0451\u043d\u043d\u044b\u0435 \u0438 \u0438\u0437\u043c\u0435\u043d\u0451\u043d\u043d\u044b\u0435 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u044f"));\n'
+        + '        items.add(SettingCell.Factory.of(90, IconBackgroundColors.GREEN.top, IconBackgroundColors.GREEN.bottom, R.drawable.settings_features, "\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 Telega", "\u0423\u0434\u0430\u043b\u0451\u043d\u043d\u044b\u0435 \u0438 \u0438\u0437\u043c\u0435\u043d\u0451\u043d\u043d\u044b\u0435 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u044f"));\n'
     )
     if anchor in text:
         text = text.replace(anchor, insert, 1)
@@ -209,7 +207,6 @@ def patch_settings_activity():
     else:
         print("WARNING: language row anchor not found")
 
-    # Click handler
     case_anchor = "            case 24: {\n                presentFragment(new RoundVideoSettingsActivity());\n                break;\n            }"
     case_new = (
         case_anchor + "\n"
