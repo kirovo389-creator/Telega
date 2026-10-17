@@ -38,10 +38,11 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import re
-          root = Path(".")
-          candidates = list(root.glob("TMessagesProj/src/main/AndroidManifest.xml"))
-          candidates += list(root.glob("TMessagesProj/src/main/res/values*/strings.xml"))
+          candidates = [Path("TMessagesProj/src/main/AndroidManifest.xml")]
+          candidates += list(Path("TMessagesProj/src/main/res").glob("values*/strings.xml"))
           for path in candidates:
+              if not path.exists():
+                  continue
               text = path.read_text(encoding="utf-8")
               text = re.sub(r'(<string\s+name="(?:AppName|app_name|app_name_short)"[^>]*>)[^<]*(</string>)', r'\1Telega\2', text)
               text = re.sub(r'android:label="Telegram"', 'android:label="Telega"', text)
@@ -74,16 +75,14 @@ jobs:
           sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
           chmod +x gradlew
 
-      - name: Build standalone release APK
-        run: ./gradlew --no-daemon --stacktrace assembleStandaloneRelease
+      - name: Build standalone APK
+        run: ./gradlew --no-daemon --stacktrace assembleStandalone
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Telega-APK
-          path: |
-            TMessagesProj/build/outputs/apk/**/standalone/release/*.apk
-            TMessagesProj/build/outputs/apk/**/release/*standalone*.apk
+          path: TMessagesProj/build/outputs/apk/standalone/*.apk
           if-no-files-found: error
           retention-days: 14
 
@@ -96,4 +95,4 @@ jobs:
           APK="$(find TMessagesProj/build/outputs/apk -type f -name '*.apk' | head -n 1)"
           test -n "$APK"
           TAG="telega-$(date -u +%Y%m%d-%H%M%S)"
-          gh release create "$TAG" "$APK#Telega APK" --title "Telega build $TAG" --notes "Automated APK build from the upstream Telegram Android source. Source code and GPL license are included in this repository."
+          gh release create "$TAG" "$APK#Telega APK" --title "Telega build $TAG" --notes "Automated APK build from upstream Telegram Android source. GPL license and source are included in this repository."
