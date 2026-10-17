@@ -106,7 +106,10 @@ public final class TelegaDeletedMessagesController {
                     }
                     // dialog_id and attachPath are not guaranteed to be in TL serialization.
                     message.dialog_id = dialogId;
-                    message.attachPath = entry.optString("attachPath", "");
+                    String attachPath = entry.optString("attachPath", "");
+                    if (!attachPath.isEmpty()) {
+                        message.attachPath = attachPath;
+                    }
 
                     MessageObject object = new MessageObject(account, message, true, false);
                     object.deleted = true;
