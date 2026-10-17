@@ -20707,7 +20707,6 @@ public class ChatActivity extends BaseFragment implements
 
             object.deleted = true;
             object.telegaDeleted = true;
-            object.stableId = lastStableId++;
             int insertionIndex = messages.size();
             for (int i = 0; i < messages.size(); i++) {
                 MessageObject current = messages.get(i);
