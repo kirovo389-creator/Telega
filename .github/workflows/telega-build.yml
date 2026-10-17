@@ -40,13 +40,17 @@ jobs:
       - name: Set unique package and app name (Telega)
         run: |
           set -euo pipefail
-          # Different applicationId so it does NOT update/replace official Telegram
+
+          # Different applicationId so it does NOT replace official Telegram
           sed -i 's/^APP_PACKAGE=.*/APP_PACKAGE=org.telega.messenger/' gradle.properties
           grep APP_PACKAGE gradle.properties
 
           python3 - <<'PY'
           from pathlib import Path
-          import re
+          import re, json
+
+          NEW_PKG = "org.telega.messenger"
+          OLD_PKG = "org.telegram.messenger"
 
           # App display name -> Telega
           for p in [Path("TMessagesProj/src/main/AndroidManifest.xml")] + list(Path("TMessagesProj/src/main/res").glob("values*/strings.xml")):
@@ -61,7 +65,22 @@ jobs:
               t = re.sub(r'android:label="Telegram"', 'android:label="Telega"', t)
               p.write_text(t, encoding="utf-8")
 
-          # Avoid provider / authority clashes where hard-coded
+          # Fix google-services.json package_name (required by Google Services plugin)
+          for p in Path(".").rglob("google-services.json"):
+              if "build" in p.parts:
+                  continue
+              data = json.loads(p.read_text(encoding="utf-8"))
+              changed = False
+              for client in data.get("client", []):
+                  info = client.get("client_info", {})
+                  if info.get("android_client_info", {}).get("package_name") == OLD_PKG:
+                      info["android_client_info"]["package_name"] = NEW_PKG
+                      changed = True
+              if changed:
+                  p.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+                  print("patched google-services:", p)
+
+          # Fix FileProvider / ContentProvider authorities that hardcode package
           for p in Path(".").rglob("*.xml"):
               if "build" in p.parts or ".git" in p.parts:
                   continue
@@ -69,13 +88,13 @@ jobs:
                   t = p.read_text(encoding="utf-8")
               except Exception:
                   continue
-              if "org.telegram.messenger" in t and ("authorities" in t or "provider" in t.lower()):
-                  t2 = t.replace("org.telegram.messenger", "org.telega.messenger")
+              if OLD_PKG in t and ("authorities" in t or "provider" in t.lower()):
+                  t2 = t.replace(OLD_PKG, NEW_PKG)
                   if t2 != t:
                       p.write_text(t2, encoding="utf-8")
                       print("updated authorities in", p)
 
-          print("Package set to org.telega.messenger, app name Telega")
+          print("Package set to", NEW_PKG, ", app name Telega")
           PY
 
       - name: Set up Java 17
@@ -147,7 +166,6 @@ jobs:
           APK="$(find TMessagesProj_App TMessagesProj -type f -name '*.apk' 2>/dev/null | head -n 1)"
           test -n "$APK"
           echo "Found APK: $APK"
-          # Rename for clearer download name
           cp "$APK" Telega.apk
           TAG="telega-$(date -u +%Y%m%d-%H%M%S)"
           gh release create "$TAG" "Telega.apk#Telega.apk" \
