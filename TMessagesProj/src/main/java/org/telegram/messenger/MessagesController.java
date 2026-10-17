@@ -21244,6 +21244,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     long key = clearHistoryMessagesFinal.keyAt(a);
                     int id = clearHistoryMessagesFinal.valueAt(a);
                     long did = -key;
+                    TelegaDeletedMessagesController.clearMessagesUpTo(currentAccount, did, id);
                     getNotificationCenter().postNotificationName(NotificationCenter.historyCleared, did, id);
                     ArrayList<MessageObject> objs = dialogMessage.get(did);
                     if (objs != null) {
