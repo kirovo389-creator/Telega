@@ -26651,6 +26651,20 @@ public class ChatActivity extends BaseFragment implements
                         && obj.messageOwner != null
                         && !obj.isEphemeral()) {
                     org.telegram.messenger.TelegaDeletedMessagesController.saveMessage(currentAccount, dialog_id, obj.messageOwner);
+                    long retainedGroupId = obj.getGroupId();
+                    if (retainedGroupId != 0) {
+                        MessageObject.GroupedMessages retainedGroup = groupedMessagesMap.get(retainedGroupId);
+                        if (retainedGroup != null) {
+                            retainedGroup.messages.remove(obj);
+                            if (retainedGroup.messages.isEmpty()) {
+                                groupedMessagesMap.remove(retainedGroupId);
+                            } else {
+                                retainedGroup.calculate();
+                            }
+                        }
+                        obj.messageOwner.grouped_id = 0;
+                        obj.localSentGroupId = 0;
+                    }
                     obj.deleted = true;
                     obj.telegaDeleted = true;
                     updated = true;
