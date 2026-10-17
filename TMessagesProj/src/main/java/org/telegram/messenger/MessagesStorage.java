@@ -14648,7 +14648,8 @@ public class MessagesStorage extends BaseController {
                                 message.dialog_id = did;
                                 TelegaDeletedMessagesController.saveMessage(currentAccount, did, message);
                             }
-                            if (deletedMessages != null) {
+                            if (deletedMessages != null
+                                    && (!keepTelegaForDialog || DialogObject.isEncryptedDialog(did) || deleteFiles || did == currentUser)) {
                                 deletedMessages.add(message);
                             }
                             data.reuse();
