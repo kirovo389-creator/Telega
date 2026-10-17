@@ -23960,7 +23960,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if ((!drawTime || groupPhotoInvisible) && shouldDrawTimeOnMedia() || timeLayout == null || (currentMessageObject.deleted && !currentMessageObject.telegaDeleted && currentPosition != null) || currentMessageObject.type == MessageObject.TYPE_PHONE_CALL) {
             return;
         }
-        if (currentMessageObject.type == MessageObject.TYPE_ROUND_VIDEO) {
+        if (currentMessageObject.telegaDeleted) {
+            Theme.chat_timePaint.setColor(Color.RED);
+        } else if (currentMessageObject.type == MessageObject.TYPE_ROUND_VIDEO) {
             Theme.chat_timePaint.setColor(
                 ColorUtils.blendARGB(
                     getThemedColor(Theme.key_chat_serviceText),
