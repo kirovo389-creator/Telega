@@ -115,6 +115,9 @@ public final class TelegaDeletedMessagesController {
                     }
                     // dialog_id and attachPath are not guaranteed to be in TL serialization.
                     message.dialog_id = dialogId;
+                    // An archived album item is rendered as a standalone deleted message;
+                    // its original group may no longer exist in the freshly loaded chat.
+                    message.grouped_id = 0;
                     String attachPath = entry.optString("attachPath", "");
                     if (!attachPath.isEmpty()) {
                         message.attachPath = attachPath;
