@@ -20725,7 +20725,8 @@ public class ChatActivity extends BaseFragment implements
                 // Place a new day header before the next day's existing header, not after it.
                 if (insertionIndex > 0 && insertionIndex < messages.size()) {
                     MessageObject previousRow = messages.get(insertionIndex - 1);
-                    if (previousRow != null && previousRow.isDateObject) {
+                    if (previousRow != null && previousRow.isDateObject
+                            && previousRow.dateKeyInt != object.dateKeyInt) {
                         insertionIndex--;
                     }
                 }
