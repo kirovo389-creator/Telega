@@ -18502,7 +18502,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             currentTimeString = timeString;
         }
         if (TelegaDeletedMessages.isDeleted(messageObject.currentAccount, messageObject.getDialogId(), messageObject.getId())) {
-            currentTimeString = TextUtils.concat("🗑️ ", currentTimeString);
+            currentTimeString = TextUtils.concat("    ", currentTimeString);
         }
         if (currentMessageObject.isStakedDice()) {
             currentTimeString = TextUtils.concat("💎", StarsIntroActivity.formatTON(currentMessageObject.getStakedDiceAmount()), "  ", currentTimeString);
@@ -24362,6 +24362,21 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 canvas.restore();
             }
         }
+        if (currentMessageObject != null
+                && TelegaDeletedMessages.isDeleted(
+                        currentMessageObject.currentAccount,
+                        currentMessageObject.getDialogId(),
+                        currentMessageObject.getId())) {
+            android.graphics.drawable.Drawable deletedIcon = getResources().getDrawable(R.drawable.msg_delete).mutate();
+            deletedIcon.setColorFilter(android.graphics.Color.rgb(226, 58, 65), android.graphics.PorterDuff.Mode.SRC_IN);
+            int iconSize = dp(11);
+            int iconLeft = (int) (drawTimeX + dp(1));
+            int iconTop = (int) (drawTimeY + Math.max(0, (timeLayout.getHeight() - iconSize) / 2f));
+            deletedIcon.setBounds(iconLeft, iconTop, iconLeft + iconSize, iconTop + iconSize);
+            deletedIcon.draw(canvas);
+            deletedIcon.clearColorFilter();
+        }
+
     }
 
     private void createStatusDrawableAnimator(int lastStatusDrawableParams, int currentStatus, boolean fromParent) {
