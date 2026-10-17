@@ -65,6 +65,9 @@ public final class TelegaDeletedMessagesController {
             entry.put("id", message.id);
             entry.put("date", message.date);
             entry.put("data", encoded);
+            if (message.attachPath != null && !message.attachPath.isEmpty()) {
+                entry.put("attachPath", message.attachPath);
+            }
             updated.put(entry);
 
             while (updated.length() > MAX_MESSAGES_PER_DIALOG) {
@@ -101,8 +104,9 @@ public final class TelegaDeletedMessagesController {
                     if (message == null || message.id <= 0) {
                         continue;
                     }
-                    // dialog_id is populated from chat context, not guaranteed to be in TL serialization.
+                    // dialog_id and attachPath are not guaranteed to be in TL serialization.
                     message.dialog_id = dialogId;
+                    message.attachPath = entry.optString("attachPath", "");
 
                     MessageObject object = new MessageObject(account, message, true, false);
                     object.deleted = true;
