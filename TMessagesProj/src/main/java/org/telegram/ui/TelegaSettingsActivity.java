@@ -3,7 +3,9 @@ package org.telegram.ui;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.RectF;
+import android.graphics.Typeface;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -24,12 +26,7 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RecyclerListView;
 
-/**
- * Root Telega settings — iOS-like grouped list of categories.
- */
 public class TelegaSettingsActivity extends BaseFragment {
-
-    private ListAdapter listAdapter;
 
     private int messagesRow;
     private int otherRow;
@@ -70,10 +67,9 @@ public class TelegaSettingsActivity extends BaseFragment {
         root.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
         fragmentView = root;
 
-        listAdapter = new ListAdapter(context);
         RecyclerListView listView = new RecyclerListView(context);
         listView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
-        listView.setAdapter(listAdapter);
+        listView.setAdapter(new ListAdapter(context));
         listView.setClipToPadding(false);
         listView.setPadding(0, AndroidUtilities.dp(12), 0, AndroidUtilities.dp(24));
         root.addView(listView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
@@ -82,7 +78,6 @@ public class TelegaSettingsActivity extends BaseFragment {
             if (position == messagesRow) {
                 presentFragment(new TelegaMessagesSettingsActivity());
             } else if (position == otherRow || position == profileRow || position == customRow) {
-                // placeholders for future sections
                 AndroidUtilities.shakeView(view);
             }
         });
@@ -144,12 +139,10 @@ public class TelegaSettingsActivity extends BaseFragment {
         }
     }
 
-    /** iOS-like rounded grouped row */
     private static class CategoryCell extends FrameLayout {
         private final TextView emoji;
         private final TextView title;
         private final TextView subtitle;
-        private final TextView chevron;
         private final Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final RectF rect = new RectF();
         private boolean first, last;
@@ -175,7 +168,7 @@ public class TelegaSettingsActivity extends BaseFragment {
 
             title = new TextView(context);
             title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 17);
-            title.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+            title.setTypeface(Typeface.DEFAULT_BOLD);
             title.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
             texts.addView(title);
 
@@ -184,7 +177,7 @@ public class TelegaSettingsActivity extends BaseFragment {
             subtitle.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText3));
             texts.addView(subtitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
 
-            chevron = new TextView(context);
+            TextView chevron = new TextView(context);
             chevron.setText("›");
             chevron.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 22);
             chevron.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText3));
@@ -208,8 +201,9 @@ public class TelegaSettingsActivity extends BaseFragment {
             float inset = AndroidUtilities.dp(16);
             rect.set(inset, 0, getWidth() - inset, getHeight());
             float tl = first ? r : 0, tr = first ? r : 0, br = last ? r : 0, bl = last ? r : 0;
-            // simple path for top/bottom rounding of group
-            PathCompat.drawRoundRect(canvas, rect, tl, tr, br, bl, bgPaint);
+            Path path = new Path();
+            path.addRoundRect(rect, new float[]{tl, tl, tr, tr, br, br, bl, bl}, Path.Direction.CW);
+            canvas.drawPath(path, bgPaint);
             if (!last) {
                 Paint divider = new Paint();
                 divider.setColor(ColorUtils.setAlphaComponent(Theme.getColor(Theme.key_divider), 90));
@@ -223,16 +217,6 @@ public class TelegaSettingsActivity extends BaseFragment {
             super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
             int h = Math.max(getMeasuredHeight(), AndroidUtilities.dp(58));
             setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), h);
-        }
-    }
-
-    /** tiny helper without importing android.graphics.Path for partial rounds */
-    private static class PathCompat {
-        static void drawRoundRect(Canvas c, RectF r, float tl, float tr, float br, float bl, Paint p) {
-            android.graphics.Path path = new android.graphics.Path();
-            float[] radii = new float[]{tl, tl, tr, tr, br, br, bl, bl};
-            path.addRoundRect(r, radii, android.graphics.Path.Direction.CW);
-            c.drawPath(path, p);
         }
     }
 }
