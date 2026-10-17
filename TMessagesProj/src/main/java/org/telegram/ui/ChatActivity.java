@@ -20659,7 +20659,7 @@ public class ChatActivity extends BaseFragment implements
             }
             int messageId = object.getId();
             MessageObject existing = messagesDict[0].get(messageId);
-            if (existing != null) {
+            if (existing != null && existing.getDialogId() == dialog_id) {
                 existing.deleted = true;
                 existing.telegaDeleted = true;
                 changed++;
@@ -20697,14 +20697,16 @@ public class ChatActivity extends BaseFragment implements
                     if (i > 0) {
                         MessageObject previousRow = messages.get(i - 1);
                         if (previousRow != null && previousRow.isDateObject
-                                && previousRow.dateKeyInt != object.dateKeyInt) {
+                                && previousRow.dateKeyInt == current.dateKeyInt) {
                             insertionIndex = i - 1;
                         }
                     }
                     break;
                 }
             }
-            messages.add(Math.max(0, Math.min(insertionIndex, messages.size())), object);
+            object.stableId = lastStableId++;
+            int safeInsertionIndex = Math.max(0, Math.min(insertionIndex, messages.size()));
+            messages.add(safeInsertionIndex, object);
             messagesDict[0].put(messageId, object);
 
             ArrayList<MessageObject> dayMessages = messagesByDays.get(object.dateKey);
@@ -20712,6 +20714,20 @@ public class ChatActivity extends BaseFragment implements
                 dayMessages = new ArrayList<>();
                 messagesByDays.put(object.dateKey, dayMessages);
                 messagesByDaysSorted.put(object.dateKeyInt, dayMessages);
+
+                TLRPC.Message dateMessage = new TLRPC.TL_message();
+                dateMessage.id = 0;
+                dateMessage.date = object.messageOwner.date;
+                dateMessage.message = LocaleController.formatDateChat(object.messageOwner.date);
+                MessageObject dateObject = new MessageObject(currentAccount, dateMessage, false, false);
+                dateObject.type = MessageObject.TYPE_DATE;
+                dateObject.contentType = 1;
+                dateObject.isDateObject = true;
+                dateObject.dateKey = object.dateKey;
+                dateObject.dateKeyInt = object.dateKeyInt;
+                dateObject.monthKey = object.monthKey;
+                dateObject.stableId = getStableIdForDateObject(object.dateKeyInt);
+                messages.add(Math.min(safeInsertionIndex + 1, messages.size()), dateObject);
             }
             if (!dayMessages.contains(object)) {
                 dayMessages.add(object);
