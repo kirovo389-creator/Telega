@@ -132,6 +132,8 @@ public final class TelegaDeletedMessagesController {
                     }
 
                     MessageObject object = new MessageObject(account, message, controller.getUsers(), controller.getChats(), true, false);
+                    object.localGroupId = 0;
+                    object.localSentGroupId = 0;
                     object.deleted = true;
                     object.telegaDeleted = true;
                     result.add(object);
