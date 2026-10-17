@@ -18836,12 +18836,32 @@ public class MessagesController extends BaseController implements NotificationCe
                 dialogs_read_outbox_max.put(dialogId, Math.max(value, update.max_id));
             } else if (baseUpdate instanceof TL_update.TL_updateDeleteMessages) {
                 TL_update.TL_updateDeleteMessages update = (TL_update.TL_updateDeleteMessages) baseUpdate;
-                // Telega: keep locally cached messages and mark them as deleted instead of
-                // passing their ids to MessagesStorage.markMessagesAsDeleted().
+                ArrayList<Integer> idsToActuallyDelete = new ArrayList<>();
                 for (int messageId : update.messages) {
-                    TelegaDeletedMessages.markDeleted(currentAccount, 0, messageId);
+                    MessageObject messageObject = dialogMessagesByIds.get(messageId);
+                    boolean retainDeletedMessage = messageObject != null && !messageObject.isOut();
+                    if (retainDeletedMessage && messageObject.getDialogId() < 0) {
+                        TLRPC.Chat messageChat = getChat(-messageObject.getDialogId());
+                        retainDeletedMessage = !ChatObject.isChannel(messageChat);
+                    }
+                    if (retainDeletedMessage) {
+                        TelegaDeletedMessages.markDeleted(currentAccount, messageObject.getDialogId(), messageId);
+                        interfaceUpdateMask |= UPDATE_MASK_MESSAGE_TEXT;
+                    } else {
+                        idsToActuallyDelete.add(messageId);
+                    }
                 }
-                interfaceUpdateMask |= UPDATE_MASK_MESSAGE_TEXT;
+                if (!idsToActuallyDelete.isEmpty()) {
+                    if (deletedMessages == null) {
+                        deletedMessages = new LongSparseArray<>();
+                    }
+                    ArrayList<Integer> arrayList = deletedMessages.get(0);
+                    if (arrayList == null) {
+                        arrayList = new ArrayList<>();
+                        deletedMessages.put(0, arrayList);
+                    }
+                    arrayList.addAll(idsToActuallyDelete);
+                }
             } else if (baseUpdate instanceof TL_update.TL_updateDeleteQuickReplyMessages) {
                 TL_update.TL_updateDeleteQuickReplyMessages update = (TL_update.TL_updateDeleteQuickReplyMessages) baseUpdate;
                 if (deletedQuickReplyMessages == null) {
@@ -19358,12 +19378,28 @@ public class MessagesController extends BaseController implements NotificationCe
                 if (BuildVars.LOGS_ENABLED) {
                     FileLog.d(baseUpdate + " channelId = " + update.channel_id);
                 }
-                // Telega: retain the cached channel messages and show a deleted marker.
                 long dialogId = -update.channel_id;
+                ArrayList<Integer> idsToActuallyDelete = new ArrayList<>();
                 for (int messageId : update.messages) {
-                    TelegaDeletedMessages.markDeleted(currentAccount, dialogId, messageId);
+                    MessageObject messageObject = dialogMessagesByIds.get(messageId);
+                    if (messageObject != null && messageObject.getDialogId() == dialogId && !messageObject.isOut()) {
+                        TelegaDeletedMessages.markDeleted(currentAccount, dialogId, messageId);
+                        interfaceUpdateMask |= UPDATE_MASK_MESSAGE_TEXT;
+                    } else {
+                        idsToActuallyDelete.add(messageId);
+                    }
                 }
-                interfaceUpdateMask |= UPDATE_MASK_MESSAGE_TEXT;
+                if (!idsToActuallyDelete.isEmpty()) {
+                    if (deletedMessages == null) {
+                        deletedMessages = new LongSparseArray<>();
+                    }
+                    ArrayList<Integer> arrayList = deletedMessages.get(dialogId);
+                    if (arrayList == null) {
+                        arrayList = new ArrayList<>();
+                        deletedMessages.put(dialogId, arrayList);
+                    }
+                    arrayList.addAll(idsToActuallyDelete);
+                }
             } else if (baseUpdate instanceof TL_update.TL_updateChannel) {
                 if (BuildVars.LOGS_ENABLED) {
                     TL_update.TL_updateChannel update = (TL_update.TL_updateChannel) baseUpdate;
