@@ -1,0 +1,99 @@
+name: Sync and build Telega
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: telega-sync-build
+  cancel-in-progress: false
+
+jobs:
+  sync-build-release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout Telega
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Copy complete upstream Telegram source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp .github/workflows/telega-build.yml /tmp/telega-build.yml
+          git clone --recursive --depth 1 --shallow-submodules https://github.com/DrKLO/Telegram.git /tmp/telegram-upstream
+          rsync -a --delete --exclude='.git/' --exclude='.github/' /tmp/telegram-upstream/ ./
+          mkdir -p .github/workflows
+          cp /tmp/telega-build.yml .github/workflows/telega-build.yml
+
+      - name: Set visible app name to Telega
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root = Path(".")
+          candidates = list(root.glob("TMessagesProj/src/main/AndroidManifest.xml"))
+          candidates += list(root.glob("TMessagesProj/src/main/res/values*/strings.xml"))
+          for path in candidates:
+              text = path.read_text(encoding="utf-8")
+              text = re.sub(r'(<string\s+name="(?:AppName|app_name|app_name_short)"[^>]*>)[^<]*(</string>)', r'\1Telega\2', text)
+              text = re.sub(r'android:label="Telegram"', 'android:label="Telega"', text)
+              path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Commit copied source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Import upstream Telegram Android source for Telega"
+            git push
+          fi
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android build dependencies
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
+          chmod +x gradlew
+
+      - name: Build standalone release APK
+        run: ./gradlew --no-daemon --stacktrace assembleStandaloneRelease
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Telega-APK
+          path: |
+            TMessagesProj/build/outputs/apk/**/standalone/release/*.apk
+            TMessagesProj/build/outputs/apk/**/release/*standalone*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish APK release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="$(find TMessagesProj/build/outputs/apk -type f -name '*.apk' | head -n 1)"
+          test -n "$APK"
+          TAG="telega-$(date -u +%Y%m%d-%H%M%S)"
+          gh release create "$TAG" "$APK#Telega APK" --title "Telega build $TAG" --notes "Automated APK build from the upstream Telegram Android source. Source code and GPL license are included in this repository."
