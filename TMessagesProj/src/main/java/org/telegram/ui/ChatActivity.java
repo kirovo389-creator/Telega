@@ -20686,9 +20686,12 @@ public class ChatActivity extends BaseFragment implements
             int messageId = object.getId();
             MessageObject existing = messagesDict[archiveIndex].get(messageId);
             if (existing != null && existing.getDialogId() == archivedDialogId && messages.contains(existing)) {
+                boolean needsUpdate = !existing.deleted || !existing.telegaDeleted;
                 existing.deleted = true;
                 existing.telegaDeleted = true;
-                changed++;
+                if (needsUpdate) {
+                    changed++;
+                }
                 continue;
             }
             if (existing != null && existing.getDialogId() == archivedDialogId) {
@@ -20706,10 +20709,13 @@ public class ChatActivity extends BaseFragment implements
                 }
             }
             if (messageInList != null) {
+                boolean needsUpdate = !messageInList.deleted || !messageInList.telegaDeleted;
                 messageInList.deleted = true;
                 messageInList.telegaDeleted = true;
                 messagesDict[archiveIndex].put(messageId, messageInList);
-                changed++;
+                if (needsUpdate) {
+                    changed++;
+                }
                 continue;
             }
 
