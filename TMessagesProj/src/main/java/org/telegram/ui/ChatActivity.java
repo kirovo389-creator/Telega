@@ -26568,6 +26568,7 @@ public class ChatActivity extends BaseFragment implements
                 if (loadIndex == 0
                         && org.telegram.messenger.TelegaDeletedMessagesController.isEnabled()
                         && chatMode == MODE_DEFAULT
+                        && thanos
                         && currentEncryptedChat == null
                         && !isTopic
                         && threadMessageId == 0
