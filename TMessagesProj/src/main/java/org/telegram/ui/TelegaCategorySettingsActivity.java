@@ -28,7 +28,7 @@ public class TelegaCategorySettingsActivity extends BaseFragment {
     private String[] getItems() {
         switch (category) {
             case "Сообщения":
-                return new String[] {"История изменений сообщений", "Отображение удалённых сообщений", "Реакции и эмодзи"};
+                return new String[] {"История изменений сообщений", "Удалённые сообщения", "Реакции и эмодзи"};
             case "Общее":
                 return new String[] {"Статус эмодзи", "Уведомления", "Работа в фоне"};
             case "Профиль":
@@ -143,11 +143,17 @@ public class TelegaCategorySettingsActivity extends BaseFragment {
         arrow.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
         row.addView(arrow, new LinearLayout.LayoutParams(dp(20), dp(42)));
 
-        row.setOnClickListener(v -> new AlertDialog.Builder(getParentActivity())
-                .setTitle(titleText)
-                .setMessage("Пункт добавлен в меню Telega. Саму настройку подключим отдельно.")
-                .setPositiveButton("Понятно", null)
-                .show());
+        row.setOnClickListener(v -> {
+            if ("Удалённые сообщения".equals(titleText)) {
+                presentFragment(new TelegaDeletedMessagesSettingsActivity());
+            } else {
+                new AlertDialog.Builder(getParentActivity())
+                        .setTitle(titleText)
+                        .setMessage("Пункт добавлен в меню Telega. Саму настройку подключим отдельно.")
+                        .setPositiveButton("Понятно", null)
+                        .show();
+            }
+        });
         return row;
     }
 }
