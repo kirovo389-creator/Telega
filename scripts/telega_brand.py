@@ -36,7 +36,6 @@ Path("TMessagesProj/src/main/res/drawable/icon_background_round.xml").write_text
     encoding="utf-8",
 )
 
-# Ensure bg/fg drawables exist
 Path("TMessagesProj/src/main/res/drawable/telega_icon_bg.xml").write_text(
     '''<?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
@@ -57,11 +56,34 @@ Path("TMessagesProj/src/main/res/drawable/telega_icon_fg.xml").write_text(
     encoding="utf-8",
 )
 
-try:
-    from PIL import Image, ImageDraw
-except ImportError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "pillow"])
-    from PIL import Image, ImageDraw
+# Install pillow if needed
+def ensure_pil():
+    try:
+        from PIL import Image, ImageDraw  # noqa: F401
+        return
+    except ImportError:
+        pass
+    for cmd in (
+        [sys.executable, "-m", "pip", "install", "--user", "pillow"],
+        [sys.executable, "-m", "pip", "install", "pillow"],
+        ["pip3", "install", "--user", "pillow"],
+    ):
+        try:
+            subprocess.check_call(cmd)
+            from PIL import Image, ImageDraw  # noqa: F401
+            return
+        except Exception as e:
+            print("pip try failed:", cmd, e)
+    # last resort: apt
+    try:
+        subprocess.check_call(["sudo", "apt-get", "update", "-qq"])
+        subprocess.check_call(["sudo", "apt-get", "install", "-y", "-qq", "python3-pil"])
+    except Exception as e:
+        print("apt install failed", e)
+        raise
+
+ensure_pil()
+from PIL import Image, ImageDraw
 
 def make_plane(size):
     img = Image.new("RGBA", (size, size), (0, 0, 0, 255))
@@ -98,7 +120,6 @@ for dens_name, sz in dens.items():
             wp.unlink()
 print("Generated black+plane icons")
 
-# google-services dual package
 for p in Path(".").rglob("google-services.json"):
     if "build" in p.parts:
         continue
