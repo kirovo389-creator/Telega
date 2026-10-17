@@ -41,13 +41,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Different applicationId so it does NOT replace official Telegram
           sed -i 's/^APP_PACKAGE=.*/APP_PACKAGE=org.telega.messenger/' gradle.properties
           grep APP_PACKAGE gradle.properties
 
           python3 - <<'PY'
           from pathlib import Path
-          import re, json
+          import re, json, copy
 
           NEW_PKG = "org.telega.messenger"
           OLD_PKG = "org.telegram.messenger"
@@ -65,36 +64,52 @@ jobs:
               t = re.sub(r'android:label="Telegram"', 'android:label="Telega"', t)
               p.write_text(t, encoding="utf-8")
 
-          # Fix google-services.json package_name (required by Google Services plugin)
+          # google-services.json: KEEP org.telegram.messenger AND ADD org.telega.messenger
           for p in Path(".").rglob("google-services.json"):
               if "build" in p.parts:
                   continue
               data = json.loads(p.read_text(encoding="utf-8"))
-              changed = False
-              for client in data.get("client", []):
-                  info = client.get("client_info", {})
-                  if info.get("android_client_info", {}).get("package_name") == OLD_PKG:
-                      info["android_client_info"]["package_name"] = NEW_PKG
-                      changed = True
-              if changed:
+              clients = data.get("client", [])
+              existing = set()
+              base = None
+              for c in clients:
+                  pkg = c.get("client_info", {}).get("android_client_info", {}).get("package_name")
+                  if pkg:
+                      existing.add(pkg)
+                  if pkg == OLD_PKG:
+                      base = c
+              if NEW_PKG not in existing and base is not None:
+                  extra = copy.deepcopy(base)
+                  extra["client_info"]["android_client_info"]["package_name"] = NEW_PKG
+                  clients.append(extra)
+                  data["client"] = clients
                   p.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-                  print("patched google-services:", p)
+                  print("added telega client to", p)
+              else:
+                  print("ok", p, "packages:", sorted(existing))
 
-          # Fix FileProvider / ContentProvider authorities that hardcode package
-          for p in Path(".").rglob("*.xml"):
-              if "build" in p.parts or ".git" in p.parts:
+          # FileProvider authorities only in app manifests (avoid breaking library)
+          for p in [
+              Path("TMessagesProj_App/src/main/AndroidManifest.xml"),
+              Path("TMessagesProj/src/main/AndroidManifest.xml"),
+          ]:
+              if not p.exists():
                   continue
-              try:
-                  t = p.read_text(encoding="utf-8")
-              except Exception:
-                  continue
-              if OLD_PKG in t and ("authorities" in t or "provider" in t.lower()):
-                  t2 = t.replace(OLD_PKG, NEW_PKG)
-                  if t2 != t:
-                      p.write_text(t2, encoding="utf-8")
-                      print("updated authorities in", p)
+              t = p.read_text(encoding="utf-8")
+              # Only replace authorities that would clash at install time
+              t2 = t
+              for attr in ["android:authorities"]:
+                  if OLD_PKG in t2:
+                      # replace package in authority strings carefully
+                      t2 = t2.replace(f'{OLD_PKG}.provider', f'{NEW_PKG}.provider')
+                      t2 = t2.replace(f'{OLD_PKG}.passthrough', f'{NEW_PKG}.passthrough')
+                      t2 = t2.replace(f'{OLD_PKG}.channel_content', f'{NEW_PKG}.channel_content')
+                      t2 = t2.replace(f'{OLD_PKG}.notification', f'{NEW_PKG}.notification')
+              if t2 != t:
+                  p.write_text(t2, encoding="utf-8")
+                  print("updated authorities in", p)
 
-          print("Package set to", NEW_PKG, ", app name Telega")
+          print("Package set to", NEW_PKG)
           PY
 
       - name: Set up Java 17
@@ -137,14 +152,13 @@ jobs:
             "cmake;3.22.1" || true
 
           chmod +x gradlew || true
-          echo "SDK setup done. ANDROID_HOME=$ANDROID_HOME"
+          echo "SDK setup done"
 
       - name: Build APK (afatRelease)
         run: |
           set -euo pipefail
           export ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
-          echo "Building with ANDROID_HOME=$ANDROID_HOME"
           grep APP_PACKAGE gradle.properties
           ./gradlew --no-daemon --stacktrace :TMessagesProj_App:assembleAfatRelease
 
@@ -170,4 +184,4 @@ jobs:
           TAG="telega-$(date -u +%Y%m%d-%H%M%S)"
           gh release create "$TAG" "Telega.apk#Telega.apk" \
             --title "Telega $TAG" \
-            --notes "Telega (package org.telega.messenger) — installs separately from Telegram.\n\nSoft-deleted messages stay visible with mild transparency (0.85) and red label «Удалено».\nSource and GPL included."
+            --notes "Telega (org.telega.messenger) — installs separately from Telegram.\n\nSoft-delete: mild transparency + red «Удалено»."
