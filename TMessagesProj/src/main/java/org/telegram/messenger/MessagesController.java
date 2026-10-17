@@ -9380,7 +9380,9 @@ public class MessagesController extends BaseController implements NotificationCe
             } else if (welcomeMessages) {
                 getMessagesStorage().markMessagesAsDeleted(dialogId, messages, true, false, ChatActivity.MODE_WELCOME_MESSAGES, topicId);
             } else {
-                saveTelegaDeletedMessages(dialogId, messages);
+                if (topicId == 0) {
+                    saveTelegaDeletedMessages(dialogId, messages);
+                }
                 if (channelId == 0) {
                     for (int a = 0; a < messages.size(); a++) {
                         Integer id = messages.get(a);
