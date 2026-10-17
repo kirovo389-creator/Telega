@@ -26666,6 +26666,7 @@ public class ChatActivity extends BaseFragment implements
                             }
                         }
                         obj.messageOwner.grouped_id = 0;
+                        obj.localGroupId = 0;
                         obj.localSentGroupId = 0;
                     }
                     obj.deleted = true;
