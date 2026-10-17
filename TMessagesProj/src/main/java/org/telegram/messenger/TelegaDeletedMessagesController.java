@@ -34,19 +34,19 @@ public final class TelegaDeletedMessagesController {
                 .getBoolean(KEEP_KEY, false);
     }
 
-    public static void saveMessage(int account, long dialogId, TLRPC.Message message) {
+    public static boolean saveMessage(int account, long dialogId, TLRPC.Message message) {
         Context context = ApplicationLoader.applicationContext;
         if (context == null || message == null || message.id <= 0 || !isEnabled()
                 || DialogObject.isEncryptedDialog(dialogId) || MessageObject.isEphemeral(message)) {
-            return;
+            return false;
         }
         // Thread replies and topic service actions must not be restored in the parent chat.
         if (message.reply_to != null && message.reply_to.forum_topic) {
-            return;
+            return false;
         }
         if (message.action instanceof TLRPC.TL_messageActionTopicCreate
                 || message.action instanceof TLRPC.TL_messageActionTopicEdit) {
-            return;
+            return false;
         }
 
         try {
@@ -72,7 +72,7 @@ public final class TelegaDeletedMessagesController {
                             entry.put("attachPath", message.attachPath);
                             preferences.edit().putString(key, current.toString()).apply();
                         }
-                        return;
+                        return true;
                     }
                     continue;
                 }
@@ -92,8 +92,10 @@ public final class TelegaDeletedMessagesController {
                 updated.remove(0);
             }
             preferences.edit().putString(key, updated.toString()).apply();
+            return true;
         } catch (Exception e) {
             FileLog.e(e);
+            return false;
         }
     }
 
