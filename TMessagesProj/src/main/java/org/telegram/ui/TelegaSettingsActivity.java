@@ -26,8 +26,13 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RecyclerListView;
 
+/**
+ * Telega settings hub — iOS Settings style:
+ * gray canvas, inset grouped card, 17pt titles, chevrons, emoji leading icons.
+ */
 public class TelegaSettingsActivity extends BaseFragment {
 
+    private int headerRow;
     private int messagesRow;
     private int otherRow;
     private int profileRow;
@@ -39,6 +44,7 @@ public class TelegaSettingsActivity extends BaseFragment {
     public boolean onFragmentCreate() {
         super.onFragmentCreate();
         rowCount = 0;
+        headerRow = rowCount++;
         messagesRow = rowCount++;
         otherRow = rowCount++;
         profileRow = rowCount++;
@@ -51,7 +57,7 @@ public class TelegaSettingsActivity extends BaseFragment {
     public View createView(Context context) {
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
         actionBar.setAllowOverlayTitle(true);
-        actionBar.setTitle("Настройки Telega");
+        actionBar.setTitle("Telega");
         actionBar.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
         actionBar.setTitleColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
         actionBar.setItemsColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText), false);
@@ -71,7 +77,8 @@ public class TelegaSettingsActivity extends BaseFragment {
         listView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
         listView.setAdapter(new ListAdapter(context));
         listView.setClipToPadding(false);
-        listView.setPadding(0, AndroidUtilities.dp(12), 0, AndroidUtilities.dp(24));
+        listView.setPadding(0, AndroidUtilities.dp(8), 0, AndroidUtilities.dp(32));
+        listView.setSelectorDrawableColor(0);
         root.addView(listView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
         listView.setOnItemClickListener((view, position) -> {
@@ -92,7 +99,8 @@ public class TelegaSettingsActivity extends BaseFragment {
 
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
-            return holder.getItemViewType() == 0;
+            int t = holder.getItemViewType();
+            return t == 1;
         }
 
         @Override
@@ -100,19 +108,29 @@ public class TelegaSettingsActivity extends BaseFragment {
 
         @Override
         public int getItemViewType(int position) {
-            return position == footerRow ? 1 : 0;
+            if (position == headerRow) return 0;
+            if (position == footerRow) return 2;
+            return 1;
         }
 
         @Override
         public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             View v;
-            if (viewType == 1) {
+            if (viewType == 0) {
+                TextView tv = new TextView(ctx);
+                tv.setText("НАСТРОЙКИ");
+                tv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+                tv.setTypeface(Typeface.DEFAULT_BOLD);
+                tv.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText3));
+                tv.setPadding(AndroidUtilities.dp(32), AndroidUtilities.dp(18), AndroidUtilities.dp(32), AndroidUtilities.dp(8));
+                v = tv;
+            } else if (viewType == 2) {
                 TextView tv = new TextView(ctx);
                 tv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
                 tv.setGravity(Gravity.CENTER);
                 tv.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText3));
-                tv.setPadding(AndroidUtilities.dp(24), AndroidUtilities.dp(20), AndroidUtilities.dp(24), AndroidUtilities.dp(8));
-                tv.setText("Telega · дополнительные возможности");
+                tv.setPadding(AndroidUtilities.dp(32), AndroidUtilities.dp(16), AndroidUtilities.dp(32), AndroidUtilities.dp(8));
+                tv.setText("Дополнительные возможности Telega");
                 v = tv;
             } else {
                 v = new CategoryCell(ctx);
@@ -123,7 +141,7 @@ public class TelegaSettingsActivity extends BaseFragment {
 
         @Override
         public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
-            if (holder.getItemViewType() != 0) return;
+            if (holder.getItemViewType() != 1) return;
             CategoryCell cell = (CategoryCell) holder.itemView;
             boolean first = position == messagesRow;
             boolean last = position == customRow;
@@ -155,12 +173,12 @@ public class TelegaSettingsActivity extends BaseFragment {
             LinearLayout row = new LinearLayout(context);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setPadding(AndroidUtilities.dp(14), AndroidUtilities.dp(12), AndroidUtilities.dp(12), AndroidUtilities.dp(12));
+            row.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(11), AndroidUtilities.dp(14), AndroidUtilities.dp(11));
             addView(row, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
             emoji = new TextView(context);
-            emoji.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 22);
-            row.addView(emoji, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 0, 0, 12, 0));
+            emoji.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
+            row.addView(emoji, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 0, 0, 14, 0));
 
             LinearLayout texts = new LinearLayout(context);
             texts.setOrientation(LinearLayout.VERTICAL);
@@ -168,19 +186,20 @@ public class TelegaSettingsActivity extends BaseFragment {
 
             title = new TextView(context);
             title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 17);
-            title.setTypeface(Typeface.DEFAULT_BOLD);
             title.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
             texts.addView(title);
 
             subtitle = new TextView(context);
             subtitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
-            subtitle.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText3));
-            texts.addView(subtitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
+            subtitle.setTextColor(ColorUtils.setAlphaComponent(
+                    Theme.getColor(Theme.key_windowBackgroundWhiteBlackText), (int) (0.55f * 255)));
+            texts.addView(subtitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 1, 0, 0));
 
             TextView chevron = new TextView(context);
             chevron.setText("›");
-            chevron.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 22);
-            chevron.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText3));
+            chevron.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
+            chevron.setTextColor(ColorUtils.setAlphaComponent(
+                    Theme.getColor(Theme.key_windowBackgroundWhiteBlackText), (int) (0.3f * 255)));
             row.addView(chevron, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
 
             bgPaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
@@ -197,7 +216,7 @@ public class TelegaSettingsActivity extends BaseFragment {
 
         @Override
         protected void onDraw(Canvas canvas) {
-            float r = AndroidUtilities.dp(14);
+            float r = AndroidUtilities.dp(12);
             float inset = AndroidUtilities.dp(16);
             rect.set(inset, 0, getWidth() - inset, getHeight());
             float tl = first ? r : 0, tr = first ? r : 0, br = last ? r : 0, bl = last ? r : 0;
@@ -206,17 +225,17 @@ public class TelegaSettingsActivity extends BaseFragment {
             canvas.drawPath(path, bgPaint);
             if (!last) {
                 Paint divider = new Paint();
-                divider.setColor(ColorUtils.setAlphaComponent(Theme.getColor(Theme.key_divider), 90));
-                float left = inset + AndroidUtilities.dp(52);
-                canvas.drawRect(left, getHeight() - 1, getWidth() - inset, getHeight(), divider);
+                divider.setColor(ColorUtils.setAlphaComponent(Theme.getColor(Theme.key_divider), 80));
+                float left = inset + AndroidUtilities.dp(50);
+                canvas.drawRect(left, getHeight() - AndroidUtilities.dpf2(0.33f), getWidth() - inset, getHeight(), divider);
             }
         }
 
         @Override
         protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
             super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
-            int h = Math.max(getMeasuredHeight(), AndroidUtilities.dp(58));
-            setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), h);
+            setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec),
+                    Math.max(getMeasuredHeight(), AndroidUtilities.dp(52)));
         }
     }
 }
