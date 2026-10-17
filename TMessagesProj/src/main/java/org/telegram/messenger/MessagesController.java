@@ -18839,16 +18839,16 @@ public class MessagesController extends BaseController implements NotificationCe
                 ArrayList<Integer> idsToActuallyDelete = new ArrayList<>();
                 for (int messageId : update.messages) {
                     MessageObject messageObject = dialogMessagesByIds.get(messageId);
-                    boolean retainDeletedMessage = messageObject != null && !messageObject.isOut() && !messageObject.deleted;
-                    if (retainDeletedMessage && messageObject.getDialogId() < 0) {
-                        TLRPC.Chat messageChat = getChat(-messageObject.getDialogId());
-                        retainDeletedMessage = !ChatObject.isChannel(messageChat);
-                    }
-                    if (retainDeletedMessage) {
-                        TelegaDeletedMessages.markDeleted(currentAccount, messageObject.getDialogId(), messageId);
-                        interfaceUpdateMask |= UPDATE_MASK_MESSAGE_TEXT;
-                    } else {
+                    boolean alreadyDeletedLocally = messageObject != null && messageObject.deleted
+                            && (messageObject.getDialogId() >= 0
+                                    || !ChatObject.isChannel(getChat(-messageObject.getDialogId())));
+                    if (alreadyDeletedLocally) {
                         idsToActuallyDelete.add(messageId);
+                    } else {
+                        // The private-chat deletion update does not carry a dialog id.
+                        // Store a global tombstone so the message is still marked after reload.
+                        TelegaDeletedMessages.markDeleted(currentAccount, 0, messageId);
+                        interfaceUpdateMask |= UPDATE_MASK_MESSAGE_TEXT;
                     }
                 }
                 if (!idsToActuallyDelete.isEmpty()) {
@@ -19382,11 +19382,13 @@ public class MessagesController extends BaseController implements NotificationCe
                 ArrayList<Integer> idsToActuallyDelete = new ArrayList<>();
                 for (int messageId : update.messages) {
                     MessageObject messageObject = dialogMessagesByIds.get(messageId);
-                    if (messageObject != null && messageObject.getDialogId() == dialogId && !messageObject.isOut() && !messageObject.deleted) {
+                    if (messageObject != null && messageObject.getDialogId() == dialogId && messageObject.deleted) {
+                        idsToActuallyDelete.add(messageId);
+                    } else {
+                        // Channel message IDs are only unique within that channel.
+                        // Keep the tombstone scoped to this dialog to avoid ID collisions.
                         TelegaDeletedMessages.markDeleted(currentAccount, dialogId, messageId);
                         interfaceUpdateMask |= UPDATE_MASK_MESSAGE_TEXT;
-                    } else {
-                        idsToActuallyDelete.add(messageId);
                     }
                 }
                 if (!idsToActuallyDelete.isEmpty()) {
