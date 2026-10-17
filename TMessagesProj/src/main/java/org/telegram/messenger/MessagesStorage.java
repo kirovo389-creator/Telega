@@ -14517,6 +14517,8 @@ public class MessagesStorage extends BaseController {
     private ArrayList<Long> markMessagesAsDeletedInternal(long dialogId, ArrayList<Integer> messages, boolean deleteFiles, int mode, int threadMessageId) {
         SQLiteCursor cursor = null;
         SQLitePreparedStatement state = null;
+        final boolean keepTelegaDeletedMessages = TelegaDeletedMessagesController.isEnabled()
+                && mode == ChatActivity.MODE_DEFAULT && threadMessageId == 0;
         try {
             if (getUserConfig().getClientUserId() == dialogId) {
                 database.executeFast(String.format(Locale.US, "DELETE FROM tag_message_id WHERE mid IN(%s)", TextUtils.join(",", messages))).stepThis().dispose();
@@ -14631,13 +14633,21 @@ public class MessagesStorage extends BaseController {
                                 }
                             }
                         }
-                        if (!DialogObject.isEncryptedDialog(did) && !deleteFiles && did != currentUser) {
+                        boolean keepTelegaForDialog = keepTelegaDeletedMessages
+                                && !DialogObject.isEncryptedDialog(did)
+                                && did != currentUser;
+                        if (!DialogObject.isEncryptedDialog(did) && !deleteFiles && did != currentUser
+                                && !keepTelegaForDialog) {
                             continue;
                         }
                         NativeByteBuffer data = cursor.byteBufferValue(1);
                         if (data != null) {
                             TLRPC.Message message = TLRPC.Message.TLdeserialize(data, data.readInt32(false), false);
                             message.readAttachPath(data, currentUser);
+                            if (keepTelegaForDialog && message != null && !MessageObject.isEphemeral(message)) {
+                                message.dialog_id = did;
+                                TelegaDeletedMessagesController.saveMessage(currentAccount, did, message);
+                            }
                             if (deletedMessages != null) {
                                 deletedMessages.add(message);
                             }
