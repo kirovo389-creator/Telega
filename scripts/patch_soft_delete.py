@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply soft-delete UI patches to ChatMessageCell and MessagesController."""
+"""Apply Telega soft-delete + settings + edit-history patches."""
 from pathlib import Path
 
 def patch_chat_message_cell():
@@ -13,7 +13,7 @@ def patch_chat_message_cell():
     )
 
     new_time = (
-        "        if (TelegaDeletedMessages.isDeleted(messageObject.currentAccount, messageObject.getDialogId(), messageObject.getId(), messageObject.messageOwner == null || messageObject.messageOwner.peer_id == null || messageObject.messageOwner.peer_id.channel_id == 0)) {\n"
+        "        if (org.telegram.messenger.TelegaSettings.isShowDeletedMessages() && TelegaDeletedMessages.isDeleted(messageObject.currentAccount, messageObject.getDialogId(), messageObject.getId(), messageObject.messageOwner == null || messageObject.messageOwner.peer_id == null || messageObject.messageOwner.peer_id.channel_id == 0)) {\n"
         "            // Soft-deleted: red label instead of time + mild transparency\n"
         "            currentTimeString = \"    \u0423\u0434\u0430\u043b\u0435\u043d\u043e\";\n"
         "            if (Math.abs(getAlpha() - 0.85f) > 0.01f) {\n"
@@ -52,6 +52,7 @@ def patch_chat_message_cell():
 
     new_icon = (
         "        if (currentMessageObject != null\n"
+        "                && org.telegram.messenger.TelegaSettings.isShowDeletedMessages()\n"
         "                && TelegaDeletedMessages.isDeleted(\n"
         "                        currentMessageObject.currentAccount,\n"
         "                        currentMessageObject.getDialogId(),\n"
@@ -59,7 +60,6 @@ def patch_chat_message_cell():
         "                        currentMessageObject.messageOwner == null\n"
         "                                || currentMessageObject.messageOwner.peer_id == null\n"
         "                                || currentMessageObject.messageOwner.peer_id.channel_id == 0)) {\n"
-        "            // Force red color for deleted label\n"
         "            int oldColor = Theme.chat_timePaint.getColor();\n"
         "            Theme.chat_timePaint.setColor(android.graphics.Color.rgb(226, 58, 65));\n"
         "            if (timeLayout != null) {\n"
@@ -99,6 +99,34 @@ def patch_messages_controller():
         return
     text = path.read_text(encoding="utf-8")
     changed = False
+
+    # Capture previous text on edit
+    old_edit = "                    getSendMessagesHelper().onMessageEdited(message);"
+    new_edit = (
+        "                    // Telega: store previous version before edit is applied\n"
+        "                    try {\n"
+        "                        long _telegaDid = MessageObject.getDialogId(message);\n"
+        "                        MessageObject _telegaOld = dialogMessage.get(_telegaDid);\n"
+        "                        if (_telegaOld == null || _telegaOld.getId() != message.id) {\n"
+        "                            java.util.concurrent.ConcurrentHashMap<Integer, MessageObject> _map = dialogMessagesByIds.get(_telegaDid);\n"
+        "                            if (_map != null) {\n"
+        "                                _telegaOld = _map.get(message.id);\n"
+        "                            }\n"
+        "                        }\n"
+        "                        if (_telegaOld != null && _telegaOld.messageOwner != null && !android.text.TextUtils.isEmpty(_telegaOld.messageOwner.message)) {\n"
+        "                            if (message.message == null || !message.message.equals(_telegaOld.messageOwner.message)) {\n"
+        "                                org.telegram.messenger.TelegaEditedMessages.addPreviousVersion(currentAccount, _telegaDid, message.id, _telegaOld.messageOwner.message);\n"
+        "                            }\n"
+        "                        }\n"
+        "                    } catch (Throwable ignore) {}\n"
+        "                    getSendMessagesHelper().onMessageEdited(message);"
+    )
+    if old_edit in text and "Telega: store previous version" not in text:
+        text = text.replace(old_edit, new_edit, 1)
+        changed = True
+        print("Patched edit-history capture")
+    else:
+        print("edit-history capture already present or anchor missing")
 
     old1 = (
         "                    } else {\n"
@@ -155,7 +183,52 @@ def patch_messages_controller():
         print("MessagesController already patched or blocks not found")
 
 
+def patch_settings_activity():
+    path = Path("TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java")
+    if not path.exists():
+        print("SettingsActivity not found")
+        return
+    text = path.read_text(encoding="utf-8")
+
+    if "TelegaSettingsActivity" in text:
+        print("SettingsActivity already has Telega entry")
+        return
+
+    # Add settings row after language
+    anchor = (
+        '        items.add(SettingCell.Factory.of(10, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.settings_language, getString(R.string.SettingsLanguage), LocaleController.getCurrentLanguageName()));\n'
+    )
+    insert = (
+        anchor
+        + '        items.add(UItem.asShadow(null));\n'
+        + '        items.add(SettingCell.Factory.of(90, IconBackgroundColors.GREEN.top, IconBackgroundColors.GREEN.bottom, R.drawable.msg_settings_old, "\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 Telega", "\u0423\u0434\u0430\u043b\u0451\u043d\u043d\u044b\u0435 \u0438 \u0438\u0437\u043c\u0435\u043d\u0451\u043d\u043d\u044b\u0435 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u044f"));\n'
+    )
+    if anchor in text:
+        text = text.replace(anchor, insert, 1)
+        print("Added Telega settings row")
+    else:
+        print("WARNING: language row anchor not found")
+
+    # Click handler
+    case_anchor = "            case 24: {\n                presentFragment(new RoundVideoSettingsActivity());\n                break;\n            }"
+    case_new = (
+        case_anchor + "\n"
+        + "            case 90: {\n"
+        + "                presentFragment(new TelegaSettingsActivity());\n"
+        + "                break;\n"
+        + "            }"
+    )
+    if case_anchor in text and "case 90" not in text:
+        text = text.replace(case_anchor, case_new, 1)
+        print("Added Telega settings click handler")
+    else:
+        print("WARNING: case 24 anchor not found or case 90 exists")
+
+    path.write_text(text, encoding="utf-8")
+
+
 if __name__ == "__main__":
     patch_chat_message_cell()
     patch_messages_controller()
-    print("Soft-delete patches done")
+    patch_settings_activity()
+    print("All Telega patches done")
