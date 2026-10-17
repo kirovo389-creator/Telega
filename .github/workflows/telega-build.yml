@@ -37,19 +37,46 @@ jobs:
 
           python3 scripts/patch_soft_delete.py
 
-      - name: Set app name to Telega
+      - name: Set unique package and app name (Telega)
         run: |
-          python3 -c '
+          set -euo pipefail
+          # Different applicationId so it does NOT update/replace official Telegram
+          sed -i 's/^APP_PACKAGE=.*/APP_PACKAGE=org.telega.messenger/' gradle.properties
+          grep APP_PACKAGE gradle.properties
+
+          python3 - <<'PY'
           from pathlib import Path
           import re
+
+          # App display name -> Telega
           for p in [Path("TMessagesProj/src/main/AndroidManifest.xml")] + list(Path("TMessagesProj/src/main/res").glob("values*/strings.xml")):
-              if not p.exists(): continue
+              if not p.exists():
+                  continue
               t = p.read_text(encoding="utf-8")
-              t = re.sub(r"(<string\\s+name=\"(?:AppName|app_name|app_name_short)\"[^>]*>)[^<]*(</string>)", r"\\1Telega\\2", t)
-              t = re.sub(r"android:label=\"Telegram\"", "android:label=\"Telega\"", t)
+              t = re.sub(
+                  r'(<string\s+name="(?:AppName|app_name|app_name_short)"[^>]*>)[^<]*(</string>)',
+                  r'\1Telega\2',
+                  t,
+              )
+              t = re.sub(r'android:label="Telegram"', 'android:label="Telega"', t)
               p.write_text(t, encoding="utf-8")
-          print("App name set to Telega")
-          '
+
+          # Avoid provider / authority clashes where hard-coded
+          for p in Path(".").rglob("*.xml"):
+              if "build" in p.parts or ".git" in p.parts:
+                  continue
+              try:
+                  t = p.read_text(encoding="utf-8")
+              except Exception:
+                  continue
+              if "org.telegram.messenger" in t and ("authorities" in t or "provider" in t.lower()):
+                  t2 = t.replace("org.telegram.messenger", "org.telega.messenger")
+                  if t2 != t:
+                      p.write_text(t2, encoding="utf-8")
+                      print("updated authorities in", p)
+
+          print("Package set to org.telega.messenger, app name Telega")
+          PY
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -99,6 +126,7 @@ jobs:
           export ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
           echo "Building with ANDROID_HOME=$ANDROID_HOME"
+          grep APP_PACKAGE gradle.properties
           ./gradlew --no-daemon --stacktrace :TMessagesProj_App:assembleAfatRelease
 
       - name: Upload APK artifact
@@ -119,7 +147,9 @@ jobs:
           APK="$(find TMessagesProj_App TMessagesProj -type f -name '*.apk' 2>/dev/null | head -n 1)"
           test -n "$APK"
           echo "Found APK: $APK"
+          # Rename for clearer download name
+          cp "$APK" Telega.apk
           TAG="telega-$(date -u +%Y%m%d-%H%M%S)"
-          gh release create "$TAG" "$APK#Telega APK" \
+          gh release create "$TAG" "Telega.apk#Telega.apk" \
             --title "Telega $TAG" \
-            --notes "Soft-deleted messages stay visible with mild transparency (0.85) and red label «Удалено». Source and GPL included."
+            --notes "Telega (package org.telega.messenger) — installs separately from Telegram.\n\nSoft-deleted messages stay visible with mild transparency (0.85) and red label «Удалено».\nSource and GPL included."
