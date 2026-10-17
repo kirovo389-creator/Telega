@@ -37,12 +37,18 @@ jobs:
 
           python3 scripts/patch_soft_delete.py
 
-      - name: Set unique package and app name (Telega)
+      - name: Set unique package, app name and rising version (Telega)
         run: |
           set -euo pipefail
 
+          # Always higher than previous builds so Android treats APK as update
+          # Format: YYMMDDHHMM -> e.g. 2610171520 (fits in 32-bit int)
+          VERSION_CODE=$(date -u +%y%m%d%H%M)
+          VERSION_NAME="13.0.3-telega.${VERSION_CODE}"
+          sed -i "s/^APP_VERSION_CODE=.*/APP_VERSION_CODE=${VERSION_CODE}/" gradle.properties
+          sed -i "s/^APP_VERSION_NAME=.*/APP_VERSION_NAME=${VERSION_NAME}/" gradle.properties
           sed -i 's/^APP_PACKAGE=.*/APP_PACKAGE=org.telega.messenger/' gradle.properties
-          grep APP_PACKAGE gradle.properties
+          grep -E 'APP_PACKAGE|APP_VERSION' gradle.properties
 
           python3 - <<'PY'
           from pathlib import Path
@@ -51,7 +57,6 @@ jobs:
           NEW_PKG = "org.telega.messenger"
           OLD_PKG = "org.telegram.messenger"
 
-          # App display name -> Telega
           for p in [Path("TMessagesProj/src/main/AndroidManifest.xml")] + list(Path("TMessagesProj/src/main/res").glob("values*/strings.xml")):
               if not p.exists():
                   continue
@@ -64,7 +69,6 @@ jobs:
               t = re.sub(r'android:label="Telegram"', 'android:label="Telega"', t)
               p.write_text(t, encoding="utf-8")
 
-          # google-services.json: KEEP org.telegram.messenger AND ADD org.telega.messenger
           for p in Path(".").rglob("google-services.json"):
               if "build" in p.parts:
                   continue
@@ -88,7 +92,6 @@ jobs:
               else:
                   print("ok", p, "packages:", sorted(existing))
 
-          # FileProvider authorities only in app manifests (avoid breaking library)
           for p in [
               Path("TMessagesProj_App/src/main/AndroidManifest.xml"),
               Path("TMessagesProj/src/main/AndroidManifest.xml"),
@@ -96,15 +99,12 @@ jobs:
               if not p.exists():
                   continue
               t = p.read_text(encoding="utf-8")
-              # Only replace authorities that would clash at install time
               t2 = t
-              for attr in ["android:authorities"]:
-                  if OLD_PKG in t2:
-                      # replace package in authority strings carefully
-                      t2 = t2.replace(f'{OLD_PKG}.provider', f'{NEW_PKG}.provider')
-                      t2 = t2.replace(f'{OLD_PKG}.passthrough', f'{NEW_PKG}.passthrough')
-                      t2 = t2.replace(f'{OLD_PKG}.channel_content', f'{NEW_PKG}.channel_content')
-                      t2 = t2.replace(f'{OLD_PKG}.notification', f'{NEW_PKG}.notification')
+              if OLD_PKG in t2:
+                  t2 = t2.replace(f'{OLD_PKG}.provider', f'{NEW_PKG}.provider')
+                  t2 = t2.replace(f'{OLD_PKG}.passthrough', f'{NEW_PKG}.passthrough')
+                  t2 = t2.replace(f'{OLD_PKG}.channel_content', f'{NEW_PKG}.channel_content')
+                  t2 = t2.replace(f'{OLD_PKG}.notification', f'{NEW_PKG}.notification')
               if t2 != t:
                   p.write_text(t2, encoding="utf-8")
                   print("updated authorities in", p)
@@ -159,7 +159,7 @@ jobs:
           set -euo pipefail
           export ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
-          grep APP_PACKAGE gradle.properties
+          grep -E 'APP_PACKAGE|APP_VERSION' gradle.properties
           ./gradlew --no-daemon --stacktrace :TMessagesProj_App:assembleAfatRelease
 
       - name: Upload APK artifact
@@ -182,6 +182,7 @@ jobs:
           echo "Found APK: $APK"
           cp "$APK" Telega.apk
           TAG="telega-$(date -u +%Y%m%d-%H%M%S)"
+          VER=$(grep '^APP_VERSION_CODE=' gradle.properties | cut -d= -f2)
           gh release create "$TAG" "Telega.apk#Telega.apk" \
-            --title "Telega $TAG" \
-            --notes "Telega (org.telega.messenger) — installs separately from Telegram.\n\nSoft-delete: mild transparency + red «Удалено»."
+            --title "Telega $TAG (v$VER)" \
+            --notes "Telega (org.telega.messenger) versionCode $VER\n\n• Soft-delete «Удалено»\n• Настройки Telega → Сообщения\n• История правок сообщений (локально)"
