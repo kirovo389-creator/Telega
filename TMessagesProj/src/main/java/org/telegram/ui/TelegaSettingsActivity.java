@@ -1,53 +1,53 @@
 package org.telegram.ui;
 
 import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.RectF;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
+import androidx.core.graphics.ColorUtils;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.R;
-import org.telegram.messenger.TelegaSettings;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
-import org.telegram.ui.Cells.HeaderCell;
-import org.telegram.ui.Cells.ShadowSectionCell;
-import org.telegram.ui.Cells.TextCheckCell;
-import org.telegram.ui.Cells.TextInfoPrivacyCell;
-import org.telegram.ui.Cells.TextSettingsCell;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RecyclerListView;
 
+/**
+ * Root Telega settings — iOS-like grouped list of categories.
+ */
 public class TelegaSettingsActivity extends BaseFragment {
 
     private ListAdapter listAdapter;
-    private RecyclerListView listView;
 
-    private int messagesHeaderRow;
-    private int deletedMessagesRow;
-    private int editedMessagesRow;
-    private int messagesInfoRow;
-    private int messagesSectionRow;
+    private int messagesRow;
+    private int otherRow;
+    private int profileRow;
+    private int customRow;
+    private int footerRow;
     private int rowCount;
 
     @Override
     public boolean onFragmentCreate() {
         super.onFragmentCreate();
-        updateRows();
-        return true;
-    }
-
-    private void updateRows() {
         rowCount = 0;
-        messagesHeaderRow = rowCount++;
-        deletedMessagesRow = rowCount++;
-        editedMessagesRow = rowCount++;
-        messagesInfoRow = rowCount++;
-        messagesSectionRow = rowCount++;
+        messagesRow = rowCount++;
+        otherRow = rowCount++;
+        profileRow = rowCount++;
+        customRow = rowCount++;
+        footerRow = rowCount++;
+        return true;
     }
 
     @Override
@@ -55,38 +55,35 @@ public class TelegaSettingsActivity extends BaseFragment {
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
         actionBar.setAllowOverlayTitle(true);
         actionBar.setTitle("Настройки Telega");
+        actionBar.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
+        actionBar.setTitleColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        actionBar.setItemsColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText), false);
+        actionBar.setCastShadows(false);
         actionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
             @Override
             public void onItemClick(int id) {
-                if (id == -1) {
-                    finishFragment();
-                }
+                if (id == -1) finishFragment();
             }
         });
 
-        listAdapter = new ListAdapter(context);
-        fragmentView = new FrameLayout(context);
-        fragmentView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
-        FrameLayout frameLayout = (FrameLayout) fragmentView;
+        FrameLayout root = new FrameLayout(context);
+        root.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
+        fragmentView = root;
 
-        listView = new RecyclerListView(context);
-        listView.setVerticalScrollBarEnabled(false);
+        listAdapter = new ListAdapter(context);
+        RecyclerListView listView = new RecyclerListView(context);
         listView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
-        frameLayout.addView(listView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
         listView.setAdapter(listAdapter);
+        listView.setClipToPadding(false);
+        listView.setPadding(0, AndroidUtilities.dp(12), 0, AndroidUtilities.dp(24));
+        root.addView(listView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+
         listView.setOnItemClickListener((view, position) -> {
-            if (position == deletedMessagesRow) {
-                boolean next = !TelegaSettings.isShowDeletedMessages();
-                TelegaSettings.setShowDeletedMessages(next);
-                if (view instanceof TextCheckCell) {
-                    ((TextCheckCell) view).setChecked(next);
-                }
-            } else if (position == editedMessagesRow) {
-                boolean next = !TelegaSettings.isShowEditedMessages();
-                TelegaSettings.setShowEditedMessages(next);
-                if (view instanceof TextCheckCell) {
-                    ((TextCheckCell) view).setChecked(next);
-                }
+            if (position == messagesRow) {
+                presentFragment(new TelegaMessagesSettingsActivity());
+            } else if (position == otherRow || position == profileRow || position == customRow) {
+                // placeholders for future sections
+                AndroidUtilities.shakeView(view);
             }
         });
 
@@ -94,93 +91,148 @@ public class TelegaSettingsActivity extends BaseFragment {
     }
 
     private class ListAdapter extends RecyclerListView.SelectionAdapter {
-        private final Context mContext;
+        private final Context ctx;
 
-        ListAdapter(Context context) {
-            mContext = context;
-        }
+        ListAdapter(Context c) { ctx = c; }
 
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
-            int type = holder.getItemViewType();
-            return type == 1;
+            return holder.getItemViewType() == 0;
         }
 
         @Override
-        public int getItemCount() {
-            return rowCount;
+        public int getItemCount() { return rowCount; }
+
+        @Override
+        public int getItemViewType(int position) {
+            return position == footerRow ? 1 : 0;
         }
 
         @Override
         public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            View view;
-            switch (viewType) {
-                case 0:
-                    view = new HeaderCell(mContext);
-                    view.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
-                    break;
-                case 1:
-                    view = new TextCheckCell(mContext);
-                    view.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
-                    break;
-                case 2:
-                    view = new TextInfoPrivacyCell(mContext);
-                    break;
-                case 3:
-default:
-                    view = new ShadowSectionCell(mContext);
-                    break;
+            View v;
+            if (viewType == 1) {
+                TextView tv = new TextView(ctx);
+                tv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+                tv.setGravity(Gravity.CENTER);
+                tv.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText3));
+                tv.setPadding(AndroidUtilities.dp(24), AndroidUtilities.dp(20), AndroidUtilities.dp(24), AndroidUtilities.dp(8));
+                tv.setText("Telega · дополнительные возможности");
+                v = tv;
+            } else {
+                v = new CategoryCell(ctx);
             }
-            view.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
-            return new RecyclerListView.Holder(view);
+            v.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            return new RecyclerListView.Holder(v);
         }
 
         @Override
         public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
-            switch (holder.getItemViewType()) {
-                case 0: {
-                    HeaderCell headerCell = (HeaderCell) holder.itemView;
-                    if (position == messagesHeaderRow) {
-                        headerCell.setText("Сообщения");
-                    }
-                    break;
-                }
-                case 1: {
-                    TextCheckCell cell = (TextCheckCell) holder.itemView;
-                    if (position == deletedMessagesRow) {
-                        cell.setTextAndCheck("Удалённые сообщения", TelegaSettings.isShowDeletedMessages(), true);
-                    } else if (position == editedMessagesRow) {
-                        cell.setTextAndCheck("Изменённые сообщения", TelegaSettings.isShowEditedMessages(), false);
-                    }
-                    break;
-                }
-                case 2: {
-                    TextInfoPrivacyCell cell = (TextInfoPrivacyCell) holder.itemView;
-                    if (position == messagesInfoRow) {
-                        cell.setText("Удалённые сообщения остаются в чате с пометкой «Удалено».\n\nИзменённые сообщения сохраняют предыдущие версии: после первого изменения сверху видно исходный текст, при следующих правках история сворачивается и раскрывается по нажатию.");
-                        cell.setBackground(Theme.getThemedDrawableByKey(mContext, R.drawable.greydivider, Theme.key_windowBackgroundGrayShadow));
-                    }
-                    break;
-                }
-                case 3: {
-                    holder.itemView.setBackground(Theme.getThemedDrawableByKey(mContext, R.drawable.greydivider_bottom, Theme.key_windowBackgroundGrayShadow));
-                    break;
-                }
+            if (holder.getItemViewType() != 0) return;
+            CategoryCell cell = (CategoryCell) holder.itemView;
+            boolean first = position == messagesRow;
+            boolean last = position == customRow;
+            if (position == messagesRow) {
+                cell.setData("💬", "Сообщения", "Удалённые и изменённые", first, last);
+            } else if (position == otherRow) {
+                cell.setData("✨", "Другое", "Скоро", first, last);
+            } else if (position == profileRow) {
+                cell.setData("👤", "Профиль", "Скоро", first, last);
+            } else if (position == customRow) {
+                cell.setData("🎨", "Кастомизация", "Скоро", first, last);
+            }
+        }
+    }
+
+    /** iOS-like rounded grouped row */
+    private static class CategoryCell extends FrameLayout {
+        private final TextView emoji;
+        private final TextView title;
+        private final TextView subtitle;
+        private final TextView chevron;
+        private final Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF rect = new RectF();
+        private boolean first, last;
+
+        CategoryCell(Context context) {
+            super(context);
+            setWillNotDraw(false);
+            setPadding(AndroidUtilities.dp(16), 0, AndroidUtilities.dp(16), 0);
+
+            LinearLayout row = new LinearLayout(context);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(AndroidUtilities.dp(14), AndroidUtilities.dp(12), AndroidUtilities.dp(12), AndroidUtilities.dp(12));
+            addView(row, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+            emoji = new TextView(context);
+            emoji.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 22);
+            row.addView(emoji, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 0, 0, 12, 0));
+
+            LinearLayout texts = new LinearLayout(context);
+            texts.setOrientation(LinearLayout.VERTICAL);
+            row.addView(texts, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f, Gravity.CENTER_VERTICAL));
+
+            title = new TextView(context);
+            title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 17);
+            title.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+            title.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            texts.addView(title);
+
+            subtitle = new TextView(context);
+            subtitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            subtitle.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText3));
+            texts.addView(subtitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
+
+            chevron = new TextView(context);
+            chevron.setText("›");
+            chevron.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 22);
+            chevron.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText3));
+            row.addView(chevron, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
+
+            bgPaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+        }
+
+        void setData(String icon, String t, String s, boolean isFirst, boolean isLast) {
+            emoji.setText(icon);
+            title.setText(t);
+            subtitle.setText(s);
+            first = isFirst;
+            last = isLast;
+            invalidate();
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            float r = AndroidUtilities.dp(14);
+            float inset = AndroidUtilities.dp(16);
+            rect.set(inset, 0, getWidth() - inset, getHeight());
+            float tl = first ? r : 0, tr = first ? r : 0, br = last ? r : 0, bl = last ? r : 0;
+            // simple path for top/bottom rounding of group
+            PathCompat.drawRoundRect(canvas, rect, tl, tr, br, bl, bgPaint);
+            if (!last) {
+                Paint divider = new Paint();
+                divider.setColor(ColorUtils.setAlphaComponent(Theme.getColor(Theme.key_divider), 90));
+                float left = inset + AndroidUtilities.dp(52);
+                canvas.drawRect(left, getHeight() - 1, getWidth() - inset, getHeight(), divider);
             }
         }
 
         @Override
-        public int getItemViewType(int position) {
-            if (position == messagesHeaderRow) {
-                return 0;
-            }
-            if (position == deletedMessagesRow || position == editedMessagesRow) {
-                return 1;
-            }
-            if (position == messagesInfoRow) {
-                return 2;
-            }
-            return 3;
+        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+            super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
+            int h = Math.max(getMeasuredHeight(), AndroidUtilities.dp(58));
+            setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), h);
+        }
+    }
+
+    /** tiny helper without importing android.graphics.Path for partial rounds */
+    private static class PathCompat {
+        static void drawRoundRect(Canvas c, RectF r, float tl, float tr, float br, float bl, Paint p) {
+            android.graphics.Path path = new android.graphics.Path();
+            float[] radii = new float[]{tl, tl, tr, tr, br, br, bl, bl};
+            path.addRoundRect(r, radii, android.graphics.Path.Direction.CW);
+            c.drawPath(path, p);
         }
     }
 }
