@@ -20608,10 +20608,121 @@ public class ChatActivity extends BaseFragment implements
         }
     }
 
+    private void restoreTelegaDeletedMessages(Object... args) {
+        if (!org.telegram.messenger.TelegaDeletedMessagesController.isEnabled()
+                || currentEncryptedChat != null
+                || chatMode != MODE_DEFAULT
+                || isTopic
+                || threadMessageId != 0
+                || chatAdapter == null
+                || chatAdapter.isFiltered
+                || chatAdapter.isFrozen
+                || args == null
+                || args.length <= 14
+                || !(args[10] instanceof Integer)
+                || !(args[14] instanceof Integer)
+                || (Integer) args[10] != classGuid
+                || (Integer) args[14] != MODE_DEFAULT) {
+            return;
+        }
+
+        ArrayList<MessageObject> archived = org.telegram.messenger.TelegaDeletedMessagesController
+                .loadMessages(currentAccount, dialog_id);
+        if (archived.isEmpty()) {
+            return;
+        }
+
+        boolean ascending = true;
+        MessageObject previous = null;
+        for (int i = 0; i < messages.size(); i++) {
+            MessageObject candidate = messages.get(i);
+            if (candidate == null || candidate.isDateObject || candidate.messageOwner == null || candidate.getId() <= 0) {
+                continue;
+            }
+            if (previous != null) {
+                int comparison = Integer.compare(previous.messageOwner.date, candidate.messageOwner.date);
+                if (comparison == 0) {
+                    comparison = Integer.compare(previous.getId(), candidate.getId());
+                }
+                if (comparison != 0) {
+                    ascending = comparison < 0;
+                    break;
+                }
+            }
+            previous = candidate;
+        }
+
+        int inserted = 0;
+        for (MessageObject object : archived) {
+            if (object == null || object.messageOwner == null || object.getId() <= 0) {
+                continue;
+            }
+            int messageId = object.getId();
+            if (messagesDict[0].get(messageId) != null || messagesDict[1].get(messageId) != null) {
+                continue;
+            }
+            boolean alreadyInList = false;
+            for (MessageObject current : messages) {
+                if (current != null && current.getId() == messageId && !current.isDateObject) {
+                    alreadyInList = true;
+                    break;
+                }
+            }
+            if (alreadyInList) {
+                continue;
+            }
+
+            object.deleted = true;
+            object.telegaDeleted = true;
+            int insertionIndex = messages.size();
+            for (int i = 0; i < messages.size(); i++) {
+                MessageObject current = messages.get(i);
+                if (current == null || current.isDateObject || current.messageOwner == null || current.getId() <= 0) {
+                    continue;
+                }
+                int comparison = Integer.compare(object.messageOwner.date, current.messageOwner.date);
+                if (comparison == 0) {
+                    comparison = Integer.compare(object.getId(), current.getId());
+                }
+                if ((ascending && comparison < 0) || (!ascending && comparison > 0)) {
+                    insertionIndex = i;
+                    if (i > 0) {
+                        MessageObject previousRow = messages.get(i - 1);
+                        if (previousRow != null && previousRow.isDateObject
+                                && previousRow.dateKeyInt != object.dateKeyInt) {
+                            insertionIndex = i - 1;
+                        }
+                    }
+                    break;
+                }
+            }
+            messages.add(Math.max(0, Math.min(insertionIndex, messages.size())), object);
+            messagesDict[0].put(messageId, object);
+
+            ArrayList<MessageObject> dayMessages = messagesByDays.get(object.dateKey);
+            if (dayMessages == null) {
+                dayMessages = new ArrayList<>();
+                messagesByDays.put(object.dateKey, dayMessages);
+                messagesByDaysSorted.put(object.dateKeyInt, dayMessages);
+            }
+            if (!dayMessages.contains(object)) {
+                dayMessages.add(object);
+            }
+            inserted++;
+        }
+
+        if (inserted > 0 && chatAdapter != null) {
+            chatAdapter.updateRowsSafe();
+            chatAdapter.notifyDataSetChanged(true);
+            updateVisibleRows();
+        }
+    }
+
     @Override
     public void didReceivedNotification(int id, int account, final Object... args) {
         if (id == NotificationCenter.messagesDidLoad) {
             didReceivedNotification_messagesDidLoad(id, account, args);
+            restoreTelegaDeletedMessages(args);
         } else {
             didReceivedNotification2(id, account, args);
             didReceivedNotification3(id, account, args);
@@ -26454,6 +26565,21 @@ public class ChatActivity extends BaseFragment implements
                 updateReplyMessageOwners(mid, null);
             }
             if (obj != null) {
+                if (loadIndex == 0
+                        && org.telegram.messenger.TelegaDeletedMessagesController.isEnabled()
+                        && chatMode == MODE_DEFAULT
+                        && currentEncryptedChat == null
+                        && !isTopic
+                        && threadMessageId == 0
+                        && obj.getId() > 0
+                        && obj.messageOwner != null
+                        && !obj.isEphemeral()) {
+                    org.telegram.messenger.TelegaDeletedMessagesController.saveMessage(currentAccount, dialog_id, obj.messageOwner);
+                    obj.deleted = true;
+                    obj.telegaDeleted = true;
+                    updated = true;
+                    continue;
+                }
                 if (obj.messageOwner.reply_to != null && !(obj.messageOwner.action instanceof TLRPC.TL_messageActionPinMessage)) {
                     int replyId = obj.getReplyAnyMsgId();
                     if (threadMessageObject != null && threadMessageObject.getId() == replyId) {
