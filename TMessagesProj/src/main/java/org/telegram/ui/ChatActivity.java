@@ -20698,26 +20698,23 @@ public class ChatActivity extends BaseFragment implements
                 }
                 if ((ascending && comparison < 0) || (!ascending && comparison > 0)) {
                     insertionIndex = i;
-                    if (i > 0) {
-                        MessageObject previousRow = messages.get(i - 1);
-                        if (previousRow != null && previousRow.isDateObject
-                                && previousRow.dateKeyInt == current.dateKeyInt) {
-                            insertionIndex = i - 1;
-                        }
-                    }
                     break;
                 }
             }
-            object.stableId = lastStableId++;
-            int safeInsertionIndex = Math.max(0, Math.min(insertionIndex, messages.size()));
-            messages.add(safeInsertionIndex, object);
-            messagesDict[0].put(messageId, object);
 
             ArrayList<MessageObject> dayMessages = messagesByDays.get(object.dateKey);
             if (dayMessages == null) {
                 dayMessages = new ArrayList<>();
                 messagesByDays.put(object.dateKey, dayMessages);
                 messagesByDaysSorted.put(object.dateKeyInt, dayMessages);
+
+                // Place a new day header before the next day's existing header, not after it.
+                if (insertionIndex > 0 && insertionIndex < messages.size()) {
+                    MessageObject previousRow = messages.get(insertionIndex - 1);
+                    if (previousRow != null && previousRow.isDateObject) {
+                        insertionIndex--;
+                    }
+                }
 
                 TLRPC.Message dateMessage = new TLRPC.TL_message();
                 dateMessage.id = 0;
@@ -20731,10 +20728,32 @@ public class ChatActivity extends BaseFragment implements
                 dateObject.dateKeyInt = object.dateKeyInt;
                 dateObject.monthKey = object.monthKey;
                 dateObject.stableId = getStableIdForDateObject(object.dateKeyInt);
-                messages.add(Math.min(safeInsertionIndex + 1, messages.size()), dateObject);
+                messages.add(Math.max(0, Math.min(insertionIndex, messages.size())), dateObject);
+                insertionIndex++;
             }
+
+            object.stableId = lastStableId++;
+            int safeInsertionIndex = Math.max(0, Math.min(insertionIndex, messages.size()));
+            messages.add(safeInsertionIndex, object);
+            messagesDict[0].put(messageId, object);
+
             if (!dayMessages.contains(object)) {
-                dayMessages.add(object);
+                int dayInsertionIndex = dayMessages.size();
+                for (int i = 0; i < dayMessages.size(); i++) {
+                    MessageObject dayObject = dayMessages.get(i);
+                    if (dayObject == null || dayObject.messageOwner == null) {
+                        continue;
+                    }
+                    int comparison = Integer.compare(object.messageOwner.date, dayObject.messageOwner.date);
+                    if (comparison == 0) {
+                        comparison = Integer.compare(object.getId(), dayObject.getId());
+                    }
+                    if (comparison < 0) {
+                        dayInsertionIndex = i;
+                        break;
+                    }
+                }
+                dayMessages.add(dayInsertionIndex, object);
             }
             changed++;
         }
