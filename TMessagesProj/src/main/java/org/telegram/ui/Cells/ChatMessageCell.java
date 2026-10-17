@@ -18500,6 +18500,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         } else {
             currentTimeString = timeString;
         }
+        if (TelegaDeletedMessages.isDeleted(messageObject.currentAccount, messageObject.getDialogId(), messageObject.getId())) {
+            currentTimeString = TextUtils.concat("🗑️ ", currentTimeString);
+        }
         if (currentMessageObject.isStakedDice()) {
             currentTimeString = TextUtils.concat("💎", StarsIntroActivity.formatTON(currentMessageObject.getStakedDiceAmount()), "  ", currentTimeString);
             currentTimeString = StarsIntroActivity.replaceDiamond(currentTimeString, 0.55f, null, 0, dp(-.33f), 1.05f);
