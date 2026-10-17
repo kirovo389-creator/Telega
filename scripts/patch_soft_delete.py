@@ -6,7 +6,6 @@ def patch_chat_message_cell():
     path = Path("TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java")
     text = path.read_text(encoding="utf-8")
 
-    # --- soft delete time/alpha ---
     old_time = (
         "        if (TelegaDeletedMessages.isDeleted(messageObject.currentAccount, messageObject.getDialogId(), messageObject.getId(), messageObject.messageOwner == null || messageObject.messageOwner.peer_id == null || messageObject.messageOwner.peer_id.channel_id == 0)) {\n"
         "            currentTimeString = TextUtils.concat(\"    \", currentTimeString);\n"
@@ -83,9 +82,7 @@ def patch_chat_message_cell():
     else:
         print("WARNING: icon block not found")
 
-    # --- edit history helper field ---
     if "telegaEditHistoryHelper" not in text:
-        # insert field near totalHeight
         anchor_field = "    public int totalHeight;"
         if anchor_field in text:
             text = text.replace(
@@ -95,7 +92,6 @@ def patch_chat_message_cell():
             )
             print("Added telegaEditHistoryHelper field")
 
-    # measure: after text totalHeight for text messages
     measure_anchor = "                    totalHeight = messageObject.textHeight() + dp(19.5f) + namesOffset;"
     measure_insert = (
         measure_anchor + "\n"
@@ -113,7 +109,6 @@ def patch_chat_message_cell():
     else:
         print("measure edit history already patched or anchor missing")
 
-    # draw: after drawContent(canvas, false);
     draw_anchor = "        drawContent(canvas, false);"
     draw_insert = (
         draw_anchor + "\n"
@@ -130,7 +125,6 @@ def patch_chat_message_cell():
     else:
         print("draw edit history already patched or anchor missing")
 
-    # touch: early in onTouchEvent after null checks
     touch_anchor = "        if (checkTextSelection(event)) {\n            return true;\n        }"
     touch_insert = (
         "        if (telegaEditHistoryHelper != null && telegaEditHistoryHelper.hasContent()) {\n"
@@ -179,24 +173,6 @@ def patch_messages_controller():
     else:
         print("edit-history capture already present or anchor missing")
 
-    old1 = (
-        "                    } else {\n"
-        "                        // The private-chat deletion update does not carry a dialog id.\n"
-        "                        // Store a global tombstone so the message is still marked after reload.\n"
-        "                        TelegaDeletedMessages.markDeleted(currentAccount, 0, messageId);\n"
-        "                        interfaceUpdateMask |= UPDATE_MASK_MESSAGE_TEXT;\n"
-        "                    }"
-    )
-    new1 = (
-        "                    } else {\n"
-        "                        TelegaDeletedMessages.markDeleted(currentAccount, 0, messageId);\n"
-        "                        if (messageObject != null) {\n"
-        "                            messageObject.deleted = true;\n"
-        "                        }\n"
-        "                        interfaceUpdateMask |= UPDATE_MASK_MESSAGE_TEXT;\n"
-        "                    }"
-    )
-    # keep original matching for soft-delete blocks
     old1 = (
         "                    } else {\n"
         "                        // The private-chat deletion update does not carry a dialog id.\n"
@@ -259,37 +235,45 @@ def patch_settings_activity():
         return
     text = path.read_text(encoding="utf-8")
 
-    if "TelegaSettingsActivity" in text:
-        print("SettingsActivity already has Telega entry")
-        return
+    # Remove old Telega row if present mid-list, always insert FIRST
+    import re
+    text = re.sub(
+        r'\s*items\.add\(SettingCell\.Factory\.of\(90,[^\n]+\n',
+        '\n',
+        text,
+        count=1,
+    )
 
-    anchor = (
-        '        items.add(SettingCell.Factory.of(10, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.settings_language, getString(R.string.SettingsLanguage), LocaleController.getCurrentLanguageName()));\n'
+    # Insert BEFORE Account (id 1) — first in list
+    account_anchor = (
+        '        items.add(SettingCell.Factory.of(1, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.settings_account, getString(R.string.SettingsAccount), getString(R.string.SettingsAccountInfo)));\n'
     )
-    insert = (
-        anchor
-        + '        items.add(UItem.asShadow(null));\n'
-        + '        items.add(SettingCell.Factory.of(90, IconBackgroundColors.GREEN.top, IconBackgroundColors.GREEN.bottom, R.drawable.settings_features, "\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 Telega", "\u0423\u0434\u0430\u043b\u0451\u043d\u043d\u044b\u0435 \u0438 \u0438\u0437\u043c\u0435\u043d\u0451\u043d\u043d\u044b\u0435 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u044f"));\n'
+    telega_row = (
+        '        items.add(SettingCell.Factory.of(90, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.settings_chat, "\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 Telega", "\u0421\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u044f, \u043f\u0440\u043e\u0444\u0438\u043b\u044c, \u043a\u0430\u0441\u0442\u043e\u043c\u0438\u0437\u0430\u0446\u0438\u044f"));\n'
+        '        items.add(UItem.asShadow(null));\n'
     )
-    if anchor in text:
-        text = text.replace(anchor, insert, 1)
-        print("Added Telega settings row")
+    if account_anchor in text:
+        text = text.replace(account_anchor, telega_row + account_anchor, 1)
+        print("Added Telega settings row FIRST")
     else:
-        print("WARNING: language row anchor not found")
+        print("WARNING: account row anchor not found")
 
-    case_anchor = "            case 24: {\n                presentFragment(new RoundVideoSettingsActivity());\n                break;\n            }"
-    case_new = (
-        case_anchor + "\n"
-        + "            case 90: {\n"
-        + "                presentFragment(new TelegaSettingsActivity());\n"
-        + "                break;\n"
-        + "            }"
-    )
-    if case_anchor in text and "case 90" not in text:
-        text = text.replace(case_anchor, case_new, 1)
-        print("Added Telega settings click handler")
+    if "case 90" not in text:
+        case_anchor = "            case 24: {\n                presentFragment(new RoundVideoSettingsActivity());\n                break;\n            }"
+        case_new = (
+            case_anchor + "\n"
+            + "            case 90: {\n"
+            + "                presentFragment(new TelegaSettingsActivity());\n"
+            + "                break;\n"
+            + "            }"
+        )
+        if case_anchor in text:
+            text = text.replace(case_anchor, case_new, 1)
+            print("Added Telega settings click handler")
+        else:
+            print("WARNING: case 24 anchor not found")
     else:
-        print("WARNING: case 24 anchor not found or case 90 exists")
+        print("case 90 already present")
 
     path.write_text(text, encoding="utf-8")
 
