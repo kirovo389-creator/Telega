@@ -84,7 +84,9 @@ public class TelegaSettingsActivity extends BaseFragment {
         listView.setOnItemClickListener((view, position) -> {
             if (position == messagesRow) {
                 presentFragment(new TelegaMessagesSettingsActivity());
-            } else if (position == otherRow || position == profileRow || position == customRow) {
+            } else if (position == otherRow) {
+                presentFragment(new TelegaOtherSettingsActivity());
+            } else if (position == profileRow || position == customRow) {
                 AndroidUtilities.shakeView(view);
             }
         });
@@ -148,7 +150,7 @@ public class TelegaSettingsActivity extends BaseFragment {
             if (position == messagesRow) {
                 cell.setData("💬", "Сообщения", "Удалённые и изменённые", first, last);
             } else if (position == otherRow) {
-                cell.setData("✨", "Другое", "Скоро", first, last);
+                cell.setData("✨", "Другое", "ИИ агент", first, last);
             } else if (position == profileRow) {
                 cell.setData("👤", "Профиль", "Скоро", first, last);
             } else if (position == customRow) {

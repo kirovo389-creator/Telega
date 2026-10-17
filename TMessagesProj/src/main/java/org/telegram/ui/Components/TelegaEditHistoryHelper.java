@@ -7,6 +7,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
+import android.graphics.Typeface;
 import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
@@ -25,15 +26,25 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Previous versions drawn ABOVE current message text.
- * 1 previous: always show on top.
- * 2+: collapsed bar; expands UPWARD with animation.
+ * Edited message layout (drawn ABOVE the current message text):
+ *
+ *   \uD83C\uDF1F Предыдущее содержимое:
+ *   <previous text>
+ *
+ *   \uD83C\uDF1F Новое содержимое:
+ *   <current message text, drawn by the cell>
+ *
+ * 1 previous version: always shown.
+ * 2+: collapsed bar with a counter; the older versions expand UPWARD with animation.
  */
 public class TelegaEditHistoryHelper {
 
+    private static final String TITLE_PREVIOUS = "\uD83C\uDF1F Предыдущее содержимое:";
+    private static final String TITLE_NEW = "\uD83C\uDF1F Новое содержимое:";
+
     private final View parent;
     private final TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-    private final TextPaint labelPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+    private final TextPaint titlePaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
     private final Paint chevronPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint linePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path chevronPath = new Path();
@@ -41,11 +52,15 @@ public class TelegaEditHistoryHelper {
 
     private List<String> versions = new ArrayList<>();
     private final ArrayList<StaticLayout> layouts = new ArrayList<>();
-    private StaticLayout labelLayout;
+    private StaticLayout titleLayout;      // "Предыдущее содержимое:" (single previous version)
+    private StaticLayout labelLayout;      // "Предыдущее содержимое: N версии" (2+ versions)
+    private StaticLayout newTitleLayout;   // "Новое содержимое:"
 
     private int measuredWidth;
     private int collapsedHeight;
     private int expandedExtraHeight;
+    private int barHeight;
+    private int newTitleHeight;
     private float expandProgress;
     private ValueAnimator animator;
     private boolean touchDownInHit;
@@ -56,7 +71,8 @@ public class TelegaEditHistoryHelper {
     public TelegaEditHistoryHelper(View parent) {
         this.parent = parent;
         textPaint.setTextSize(AndroidUtilities.dp(13));
-        labelPaint.setTextSize(AndroidUtilities.dp(12));
+        titlePaint.setTextSize(AndroidUtilities.dp(13));
+        titlePaint.setTypeface(Typeface.DEFAULT_BOLD);
         chevronPaint.setStyle(Paint.Style.STROKE);
         chevronPaint.setStrokeWidth(AndroidUtilities.dp(1.6f));
         chevronPaint.setStrokeCap(Paint.Cap.ROUND);
@@ -67,11 +83,15 @@ public class TelegaEditHistoryHelper {
 
     public void bind(MessageObject messageObject, int maxWidth) {
         layouts.clear();
+        titleLayout = null;
         labelLayout = null;
+        newTitleLayout = null;
         versions = new ArrayList<>();
         measuredWidth = Math.max(AndroidUtilities.dp(80), maxWidth);
         collapsedHeight = 0;
         expandedExtraHeight = 0;
+        barHeight = 0;
+        newTitleHeight = 0;
 
         if (messageObject == null || !TelegaSettings.isShowEditedMessages()) {
             boundDialogId = 0;
@@ -89,25 +109,31 @@ public class TelegaEditHistoryHelper {
         versions.addAll(history);
 
         int color = Theme.getColor(Theme.key_chat_messageTextIn);
-        textPaint.setColor(Theme.multAlpha(color, 0.5f));
-        labelPaint.setColor(Theme.multAlpha(color, 0.65f));
+        textPaint.setColor(Theme.multAlpha(color, 0.7f));
+        titlePaint.setColor(Theme.multAlpha(color, 0.85f));
         chevronPaint.setColor(Theme.multAlpha(color, 0.7f));
         linePaint.setColor(Theme.multAlpha(color, 0.28f));
 
         int contentW = measuredWidth - AndroidUtilities.dp(28);
 
+        // "Новое содержимое:" sits between the previous block and the real message text
+        newTitleLayout = new StaticLayout(TITLE_NEW, titlePaint, contentW, Layout.Alignment.ALIGN_NORMAL, 1f, 0f, false);
+        newTitleHeight = AndroidUtilities.dp(8) + newTitleLayout.getHeight() + AndroidUtilities.dp(2);
+
         if (versions.size() == 1) {
+            titleLayout = new StaticLayout(TITLE_PREVIOUS, titlePaint, contentW, Layout.Alignment.ALIGN_NORMAL, 1f, 0f, false);
             StaticLayout sl = buildLayout(versions.get(0), contentW);
             layouts.add(sl);
-            collapsedHeight = sl.getHeight() + AndroidUtilities.dp(10);
+            collapsedHeight = AndroidUtilities.dp(2) + titleLayout.getHeight() + AndroidUtilities.dp(2) + sl.getHeight() + newTitleHeight;
             expandProgress = 1f;
         } else {
-            String label = versions.size() + " " + pluralVersions(versions.size());
-            labelLayout = new StaticLayout(label, labelPaint, contentW, Layout.Alignment.ALIGN_NORMAL, 1f, 0f, false);
+            String label = TITLE_PREVIOUS + " " + versions.size() + " " + pluralVersions(versions.size());
+            labelLayout = new StaticLayout(label, titlePaint, contentW, Layout.Alignment.ALIGN_NORMAL, 1f, 0f, false);
             for (String v : versions) {
                 layouts.add(buildLayout(v, contentW));
             }
-            collapsedHeight = Math.max(AndroidUtilities.dp(18), labelLayout.getHeight()) + AndroidUtilities.dp(8);
+            barHeight = Math.max(AndroidUtilities.dp(18), labelLayout.getHeight()) + AndroidUtilities.dp(4);
+            collapsedHeight = barHeight + newTitleHeight;
             int totalList = 0;
             for (StaticLayout sl : layouts) {
                 totalList += sl.getHeight() + AndroidUtilities.dp(6);
@@ -146,23 +172,28 @@ public class TelegaEditHistoryHelper {
         int h = getHeight();
         float x = left + AndroidUtilities.dp(4);
         float bottom = top + h;
+        // bottom edge of the "previous" block; below it only the "Новое содержимое:" title
+        float prevBottom = bottom - newTitleHeight;
 
         canvas.drawLine(x + AndroidUtilities.dp(3), top + AndroidUtilities.dp(2),
-                x + AndroidUtilities.dp(3), bottom - AndroidUtilities.dp(2), linePaint);
+                x + AndroidUtilities.dp(3), prevBottom - AndroidUtilities.dp(2), linePaint);
 
         float contentX = x + AndroidUtilities.dp(14);
 
         if (versions.size() == 1) {
             canvas.save();
             canvas.translate(contentX, top + AndroidUtilities.dp(2));
+            titleLayout.draw(canvas);
+            canvas.translate(0, titleLayout.getHeight() + AndroidUtilities.dp(2));
             layouts.get(0).draw(canvas);
             canvas.restore();
             hitRect.setEmpty();
+            drawNewTitle(canvas, left, prevBottom);
             return h;
         }
 
-        // bar near bottom of reserved area (just above current message)
-        float barTop = bottom - collapsedHeight;
+        // bar near bottom of the previous block (just above "Новое содержимое:")
+        float barTop = prevBottom - barHeight;
         drawChevron(canvas, x + AndroidUtilities.dp(3), barTop + AndroidUtilities.dp(10), expandProgress);
 
         if (labelLayout != null) {
@@ -172,7 +203,7 @@ public class TelegaEditHistoryHelper {
             canvas.restore();
         }
 
-        hitRect.set(left, barTop, left + measuredWidth, bottom);
+        hitRect.set(left, barTop, left + measuredWidth, prevBottom);
 
         // list expands UPWARD above the bar
         if (expandProgress > 0.01f && !layouts.isEmpty()) {
@@ -198,7 +229,16 @@ public class TelegaEditHistoryHelper {
             canvas.restore();
         }
 
+        drawNewTitle(canvas, left, prevBottom);
         return h;
+    }
+
+    private void drawNewTitle(Canvas canvas, float left, float prevBottom) {
+        if (newTitleLayout == null) return;
+        canvas.save();
+        canvas.translate(left + AndroidUtilities.dp(4), prevBottom + AndroidUtilities.dp(8));
+        newTitleLayout.draw(canvas);
+        canvas.restore();
     }
 
     private void drawChevron(Canvas canvas, float cx, float cy, float progress) {
