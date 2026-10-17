@@ -35,11 +35,15 @@ public final class TelegaDeletedMessages {
     }
 
     public static boolean isDeleted(int account, long dialogId, int messageId) {
+        return isDeleted(account, dialogId, messageId, true);
+    }
+
+    public static boolean isDeleted(int account, long dialogId, int messageId, boolean allowGlobalIdFallback) {
         SharedPreferences prefs = preferences(account);
         if (prefs == null || messageId == 0) {
             return false;
         }
         return prefs.getBoolean(key(dialogId, messageId), false)
-                || (dialogId != 0 && prefs.getBoolean(key(0, messageId), false));
+                || (allowGlobalIdFallback && dialogId != 0 && prefs.getBoolean(key(0, messageId), false));
     }
 }
