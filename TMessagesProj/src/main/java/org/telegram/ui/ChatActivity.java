@@ -20725,8 +20725,17 @@ public class ChatActivity extends BaseFragment implements
                 dayMessages = new ArrayList<>();
                 messagesByDays.put(object.dateKey, dayMessages);
                 messagesByDaysSorted.put(object.dateKeyInt, dayMessages);
+            }
 
-                // Place a new day header before the next day's existing header, not after it.
+            boolean dateHeaderExists = false;
+            for (MessageObject row : messages) {
+                if (row != null && row.isDateObject && row.dateKeyInt == object.dateKeyInt) {
+                    dateHeaderExists = true;
+                    break;
+                }
+            }
+            if (!dateHeaderExists) {
+                // Place the restored day header before another day's header when inserting mid-history.
                 if (insertionIndex > 0 && insertionIndex < messages.size()) {
                     MessageObject previousRow = messages.get(insertionIndex - 1);
                     if (previousRow != null && previousRow.isDateObject
