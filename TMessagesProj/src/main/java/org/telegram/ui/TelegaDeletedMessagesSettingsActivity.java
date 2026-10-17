@@ -72,7 +72,7 @@ public class TelegaDeletedMessagesSettingsActivity extends BaseFragment {
 
         Switch toggle = new Switch(context);
         toggle.setChecked(context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .getBoolean(KEY_KEEP_DELETED_MESSAGES, false));
+                .getBoolean(KEY_KEEP_DELETED_MESSAGES, true));
         toggle.setOnCheckedChangeListener((button, checked) ->
                 context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
                         .putBoolean(KEY_KEEP_DELETED_MESSAGES, checked).apply());
