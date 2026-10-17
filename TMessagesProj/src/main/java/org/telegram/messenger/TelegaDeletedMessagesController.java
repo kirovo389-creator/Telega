@@ -27,7 +27,7 @@ public final class TelegaDeletedMessagesController {
     public static boolean isEnabled() {
         Context context = ApplicationLoader.applicationContext;
         return context != null && context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
-                .getBoolean(KEEP_KEY, false);
+                .getBoolean(KEEP_KEY, true);
     }
 
     public static void saveMessage(int account, long dialogId, TLRPC.Message message) {
