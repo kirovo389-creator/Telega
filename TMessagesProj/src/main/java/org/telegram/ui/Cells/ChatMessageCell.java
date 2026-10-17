@@ -24366,7 +24366,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 && TelegaDeletedMessages.isDeleted(
                         currentMessageObject.currentAccount,
                         currentMessageObject.getDialogId(),
-                        currentMessageObject.getId())) {
+                        currentMessageObject.getId(),
+                        currentMessageObject.messageOwner == null
+                                || currentMessageObject.messageOwner.peer_id == null
+                                || currentMessageObject.messageOwner.peer_id.channel_id == 0)) {
             android.graphics.drawable.Drawable deletedIcon = getResources().getDrawable(R.drawable.msg_delete).mutate();
             deletedIcon.setColorFilter(android.graphics.Color.rgb(226, 58, 65), android.graphics.PorterDuff.Mode.SRC_IN);
             int iconSize = dp(11);
