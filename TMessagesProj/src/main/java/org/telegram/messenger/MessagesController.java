@@ -18839,7 +18839,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 ArrayList<Integer> idsToActuallyDelete = new ArrayList<>();
                 for (int messageId : update.messages) {
                     MessageObject messageObject = dialogMessagesByIds.get(messageId);
-                    boolean retainDeletedMessage = messageObject != null && !messageObject.isOut();
+                    boolean retainDeletedMessage = messageObject != null && !messageObject.isOut() && !messageObject.deleted;
                     if (retainDeletedMessage && messageObject.getDialogId() < 0) {
                         TLRPC.Chat messageChat = getChat(-messageObject.getDialogId());
                         retainDeletedMessage = !ChatObject.isChannel(messageChat);
@@ -19382,7 +19382,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 ArrayList<Integer> idsToActuallyDelete = new ArrayList<>();
                 for (int messageId : update.messages) {
                     MessageObject messageObject = dialogMessagesByIds.get(messageId);
-                    if (messageObject != null && messageObject.getDialogId() == dialogId && !messageObject.isOut()) {
+                    if (messageObject != null && messageObject.getDialogId() == dialogId && !messageObject.isOut() && !messageObject.deleted) {
                         TelegaDeletedMessages.markDeleted(currentAccount, dialogId, messageId);
                         interfaceUpdateMask |= UPDATE_MASK_MESSAGE_TEXT;
                     } else {
