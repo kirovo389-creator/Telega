@@ -99,6 +99,28 @@ public final class TelegaDeletedMessagesController {
         }
     }
 
+    public static void clearMessagesUpTo(int account, long dialogId, int maxMessageId) {
+        Context context = ApplicationLoader.applicationContext;
+        if (context == null) {
+            return;
+        }
+        try {
+            SharedPreferences preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE);
+            String key = getDataKey(account, dialogId);
+            JSONArray stored = new JSONArray(preferences.getString(key, "[]"));
+            JSONArray retained = new JSONArray();
+            for (int i = 0; i < stored.length(); i++) {
+                JSONObject entry = stored.optJSONObject(i);
+                if (entry != null && entry.optInt("id", 0) > maxMessageId) {
+                    retained.put(entry);
+                }
+            }
+            preferences.edit().putString(key, retained.toString()).apply();
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
     public static ArrayList<MessageObject> loadMessages(int account, long dialogId) {
         ArrayList<MessageObject> result = new ArrayList<>();
         Context context = ApplicationLoader.applicationContext;
