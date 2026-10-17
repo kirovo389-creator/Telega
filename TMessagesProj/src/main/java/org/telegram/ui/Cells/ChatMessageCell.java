@@ -18531,12 +18531,20 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
         }
         if (currentMessageObject.telegaDeleted) {
-            SpannableString deletedLabel = new SpannableString("🗑 Удалено");
-            deletedLabel.setSpan(new ForegroundColorSpan(0xFFE53935), 0, 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            SpannableStringBuilder deletedLabel = new SpannableStringBuilder("  Удалено");
+            ColoredImageSpan deletedIcon = new ColoredImageSpan(R.drawable.telega_deleted_trash, ColoredImageSpan.ALIGN_CENTER);
+            deletedIcon.setSize(dp(13));
+            deletedIcon.setOverrideColor(Color.RED);
+            deletedLabel.setSpan(deletedIcon, 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             currentTimeString = deletedLabel;
             signString = null;
         }
         timeTextWidth = timeWidth = (int) Math.ceil(Theme.chat_timePaint.measureText(currentTimeString, 0, currentTimeString == null ? 0 : currentTimeString.length()));
+        if (currentMessageObject.telegaDeleted) {
+            int markerExtraWidth = dp(13) - (int) Math.ceil(Theme.chat_timePaint.measureText(" "));
+            timeTextWidth += Math.max(0, markerExtraWidth);
+            timeWidth += Math.max(0, markerExtraWidth);
+        }
         if (currentMessageObject.scheduled && currentMessageObject.messageOwner.date == 0x7FFFFFFE || currentMessageObject.notime) {
             timeWidth -= dp(8);
         }
