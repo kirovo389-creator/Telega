@@ -18835,13 +18835,13 @@ public class MessagesController extends BaseController implements NotificationCe
                 }
                 dialogs_read_outbox_max.put(dialogId, Math.max(value, update.max_id));
             } else if (baseUpdate instanceof TL_update.TL_updateDeleteMessages) {
-                // Keep remotely deleted messages in local history and render a Telega tombstone.
-                // Local user-initiated deletion still follows deleteMessages() and remains a real delete.
                 TL_update.TL_updateDeleteMessages update = (TL_update.TL_updateDeleteMessages) baseUpdate;
-                for (int deletedId : update.messages) {
-                    TelegaDeletedMessages.markDeleted(currentAccount, 0, deletedId);
+                // Telega: keep locally cached messages and mark them as deleted instead of
+                // passing their ids to MessagesStorage.markMessagesAsDeleted().
+                for (int messageId : update.messages) {
+                    TelegaDeletedMessages.markDeleted(currentAccount, 0, messageId);
                 }
-                interfaceUpdateMask |= UPDATE_MASK_CHAT;
+                interfaceUpdateMask |= UPDATE_MASK_MESSAGE_TEXT;
             } else if (baseUpdate instanceof TL_update.TL_updateDeleteQuickReplyMessages) {
                 TL_update.TL_updateDeleteQuickReplyMessages update = (TL_update.TL_updateDeleteQuickReplyMessages) baseUpdate;
                 if (deletedQuickReplyMessages == null) {
@@ -19358,12 +19358,12 @@ public class MessagesController extends BaseController implements NotificationCe
                 if (BuildVars.LOGS_ENABLED) {
                     FileLog.d(baseUpdate + " channelId = " + update.channel_id);
                 }
+                // Telega: retain the cached channel messages and show a deleted marker.
                 long dialogId = -update.channel_id;
-                // Channel message IDs are scoped to their channel, so keep the tombstone scoped too.
-                for (int deletedId : update.messages) {
-                    TelegaDeletedMessages.markDeleted(currentAccount, dialogId, deletedId);
+                for (int messageId : update.messages) {
+                    TelegaDeletedMessages.markDeleted(currentAccount, dialogId, messageId);
                 }
-                interfaceUpdateMask |= UPDATE_MASK_CHAT;
+                interfaceUpdateMask |= UPDATE_MASK_MESSAGE_TEXT;
             } else if (baseUpdate instanceof TL_update.TL_updateChannel) {
                 if (BuildVars.LOGS_ENABLED) {
                     TL_update.TL_updateChannel update = (TL_update.TL_updateChannel) baseUpdate;
