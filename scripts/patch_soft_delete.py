@@ -89,16 +89,29 @@ def patch_chat_message_cell():
         "            telegaEditHistoryTop = bgTop;\n"
         "            telegaEditHistoryHelper.draw(canvas, bgLeft, bgTop);\n"
         "        }\n"
-        "        if (org.telegram.messenger.TelegaSettings.isGarlandEnabled() && currentBackgroundDrawable != null) {\n"
-        "            android.graphics.Rect telegaGarlandBounds = currentBackgroundDrawable.getBounds();\n"
-        "            org.telegram.messenger.TelegaGarland.draw(canvas, this, telegaGarlandBounds.left, telegaGarlandBounds.top, telegaGarlandBounds.right);\n"
-        }"
     )
     if draw_anchor in text and "telegaEditHistoryHelper.draw" not in text:
         text = text.replace(draw_anchor, draw_insert, 1)
         print("Patched draw for edit history")
     else:
         print("draw edit history already patched or anchor missing")
+
+    garland_draw = (
+        "        if (org.telegram.messenger.TelegaSettings.isGarlandEnabled() && currentBackgroundDrawable != null) {\n"
+        "            android.graphics.Rect telegaGarlandBounds = currentBackgroundDrawable.getBounds();\n"
+        "            org.telegram.messenger.TelegaGarland.draw(canvas, this, telegaGarlandBounds.left, telegaGarlandBounds.top, telegaGarlandBounds.right);\n"
+        "        }"
+    )
+    garland_anchor = "            telegaEditHistoryHelper.draw(canvas, bgLeft, bgTop);\n        }"
+    if "TelegaGarland.draw(canvas, this" not in text:
+        if garland_anchor in text:
+            text = text.replace(garland_anchor, garland_anchor + "\n" + garland_draw, 1)
+            print("Patched animated message garland")
+        elif draw_anchor in text:
+            text = text.replace(draw_anchor, draw_anchor + "\n" + garland_draw, 1)
+            print("Patched animated message garland (fallback anchor)")
+        else:
+            raise RuntimeError("ERROR: Unable to locate ChatMessageCell draw anchor for garland")
 
     touch_anchor = "        if (checkTextSelection(event)) {\n            return true;\n        }"
     touch_insert = (
