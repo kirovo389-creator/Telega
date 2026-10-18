@@ -263,6 +263,7 @@ import org.telegram.ui.Components.Premium.ProfilePremiumCell;
 import org.telegram.ui.Components.Premium.boosts.UserSelectorBottomSheet;
 import org.telegram.ui.Components.ProfileGalleryView;
 import org.telegram.ui.Components.ProfileGooeyView;
+import org.telegram.ui.Components.TelegaAvatarFrameView;
 import org.telegram.ui.Components.ProfileMusicView;
 import org.telegram.ui.Components.RLottieDrawable;
 import org.telegram.ui.Components.RLottieImageView;
@@ -393,6 +394,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private ProfileMusicView musicView;
     private AnimatedStatusView animatedStatusView;
     private AvatarImageView avatarImage;
+    private TelegaAvatarFrameView avatarFrameView;
     private View avatarOverlay;
     private AnimatorSet avatarAnimation;
     private RadialProgressView avatarProgressView;
@@ -5234,6 +5236,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 updateGooey();
             }
         };
+        avatarContainer.setClipChildren(false);
+        avatarContainer.setClipToPadding(false);
         avatarContainer2 = new FrameLayout(context) {
 
             CanvasButton canvasButton;
@@ -5323,6 +5327,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 updateCollectibleHint();
             }
         };
+        avatarContainer2.setClipChildren(false);
+        avatarContainer2.setClipToPadding(false);
         fallbackImage = new ImageReceiver(avatarContainer2);
         fallbackImage.setRoundRadius(AndroidUtilities.dp(11));
         AndroidUtilities.updateViewVisibilityAnimated(avatarContainer2, true, 1f, false);
@@ -5330,6 +5336,13 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         avatarContainer.setPivotX(0);
         avatarContainer.setPivotY(0);
         avatarGooey = new ProfileGooeyView(context);
+        avatarGooey.setClipChildren(false);
+        avatarGooey.setClipToPadding(false);
+        avatarFrameView = new TelegaAvatarFrameView(context);
+        avatarFrameView.setForOwnProfile(myProfile
+                || (chatId == 0 && !isTopic && userId == getUserConfig().clientUserId));
+        avatarContainer.addView(avatarFrameView, 0,
+                LayoutHelper.createFrame(130, 130, Gravity.TOP | Gravity.LEFT, -15, -15, 0, 0));
         avatarGooey.addView(avatarContainer, LayoutHelper.createFrame(100, 100, Gravity.TOP | Gravity.LEFT));
         avatarContainer2.addView(avatarGooey, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 //        avatarContainer2.addView(avatarContainer, LayoutHelper.createFrame(100, 100, Gravity.TOP | Gravity.LEFT, 64, 0, 0, 0));

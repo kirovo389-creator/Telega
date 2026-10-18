@@ -70,8 +70,7 @@ public final class TelegaLocalBypassProxy {
     private static final String TAG = "TelegaLocalBypass";
     private static final Object LOCK = new Object();
     private static final String LOOPBACK = "127.0.0.1";
-    private static final int DEFAULT_PORT = 51837;
-    private static final int PORT_ATTEMPTS = 16;
+    private static final int DEFAULT_PORT = 56626;
     private static final int MAX_CONNECTIONS = 64;
     private static final int CONNECT_TIMEOUT_MS = 8_000;
     private static final int READ_TIMEOUT_MS = 45_000;
@@ -105,21 +104,6 @@ public final class TelegaLocalBypassProxy {
         return isRunning() ? listenPort : 0;
     }
  
-    /** Stable preferred port for manual SOCKS5 clients; updated if fallback is required. */
-    private static int getPreferredPort() {
-        try {
-            if (ApplicationLoader.applicationContext != null) {
-                SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences(
-                        "telega_settings", Activity.MODE_PRIVATE);
-                int saved = preferences.getInt("local_bypass_port", DEFAULT_PORT);
-                if (saved >= 1024 && saved <= 65535) return saved;
-            }
-        } catch (Throwable error) {
-            Log.w(TAG, "Unable to read saved local proxy port", error);
-        }
-        return DEFAULT_PORT;
-    }
-
     public static String getStatusText() {
         if (!isEnabled()) {
             return "Выключен. Включи режим, чтобы использовать локальный обход.";
@@ -141,34 +125,25 @@ public final class TelegaLocalBypassProxy {
     public static int start() {
         synchronized (LOCK) {
             if (isRunning()) {
-                return listenPort;
+                if (listenPort == DEFAULT_PORT) {
+                    return listenPort;
+                }
+                stop();
             }
             ServerSocket bound = null;
             try {
-                int preferredPort = getPreferredPort();
-                List<Integer> candidatePorts = new ArrayList<>();
-                candidatePorts.add(preferredPort);
-                for (int i = 0; i < PORT_ATTEMPTS; i++) {
-                    int candidatePort = DEFAULT_PORT + i;
-                    if (!candidatePorts.contains(candidatePort)) candidatePorts.add(candidatePort);
-                }
-                for (int port : candidatePorts) {
-                    ServerSocket candidate = new ServerSocket();
-                    try {
-                        candidate.setReuseAddress(true);
-                        candidate.bind(new InetSocketAddress(
-                                InetAddress.getByName(LOOPBACK), port), 32);
-                        bound = candidate;
-                        break;
-                    } catch (BindException e) {
-                        closeQuietly(candidate);
-                    } catch (IOException e) {
-                        closeQuietly(candidate);
-                        throw e;
-                    }
-                }
-                if (bound == null) {
-                    throw new BindException("Не найден свободный loopback-порт");
+                ServerSocket candidate = new ServerSocket();
+                try {
+                    candidate.setReuseAddress(true);
+                    candidate.bind(new InetSocketAddress(
+                            InetAddress.getByName(LOOPBACK), DEFAULT_PORT), 32);
+                    bound = candidate;
+                } catch (BindException error) {
+                    closeQuietly(candidate);
+                    throw new BindException("Порт 127.0.0.1:56626 уже занят");
+                } catch (IOException error) {
+                    closeQuietly(candidate);
+                    throw error;
                 }
                 ServerSocket server = bound;
                 ExecutorService pool = Executors.newCachedThreadPool(task -> {

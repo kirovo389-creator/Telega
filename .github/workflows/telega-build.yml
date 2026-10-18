@@ -11,6 +11,9 @@ on:
       - 'TMessagesProj/src/main/java/org/telegram/messenger/Telega*.java'
       - 'TMessagesProj/src/main/java/org/telegram/ui/Components/TelegaSnowView.java'
       - 'TMessagesProj/src/main/java/org/telegram/ui/Components/TelegaVideoWallpaperView.java'
+      - 'TMessagesProj/src/main/java/org/telegram/ui/Components/TelegaAvatarFrameView.java'
+      - 'TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java'
+      - 'TMessagesProj/src/main/java/org/telegram/ui/TelegaLocalBypassSettingsActivity.java'
       - 'TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java'
       - 'TMessagesProj/src/main/java/org/telegram/ui/WallpapersListActivity.java'
       - 'TMessagesProj/src/main/java/org/telegram/messenger/ApplicationLoader.java'
@@ -87,7 +90,13 @@ jobs:
           grep -Fq 'TelegaSettings.setChatVideoWallpaperUri(selectedUri.toString())' TMessagesProj/src/main/java/org/telegram/ui/WallpapersListActivity.java
           grep -Fq 'TelegaVideoWallpaperView.refreshAll()' TMessagesProj/src/main/java/org/telegram/ui/WallpapersListActivity.java
           grep -Fq 'TelegaVideoWallpaperView' TMessagesProj/src/main/java/org/telegram/messenger/TelegaChatEffects.java
-          echo "Message cell, animated garland, glass messages, video wallpaper, and existing Telega integrations verified."
+          grep -Fq 'TelegaAvatarFrameView' TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java
+          grep -Fq 'TelegaSettings.isAvatarFrameEnabled()' TMessagesProj/src/main/java/org/telegram/ui/Components/TelegaAvatarFrameView.java
+          grep -Fq 'DEFAULT_PORT = 56626' TMessagesProj/src/main/java/org/telegram/messenger/TelegaLocalBypassProxy.java
+          grep -Fq 'TextView connectButton' TMessagesProj/src/main/java/org/telegram/ui/TelegaLocalBypassSettingsActivity.java
+          grep -Fq '"Подключить"' TMessagesProj/src/main/java/org/telegram/ui/TelegaLocalBypassSettingsActivity.java
+          grep -Fq 'FRAME_INTERVAL_MS = 112L' TMessagesProj/src/main/java/org/telegram/messenger/TelegaGlassMessages.java
+          echo "Garland clipping, shared glass animation, fixed local proxy port, and profile avatar frame verified."
 
       - name: Branding package version icon
         run: |

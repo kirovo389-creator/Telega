@@ -30,6 +30,7 @@ public class TelegaLocalBypassSettingsActivity extends BaseFragment {
 
     private Context context;
     private TextCheckCell toggle;
+    private TextView connectButton;
     private TextView status;
 
     @Override
@@ -73,6 +74,22 @@ public class TelegaLocalBypassSettingsActivity extends BaseFragment {
         toggle.setOnClickListener(v -> onToggle());
         card.addView(toggle, lp(MATCH, WRAP, 0, 0, 0, 0));
 
+        connectButton = new TextView(context);
+        connectButton.setText("Подключить");
+        connectButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        connectButton.setTypeface(Typeface.DEFAULT_BOLD);
+        connectButton.setGravity(Gravity.CENTER);
+        connectButton.setTextColor(Color.WHITE);
+        connectButton.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(13),
+                AndroidUtilities.dp(16), AndroidUtilities.dp(13));
+        GradientDrawable connectBackground = new GradientDrawable();
+        connectBackground.setColor(0xFF3688F5);
+        connectBackground.setCornerRadius(AndroidUtilities.dp(12));
+        connectButton.setBackground(connectBackground);
+        connectButton.setVisibility(TelegaSettings.isLocalBypassEnabled() ? View.VISIBLE : View.GONE);
+        connectButton.setOnClickListener(v -> onConnect());
+        card.addView(connectButton, lp(MATCH, WRAP, 12, 10, 12, 0));
+
         status = text(TelegaLocalBypassProxy.getStatusText(), 14, 0.66f);
         status.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(10),
                 AndroidUtilities.dp(16), AndroidUtilities.dp(14));
@@ -111,6 +128,11 @@ public class TelegaLocalBypassSettingsActivity extends BaseFragment {
         boolean succeeded = TelegaLocalBypassProxy.setEnabled(enabled);
         boolean actual = succeeded && enabled;
         toggle.setChecked(actual);
+        if (connectButton != null) {
+            connectButton.setVisibility(actual ? View.VISIBLE : View.GONE);
+            connectButton.setText("Подключить");
+            connectButton.setEnabled(true);
+        }
         if (status != null) {
             status.setText(TelegaLocalBypassProxy.getStatusText());
         }
@@ -123,10 +145,56 @@ public class TelegaLocalBypassSettingsActivity extends BaseFragment {
         }
     }
 
+    private void onConnect() {
+        if (connectButton == null || context == null) {
+            return;
+        }
+        connectButton.setEnabled(false);
+        connectButton.setText("Подключение…");
+        boolean connected = TelegaLocalBypassProxy.setEnabled(true);
+        if (toggle != null) {
+            toggle.setChecked(connected);
+        }
+        if (!connected) {
+            connectButton.setEnabled(true);
+            connectButton.setText("Подключить");
+            connectButton.setVisibility(View.VISIBLE);
+            if (status != null) {
+                status.setText(TelegaLocalBypassProxy.getStatusText());
+            }
+            toast("Не удалось запустить прокси на 127.0.0.1:56626.", true);
+            return;
+        }
+
+        connectButton.setVisibility(View.VISIBLE);
+        if (status != null) {
+            status.setText("Проверяю маршрут через 127.0.0.1:56626…");
+        }
+        TelegaLocalBypassProxy.checkLocalEndpoint(56626, elapsed -> {
+            if (connectButton == null || context == null) {
+                return;
+            }
+            connectButton.setEnabled(true);
+            connectButton.setText("Подключить");
+            if (elapsed > 0) {
+                if (status != null) {
+                    status.setText("Подключено: 127.0.0.1:56626. Маршрут Telegram отвечает (" + elapsed + " мс).");
+                }
+                toast("Прокси подключён: 127.0.0.1:56626", false);
+            } else {
+                if (status != null) {
+                    status.setText("Локальный SOCKS5 запущен на 127.0.0.1:56626, но маршрут Telegram не ответил. Проверь сеть и повтори подключение.");
+                }
+                toast("Порт запущен, но маршрут Telegram не ответил.", true);
+            }
+        });
+    }
+
     @Override
     public void onFragmentDestroy() {
         super.onFragmentDestroy();
         toggle = null;
+        connectButton = null;
         status = null;
         context = null;
     }

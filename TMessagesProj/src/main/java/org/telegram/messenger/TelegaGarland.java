@@ -27,6 +27,7 @@ public final class TelegaGarland {
     private static final Paint wirePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final Path wirePath = new Path();
+    private static final Path bubbleClipPath = new Path();
     private static final RectF oval = new RectF();
 
     static {
@@ -62,7 +63,7 @@ public final class TelegaGarland {
     /** @param left,top,right bounds of the bubble in the coordinates of the canvas */
     public static void draw(Canvas canvas, View view, int left, int top, int right) {
         float d = AndroidUtilities.density;
-        float span = (right - left) - 14f * d;
+        float span = (right - left) - 18f * d;
         if (span < 40f * d) {
             return;
         }
@@ -71,14 +72,29 @@ public final class TelegaGarland {
         float seed = (idHash & 0xFF) / 255f * TWO_PI;
         int colorShift = (idHash >> 8) & 0x7;
 
-        float x0 = left + 7f * d;
+        float x0 = left + 9f * d;
         // Anchors sit near the top edge; the middle of the wire hangs down (sag).
-        float y0 = top + 1.2f * d;
+        float y0 = top + 1.6f * d;
 
         // Visible catenary sag: ~8–16 dp depending on bubble width.
-        float sagBase = Math.max(5f * d, Math.min(9f * d, span * 0.055f));
+        float sagBase = Math.max(4f * d, Math.min(7f * d, span * 0.043f));
         float sag = sagBase * (1f + 0.06f * (float) Math.sin(sec * 1.1f + seed));
         float sway = (float) Math.sin(sec * 0.75f + seed * 0.5f) * 0.6f * d;
+
+        // Clip to the rounded top edge of the bubble so bulbs cannot leak over its corners.
+        float clipBottom = y0 + sagBase + 7f * d;
+        float cornerRadius = Math.min(17f * d, (right - left) * 0.14f);
+        bubbleClipPath.reset();
+        bubbleClipPath.moveTo(left + cornerRadius, top);
+        bubbleClipPath.lineTo(right - cornerRadius, top);
+        bubbleClipPath.quadTo(right, top, right, top + cornerRadius);
+        bubbleClipPath.lineTo(right, clipBottom);
+        bubbleClipPath.lineTo(left, clipBottom);
+        bubbleClipPath.lineTo(left, top + cornerRadius);
+        bubbleClipPath.quadTo(left, top, left + cornerRadius, top);
+        bubbleClipPath.close();
+        int canvasSave = canvas.save();
+        canvas.clipPath(bubbleClipPath);
 
         // wire
         wirePaint.setStrokeWidth(1.35f * d);
@@ -152,8 +168,9 @@ public final class TelegaGarland {
             canvas.restore();
         }
 
-        // Invalidate the full sag + bulb area so the hanging wire is redrawn cleanly.
-        int invalidateBottom = top + (int) (sagBase + 18f * d);
-        view.postInvalidateDelayed(48, left, top, right, invalidateBottom);
+        // Keep the animated redraw tightly bounded to the garland's visible area.
+        int invalidateBottom = (int) Math.ceil(clipBottom + 2f * d);
+        canvas.restoreToCount(canvasSave);
+        view.postInvalidateDelayed(72, left, top, right, invalidateBottom);
     }
 }

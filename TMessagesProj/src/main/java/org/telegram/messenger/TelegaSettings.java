@@ -16,6 +16,7 @@ public final class TelegaSettings {
     private static int garlandCache = -1;
     private static int glassMessagesCache = -1;
     private static int glassAnimationCache = -1;
+    private static int avatarFrameCache = -1;
 
     private TelegaSettings() {
     }
@@ -113,6 +114,7 @@ public final class TelegaSettings {
         if (p != null) {
             p.edit().putBoolean("glass_messages_enabled", enabled).apply();
         }
+        TelegaGlassMessages.refreshAnimationState();
     }
 
     /** The moving highlight can be toggled independently from the glass surface. */
@@ -133,6 +135,7 @@ public final class TelegaSettings {
         if (p != null) {
             p.edit().putBoolean("glass_messages_animation", enabled).apply();
         }
+        TelegaGlassMessages.refreshAnimationState();
     }
 
     // ----------------------------------------------------------- Video wallpaper
@@ -146,6 +149,27 @@ public final class TelegaSettings {
         SharedPreferences p = prefs();
         if (p != null) {
             p.edit().putString("chat_video_wallpaper_uri", uri == null ? "" : uri).apply();
+        }
+    }
+
+    // ------------------------------------------------------------- Avatar frame
+
+    public static boolean isAvatarFrameEnabled() {
+        if (avatarFrameCache < 0) {
+            SharedPreferences p = prefs();
+            if (p == null) {
+                return false;
+            }
+            avatarFrameCache = p.getBoolean("avatar_frame_enabled", false) ? 1 : 0;
+        }
+        return avatarFrameCache == 1;
+    }
+
+    public static void setAvatarFrameEnabled(boolean enabled) {
+        avatarFrameCache = enabled ? 1 : 0;
+        SharedPreferences p = prefs();
+        if (p != null) {
+            p.edit().putBoolean("avatar_frame_enabled", enabled).apply();
         }
     }
 

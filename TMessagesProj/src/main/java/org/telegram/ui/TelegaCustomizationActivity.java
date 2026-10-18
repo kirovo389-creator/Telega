@@ -14,6 +14,7 @@ import android.widget.TextView;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.R;
 import org.telegram.messenger.TelegaSettings;
+import org.telegram.ui.Components.TelegaAvatarFrameView;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
@@ -32,6 +33,7 @@ public class TelegaCustomizationActivity extends BaseFragment {
     private TextCheckCell garlandCell;
     private TextCheckCell glassCell;
     private TextCheckCell glassAnimationCell;
+    private TextCheckCell avatarFrameCell;
 
     @Override
     public boolean onFragmentCreate() {
@@ -157,6 +159,28 @@ public class TelegaCustomizationActivity extends BaseFragment {
         glassInfo.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(9), AndroidUtilities.dp(16), AndroidUtilities.dp(14));
         glassCard.addView(glassInfo, lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0, 0, 0, 0));
 
+        addSectionTitle(content, "Рамка аватара");
+        LinearLayout avatarFrameCard = newCard();
+        content.addView(avatarFrameCard, lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 16, 4, 16, 0));
+        avatarFrameCell = createCheckCell(
+                "Пиксельная рамка",
+                R.drawable.msg_photos,
+                0xFF454B55,
+                TelegaSettings.isAvatarFrameEnabled(),
+                false
+        );
+        avatarFrameCard.addView(avatarFrameCell,
+                lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0, 0, 0, 0));
+        TextView avatarFrameInfo = text(
+                "Добавляет за аватаркой твоего профиля чёрно-серую рамку с пиксельными фрагментами. Размер рамки — 1,3× относительно фото.",
+                13,
+                0.65f
+        );
+        avatarFrameInfo.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(9),
+                AndroidUtilities.dp(16), AndroidUtilities.dp(14));
+        avatarFrameCard.addView(avatarFrameInfo,
+                lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0, 0, 0, 0));
+
         minecraftSnowCell.setOnClickListener(v -> {
             int next = TelegaSettings.getSnowMode() == TelegaSettings.SNOW_MINECRAFT
                     ? TelegaSettings.SNOW_OFF : TelegaSettings.SNOW_MINECRAFT;
@@ -188,6 +212,13 @@ public class TelegaCustomizationActivity extends BaseFragment {
             boolean enabled = !TelegaSettings.isGlassMessagesAnimationEnabled();
             TelegaSettings.setGlassMessagesAnimationEnabled(enabled);
             glassAnimationCell.setChecked(enabled);
+        });
+
+        avatarFrameCell.setOnClickListener(v -> {
+            boolean enabled = !TelegaSettings.isAvatarFrameEnabled();
+            TelegaSettings.setAvatarFrameEnabled(enabled);
+            avatarFrameCell.setChecked(enabled);
+            TelegaAvatarFrameView.refreshAll();
         });
 
         fragmentView = root;
