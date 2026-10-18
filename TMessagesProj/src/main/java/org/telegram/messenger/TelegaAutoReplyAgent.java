@@ -98,12 +98,17 @@ public final class TelegaAutoReplyAgent {
 
     private static boolean isBackground() {
         ForegroundDetector detector = ForegroundDetector.getInstance();
-        return detector != null && detector.isBackground();
+        if (detector == null) return true;
+        return detector.isBackground() || !detector.isForeground();
     }
 
     private static boolean isForegroundNow() {
         ForegroundDetector detector = ForegroundDetector.getInstance();
         return detector != null && detector.isForeground();
+    }
+
+    private static boolean canAutoReplyNow() {
+        return isBackground() || !isForegroundNow();
     }
 
     private static boolean isConfigured() {
@@ -143,7 +148,7 @@ public final class TelegaAutoReplyAgent {
 
             // The callback is already a new-message event. Telegram may clear the unread flag
             // during multi-device sync or catch-up; don't silently skip an incoming message.
-            if (!isBackground() || !isConfigured()) continue;
+            if (!canAutoReplyNow() || !isConfigured()) continue;
             String body = message.messageOwner.message;
             if (TextUtils.isEmpty(body)) continue;
 
@@ -290,7 +295,7 @@ public final class TelegaAutoReplyAgent {
     }
 
     private static void startReplyWorker(final int account, final long dialogId) {
-        if (!isBackground() || !isConfigured()) return;
+        if (!canAutoReplyNow() || !isConfigured()) return;
         final String key = conversationKey(account, dialogId);
         if (!REPLYING.add(key)) return;
 
@@ -298,7 +303,7 @@ public final class TelegaAutoReplyAgent {
             final boolean[] failed = {false};
             try {
                 int rounds = 0;
-                while (rounds++ < 8 && isBackground() && isConfigured()) {
+                while (rounds++ < 8 && canAutoReplyNow() && isConfigured()) {
                     JSONArray records = readConversation(account, dialogId);
                     ArrayList<Integer> ids = unansweredIds(records);
                     if (ids.isEmpty()) break;
@@ -314,7 +319,7 @@ public final class TelegaAutoReplyAgent {
                         failed[0] = true;
                         break;
                     }
-                    if (!isBackground() || !isConfigured()) break;
+                    if (!canAutoReplyNow() || !isConfigured()) break;
 
                     final String response = answer.trim();
                     final Set<Integer> handled = new HashSet<>(ids);
@@ -322,7 +327,7 @@ public final class TelegaAutoReplyAgent {
                     final boolean[] sent = {false};
                     AndroidUtilities.runOnUIThread(() -> {
                         try {
-                            if (isBackground() && isConfigured()) {
+                            if (canAutoReplyNow() && isConfigured()) {
                                 SharedPreferences p = prefs();
                                 boolean needsIntro = p == null || !p.getBoolean(introducedKey(account, dialogId), false);
                                 String outgoing = (needsIntro ? disclosure(account) + "\n\n" : "") + response;
@@ -346,7 +351,7 @@ public final class TelegaAutoReplyAgent {
                         }
                     });
                     if (!latch.await(12, TimeUnit.SECONDS) || !sent[0]) {
-                        if (isBackground() && isConfigured()) failed[0] = true;
+                        if (canAutoReplyNow() && isConfigured()) failed[0] = true;
                         break;
                     }
                 }
@@ -356,7 +361,7 @@ public final class TelegaAutoReplyAgent {
             } finally {
                 REPLYING.remove(key);
                 // Retry only after successful processing, never in a tight loop after API failure.
-                if (!failed[0] && isBackground() && isConfigured() && hasUnanswered(account, dialogId)) {
+                if (!failed[0] && canAutoReplyNow() && isConfigured() && hasUnanswered(account, dialogId)) {
                     startReplyWorker(account, dialogId);
                 }
             }
@@ -369,7 +374,7 @@ public final class TelegaAutoReplyAgent {
      */
     private static String requestReplyWithRetry(long dialogId, String systemPrompt, String context) {
         for (int attempt = 0; attempt < 3; attempt++) {
-            if (!isBackground() || !isConfigured()) return null;
+            if (!canAutoReplyNow() || !isConfigured()) return null;
             try {
                 String answer = TelegaAIAgent.completeWithSystemPrompt(
                         TelegaSettings.getAiBaseUrl(), TelegaSettings.getAiApiKey(),
@@ -380,7 +385,7 @@ public final class TelegaAutoReplyAgent {
             } catch (Throwable error) {
                 FileLog.e(error);
             }
-            if (attempt < 2 && isBackground() && isConfigured()) {
+            if (attempt < 2 && canAutoReplyNow() && isConfigured()) {
                 try {
                     Thread.sleep((attempt + 1) * 1500L);
                 } catch (InterruptedException interrupted) {

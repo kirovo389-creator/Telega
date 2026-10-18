@@ -759,32 +759,37 @@ public class ConnectionsManager extends BaseController {
     }
 
     private static boolean isLoopbackProxyAddress(String address) {
-        return "127.0.0.1".equals(address)
-                || "localhost".equalsIgnoreCase(address)
-                || "::1".equals(address)
-                || "[::1]".equals(address);
+        return address != null && ("127.0.0.1".equals(address.trim())
+                || "localhost".equalsIgnoreCase(address.trim())
+                || "::1".equals(address.trim())
+                || "[::1]".equals(address.trim()));
     }
 
     public long checkProxy(ProxySettings settings, RequestTimeDelegate requestTimeDelegate) {
         if (settings == null || !settings.isValid()) {
             return 0;
         }
-        // Manual loopback entries can point to a previous fallback port. Probe the
-        // live listener selected by Telega, avoiding a false "proxy unavailable" check.
-        if (TelegaLocalBypassProxy.isEnabled()
-                && settings.getType() == ProxySettings.Type.SOCKS5
-                && isLoopbackProxyAddress(settings.getAddress())) {
-            int localPort = TelegaLocalBypassProxy.start();
-            if (localPort > 0) {
-                return native_checkProxy(currentAccount, "127.0.0.1", localPort, "", "", "", requestTimeDelegate);
-            }
-        }
         if (settings.getType() == ProxySettings.Type.WEB) {
             WebProxyConnectionTester.getInstance().checkProxy(settings, requestTimeDelegate, this::checkWebProxyInternal);
             return 0;
         }
 
-        return native_checkProxy(currentAccount, settings.getAddress(), settings.getPort(), settings.getUser(), settings.getPassword(), settings.getSecret(), requestTimeDelegate);
+        // If a manual loopback entry contains an old fallback port, test the live
+        // endpoint selected by Telega rather than the stale configured port.
+        try {
+            if (TelegaLocalBypassProxy.isEnabled()
+                    && settings.getType() == ProxySettings.Type.SOCKS5) {
+                int localPort = TelegaLocalBypassProxy.ensureRunning();
+                if (localPort > 0 && isLoopbackProxyAddress(settings.getAddress())) {
+                    return native_checkProxy(currentAccount, "127.0.0.1", localPort, "", "", "", requestTimeDelegate);
+                }
+            }
+        } catch (Throwable error) {
+            FileLog.e(error);
+        }
+
+        return native_checkProxy(currentAccount, settings.getAddress(), settings.getPort(),
+                settings.getUser(), settings.getPassword(), settings.getSecret(), requestTimeDelegate);
     }
 
     private void checkWebProxyInternal(ProxySettings settings, int port, RequestTimeDelegate requestTimeDelegate) {

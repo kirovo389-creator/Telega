@@ -227,6 +227,31 @@ public final class TelegaLocalBypassProxy {
      * Persists the option, activates the local route, or restores the user's regular
      * proxy settings. A failed start never leaves Telegram pointed at a dead port.
      */
+    public static boolean isLocalEndpoint(String address, int port) {
+        if (address == null) return false;
+        String host = address.trim();
+        return isRunning() && port == listenPort
+                && ("127.0.0.1".equals(host) || "localhost".equalsIgnoreCase(host)
+                || "::1".equals(host) || "[::1]".equals(host));
+    }
+
+    public static int ensureRunning() {
+        if (!isEnabled()) return 0;
+        if (isRunning()) return listenPort;
+        return start();
+    }
+
+    private static void persistLocalProxy(int port) {
+        if (ApplicationLoader.applicationContext == null) return;
+        try {
+            ApplicationLoader.applicationContext.getSharedPreferences(
+                    "telega_settings", Activity.MODE_PRIVATE)
+                    .edit().putInt("local_bypass_port", port).apply();
+        } catch (Throwable error) {
+            Log.w(TAG, "Unable to persist local proxy port", error);
+        }
+    }
+
     public static boolean setEnabled(boolean enabled) {
         TelegaSettings.setLocalBypassEnabled(enabled);
         if (!enabled) {
@@ -235,14 +260,22 @@ public final class TelegaLocalBypassProxy {
             return true;
         }
 
-        int port = start();
+        int port = ensureRunning();
         if (port <= 0) {
             TelegaSettings.setLocalBypassEnabled(false);
             restoreConfiguredProxy();
             return false;
         }
         try {
+            persistLocalProxy(port);
             ConnectionsManager.setProxySettings(true, createLocalSettings(port));
+            for (int account = 0; account < UserConfig.MAX_ACCOUNT_COUNT; account++) {
+                try {
+                    ConnectionsManager.getInstance(account).checkConnection();
+                } catch (Throwable error) {
+                    Log.w(TAG, "Unable to refresh network after enabling local bypass", error);
+                }
+            }
             return true;
         } catch (Throwable error) {
             Log.e(TAG, "Unable to apply local proxy settings", error);
@@ -253,6 +286,7 @@ public final class TelegaLocalBypassProxy {
             return false;
         }
     }
+
 
     private static ProxySettings createLocalSettings(int port) {
         return ProxySettings.builder()
