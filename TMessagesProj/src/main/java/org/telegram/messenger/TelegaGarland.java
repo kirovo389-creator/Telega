@@ -153,13 +153,14 @@ public final class TelegaGarland {
             oval.set(-0.55f * d, -0.1f * d, 0.55f * d, 1.25f * d);
             canvas.drawRoundRect(oval, 0.35f * d, 0.35f * d, fillPaint);
 
-            fillPaint.setColor(withAlpha(color, (int) (34 * bright)));
-            canvas.drawCircle(0, 1.8f * d, 2.0f * d, fillPaint);
-            fillPaint.setColor(withAlpha(color, (int) (70 * bright)));
-            canvas.drawCircle(0, 1.8f * d, 1.25f * d, fillPaint);
+            // Brighter, broader halos make the tiny bulbs visibly glow without washing out their colours.
+            fillPaint.setColor(withAlpha(color, (int) (88 * bright)));
+            canvas.drawCircle(0, 1.9f * d, 3.5f * d, fillPaint);
+            fillPaint.setColor(withAlpha(color, (int) (154 * bright)));
+            canvas.drawCircle(0, 1.9f * d, 2.1f * d, fillPaint);
 
-            fillPaint.setColor(withAlpha(color, (int) (255 * (0.55f + 0.45f * bright))));
-            oval.set(-0.85f * d, 1.0f * d, 0.85f * d, 3.0f * d);
+            fillPaint.setColor(withAlpha(color, (int) (255 * (0.68f + 0.32f * bright))));
+            oval.set(-0.95f * d, 0.85f * d, 0.95f * d, 3.15f * d);
             canvas.drawOval(oval, fillPaint);
 
             fillPaint.setColor(Color.argb((int) (170 * bright), 255, 255, 255));
