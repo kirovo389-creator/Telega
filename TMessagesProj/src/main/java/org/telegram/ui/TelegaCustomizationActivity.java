@@ -96,7 +96,7 @@ public class TelegaCustomizationActivity extends BaseFragment {
         snowCard.addView(realSnowCell, lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0, 0, 0, 0));
 
         TextView snowInfo = text(
-                "Minecraft — угловатые пиксельные снежинки. Реалистичный — мягкий наклонный снег; встряхивание телефона временно усиливает ветер и превращает снегопад в метель. Повторное нажатие отключает выбранный эффект.",
+                "Minecraft — блочные пиксельные снежинки. Реалистичный — ярко-белый мягкий снег; его направление плавно меняется вместе с наклоном и поворотом экрана. Повторное нажатие отключает выбранный эффект.",
                 13,
                 0.65f
         );
