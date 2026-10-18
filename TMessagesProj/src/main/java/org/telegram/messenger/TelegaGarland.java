@@ -21,8 +21,8 @@ public final class TelegaGarland {
             0xFFFF4D4D, 0xFFFFC83D, 0xFF3DDC84, 0xFF4DA3FF, 0xFFFF6FB5
     };
     private static final float TWO_PI = (float) (Math.PI * 2);
-    private static final float CATENARY_K = 2.8f;
-    private static final int SEGMENTS = 22;
+    private static final float CATENARY_K = 2.6f;
+    private static final int SEGMENTS = 28;
 
     private static final Paint wirePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -63,15 +63,16 @@ public final class TelegaGarland {
         int colorShift = (idHash >> 8) & 0x7;
 
         float x0 = left + 7f * d;
-        // Keep the strand and bulbs in a narrow top padding zone, away from text.
-        float y0 = top + 0.65f * d;
+        // Anchors sit near the top edge; the middle of the wire hangs down (sag).
+        float y0 = top + 1.2f * d;
 
-        float sagBase = Math.max(0.25f * d, Math.min(1.15f * d, span * 0.018f));
-        float sag = sagBase * (1f + 0.05f * (float) Math.sin(sec * 1.1f + seed));
-        float sway = (float) Math.sin(sec * 0.75f + seed * 0.5f) * 0.35f * d;
+        // Visible catenary sag: ~8–16 dp depending on bubble width.
+        float sagBase = Math.max(8f * d, Math.min(16f * d, span * 0.11f));
+        float sag = sagBase * (1f + 0.06f * (float) Math.sin(sec * 1.1f + seed));
+        float sway = (float) Math.sin(sec * 0.75f + seed * 0.5f) * 0.6f * d;
 
         // wire
-        wirePaint.setStrokeWidth(1.2f * d);
+        wirePaint.setStrokeWidth(1.35f * d);
         wirePaint.setColor(0xCC27332B);
         wirePath.reset();
         for (int i = 0; i <= SEGMENTS; i++) {
@@ -88,11 +89,11 @@ public final class TelegaGarland {
 
         // wire ends
         fillPaint.setColor(0xFF27332B);
-        canvas.drawCircle(x0, y0, 0.8f * d, fillPaint);
-        canvas.drawCircle(x0 + span, y0, 0.8f * d, fillPaint);
+        canvas.drawCircle(x0, y0, 0.9f * d, fillPaint);
+        canvas.drawCircle(x0 + span, y0, 0.9f * d, fillPaint);
 
-        // bulbs
-        int n = Math.max(3, Math.round(span / (30f * d)));
+        // bulbs hang slightly below the wire along the catenary
+        int n = Math.max(4, Math.round(span / (26f * d)));
         for (int i = 0; i < n; i++) {
             float u = (i + 0.5f) / n;
             float px = x0 + span * u + sway * (float) Math.sin(Math.PI * u);
@@ -104,8 +105,8 @@ public final class TelegaGarland {
             float py2 = y0 + sag * shape(u2);
             float tangent = (float) Math.atan2(py2 - py, px2 - px);
 
-            float swing = (float) Math.sin(sec * 1.6f + seed + i * 1.3f) * 0.06f;
-            float rotation = (float) Math.toDegrees(tangent * 0.6f + swing);
+            float swing = (float) Math.sin(sec * 1.6f + seed + i * 1.3f) * 0.08f;
+            float rotation = (float) Math.toDegrees(tangent * 0.7f + swing);
 
             float blink = 0.5f + 0.5f * (float) Math.sin(sec * TWO_PI / 3.4f + i * 0.95f + seed);
             float bright = 0.40f + 0.60f * blink;
@@ -119,7 +120,6 @@ public final class TelegaGarland {
             oval.set(-0.55f * d, -0.1f * d, 0.55f * d, 1.25f * d);
             canvas.drawRoundRect(oval, 0.35f * d, 0.35f * d, fillPaint);
 
-            // Tiny bulbs keep their glow and slow blink without touching the message text.
             fillPaint.setColor(withAlpha(color, (int) (34 * bright)));
             canvas.drawCircle(0, 1.8f * d, 2.0f * d, fillPaint);
             fillPaint.setColor(withAlpha(color, (int) (70 * bright)));
@@ -135,7 +135,8 @@ public final class TelegaGarland {
             canvas.restore();
         }
 
-        // slow animation: ~20 fps is plenty for a 3.4 s blink and a gentle sway
-        view.postInvalidateDelayed(48, left, top, right, top + (int) (30f * d));
+        // Invalidate the full sag + bulb area so the hanging wire is redrawn cleanly.
+        int invalidateBottom = top + (int) (sagBase + 18f * d);
+        view.postInvalidateDelayed(48, left, top, right, invalidateBottom);
     }
 }
