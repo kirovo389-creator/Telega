@@ -81,7 +81,7 @@ jobs:
           grep -Fq 'new TelegaLocalBypassSettingsActivity()' TMessagesProj/src/main/java/org/telegram/ui/TelegaSettingsActivity.java
           grep -Fq 'canAutoReplyNow' TMessagesProj/src/main/java/org/telegram/messenger/TelegaAutoReplyAgent.java
           grep -Fq 'persistLocalProxy' TMessagesProj/src/main/java/org/telegram/messenger/TelegaLocalBypassProxy.java
-          grep -Fq 'TelegaLocalBypassProxy.ensureRunning' TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
+          grep -Fq 'isLoopbackProxyAddress' TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
           echo "Deleted label, snowfall, garland, customization, AI agent, AutoReply, and local bypass wiring verified."
 
       - name: Branding package version icon
