@@ -109,16 +109,27 @@ public final class TelegaAIAgent {
     }
 
     public static String complete(String base, String key, String model, String question) throws Exception {
+        return completeWithSystemPrompt(base, key, model,
+                "Ты ИИ агент в Telega. Отвечай кратко и по делу, на языке вопроса, не длиннее 3000 символов, без Markdown-разметки.",
+                question);
+    }
+
+    /** Makes a completion with a user-configured system prompt. */
+    public static String completeWithSystemPrompt(String base, String key, String model,
+                                                  String systemPrompt, String question) throws Exception {
+        if (TextUtils.isEmpty(base) || TextUtils.isEmpty(key) || TextUtils.isEmpty(model)) {
+            throw new Exception("Сначала настрой подключение ИИ");
+        }
         JSONObject body = new JSONObject();
         body.put("model", model.trim());
         JSONArray messages = new JSONArray();
         JSONObject system = new JSONObject();
         system.put("role", "system");
-        system.put("content", "Ты ИИ агент в Telegram. Отвечай кратко и по делу, на языке вопроса, не длиннее 3000 символов, без Markdown-разметки.");
+        system.put("content", systemPrompt == null ? "" : systemPrompt.trim());
         messages.put(system);
         JSONObject user = new JSONObject();
         user.put("role", "user");
-        user.put("content", question);
+        user.put("content", question == null ? "" : question);
         messages.put(user);
         body.put("messages", messages);
 
