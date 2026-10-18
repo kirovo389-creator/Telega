@@ -67,7 +67,7 @@ public final class TelegaGarland {
         float y0 = top + 1.2f * d;
 
         // Visible catenary sag: ~8–16 dp depending on bubble width.
-        float sagBase = Math.max(3.0f * d, Math.min(7.0f * d, span * 0.045f));
+        float sagBase = Math.max(12f * d, Math.min(25f * d, span * 0.13f));
         float sag = sagBase * (1f + 0.06f * (float) Math.sin(sec * 1.1f + seed));
         float sway = (float) Math.sin(sec * 0.75f + seed * 0.5f) * 0.6f * d;
 
