@@ -52,6 +52,7 @@ jobs:
           git show "${GOOD_COMMIT}:${TARGET}" > "$TARGET"
           python3 scripts/patch_soft_delete.py
           python3 scripts/patch_edit_own.py || true
+          python3 scripts/patch_edit_text.py
           python3 scripts/patch_ai_agent.py
 
       - name: Branding package version icon
