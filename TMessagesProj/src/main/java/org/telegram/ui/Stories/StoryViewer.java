@@ -1,5 +1,7 @@
 package org.telegram.ui.Stories;
 
+import org.telegram.messenger.TelegaSettings;
+
 import static android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON;
 
 import static org.telegram.messenger.AndroidUtilities.dp;
@@ -373,7 +375,7 @@ public class StoryViewer implements NotificationCenter.NotificationCenterDelegat
         open(UserConfig.selectedAccount, context, storyItem, peerIds, position, storiesList, userStories, placeProvider, reversed);
     }
     public void open(int account, Context context, TL_stories.StoryItem storyItem, ArrayList<Long> peerIds, int position, StoriesController.StoriesList storiesList, TL_stories.PeerStories userStories, PlaceProvider placeProvider, boolean reversed) {
-        if (!isContextSafe(context)) {
+        if (TelegaSettings.isStoriesDisabled() || !isContextSafe(context)) {
             doOnAnimationReadyRunnables.clear();
             return;
         }

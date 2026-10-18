@@ -87,6 +87,7 @@ public class TelegaOtherSettingsActivity extends BaseFragment {
         } else {
             buildForm();
         }
+        buildOfflineAutoReply();
         TextView footer = text(
                 "Команды работают в любом чате, в том числе в группах:\n" +
                 ".ai — показать, что агент включён\n" +
@@ -167,6 +168,44 @@ public class TelegaOtherSettingsActivity extends BaseFragment {
     }
 
     // -------------------------------------------------------------- connected
+
+    private void buildOfflineAutoReply() {
+        content.addView(sectionTitle("АВТООТВЕТЧИК СООБЩЕНИЕМ"));
+        LinearLayout card = newCard();
+        content.addView(card, lp(MP, WC, 16, 0, 16, 0));
+
+        final TextCheckCell autoReply = new TextCheckCell(ctx);
+        autoReply.setTextAndCheck("Автоответчик сообщением",
+                TelegaSettings.isOfflineAutoReplyEnabled(), true);
+        autoReply.setColorfullIcon(0xFF52798B, R.drawable.telega_ic_robot);
+        autoReply.setOnClickListener(v -> {
+            if (TelegaSettings.getOfflineAutoReplyMessage().trim().isEmpty()) {
+                presentFragment(new TelegaOfflineAutoReplyActivity());
+                return;
+            }
+            boolean enabled = !TelegaSettings.isOfflineAutoReplyEnabled();
+            TelegaSettings.setOfflineAutoReplyEnabled(enabled);
+            autoReply.setChecked(enabled);
+        });
+        card.addView(autoReply, lp(MP, WC, 0, 0, 0, 0));
+
+        TextView setup = text(
+                TelegaSettings.getOfflineAutoReplyMessage().trim().isEmpty()
+                        ? "Настроить сообщение" : "Изменить сообщение",
+                16, 1f);
+        setup.setTextColor(Color.parseColor("#2F80ED"));
+        setup.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(13),
+                AndroidUtilities.dp(16), AndroidUtilities.dp(13));
+        setup.setOnClickListener(v -> presentFragment(new TelegaOfflineAutoReplyActivity()));
+        card.addView(setup, lp(MP, WC, 0, 0, 0, 0));
+
+        TextView info = text(
+                "Отправляет заранее сохранённый текст в личных чатах, когда приложение находится в фоне. Одному человеку — не чаще одного раза за 10 минут. ИИ-подключение не требуется.",
+                13, 0.62f);
+        info.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(4),
+                AndroidUtilities.dp(16), AndroidUtilities.dp(13));
+        card.addView(info, lp(MP, WC, 0, 0, 0, 0));
+    }
 
     private void buildConnected() {
         LinearLayout card = newCard();

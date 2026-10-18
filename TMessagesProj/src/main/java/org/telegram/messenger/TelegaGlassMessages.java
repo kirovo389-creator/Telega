@@ -28,6 +28,7 @@ public final class TelegaGlassMessages {
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final WeakHashMap<View, Layer> LAYERS = new WeakHashMap<>();
     private static final WeakHashMap<View, Layer> ANIMATING = new WeakHashMap<>();
+    private static final Rect VISIBLE_RECT = new Rect();
     private static boolean tickScheduled;
 
     private static final int[] SURFACE_COLORS = {
@@ -49,7 +50,8 @@ public final class TelegaGlassMessages {
                     Map.Entry<View, Layer> entry = iterator.next();
                     View view = entry.getKey();
                     Layer layer = entry.getValue();
-                    if (view == null || layer == null || !view.isShown() || !view.isAttachedToWindow()) {
+                    if (view == null || layer == null || !view.isShown() || !view.isAttachedToWindow()
+                            || !view.getGlobalVisibleRect(VISIBLE_RECT)) {
                         iterator.remove();
                         continue;
                     }

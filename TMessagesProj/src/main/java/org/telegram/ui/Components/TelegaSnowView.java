@@ -44,6 +44,8 @@ public class TelegaSnowView extends View implements SensorEventListener {
     private final Random random = new Random();
     private final Paint pixelPaint = new Paint();
     private final Paint softPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+    private final Paint rainPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint rainGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Rect srcRect = new Rect();
     private final RectF dstRect = new RectF();
 
@@ -80,6 +82,10 @@ public class TelegaSnowView extends View implements SensorEventListener {
         pixelPaint.setAntiAlias(false);
         pixelPaint.setFilterBitmap(false);
         pixelPaint.setStyle(Paint.Style.FILL);
+        rainPaint.setStyle(Paint.Style.STROKE);
+        rainPaint.setStrokeCap(Paint.Cap.ROUND);
+        rainGlowPaint.setStyle(Paint.Style.STROKE);
+        rainGlowPaint.setStrokeCap(Paint.Cap.ROUND);
     }
 
     @Override
@@ -191,7 +197,7 @@ public class TelegaSnowView extends View implements SensorEventListener {
             lastTime = 0;
             windTilt = 0;
             reseed();
-            if (mode == TelegaSettings.SNOW_REAL) {
+            if (mode == TelegaSettings.SNOW_REAL || mode == TelegaSettings.SNOW_RAIN) {
                 registerSensor();
             } else {
                 unregisterSensor();
@@ -212,6 +218,8 @@ public class TelegaSnowView extends View implements SensorEventListener {
 
         if (mode == TelegaSettings.SNOW_MINECRAFT) {
             drawMinecraft(canvas, dt);
+        } else if (mode == TelegaSettings.SNOW_RAIN) {
+            drawRain(canvas, dt);
         } else {
             drawReal(canvas, dt);
         }
@@ -262,6 +270,46 @@ public class TelegaSnowView extends View implements SensorEventListener {
                     }
                 }
             }
+        }
+    }
+
+    /** Natural rain streaks with depth-based speed and wind drift. */
+    private void drawRain(Canvas canvas, float dt) {
+        float d = AndroidUtilities.density;
+        int w = getWidth();
+        int h = getHeight();
+        int dpArea = (int) ((w / d) * (h / d));
+        int active = Math.max(120, Math.min(300, dpArea / 1450));
+
+        float targetWind = Math.max(-1f, Math.min(1f, -tiltX / 9.81f)) * 24f * d;
+        windTilt += (targetWind - windTilt) * Math.min(1f, dt * 1.8f);
+        float baseDrift = 6f * d + windTilt;
+
+        for (int i = 0; i < active; i++) {
+            float z = fz[i];
+            float length = (8f + 17f * z) * d;
+            float speed = (600f + 900f * z) * d * fv[i];
+            float drift = baseDrift * (0.4f + 0.7f * z);
+            float wobble = (float) Math.sin(time * 0.7f + fp[i]) * (1.5f + 2f * z) * d;
+            fx[i] += (drift + wobble) * dt;
+            fy[i] += speed * dt;
+            if (fy[i] > h + length) {
+                fy[i] = -length;
+                fx[i] = random.nextFloat() * w;
+            }
+            if (fx[i] > w + length) fx[i] = -length;
+            else if (fx[i] < -length) fx[i] = w + length;
+
+            float lean = length * (0.12f + 0.14f * z) + windTilt * 0.055f;
+            float x = fx[i];
+            float y = fy[i];
+            int alpha = (int) (70f + 120f * z);
+            rainGlowPaint.setStrokeWidth((1.8f + 1.7f * z) * d);
+            rainGlowPaint.setColor(Color.argb(alpha / 4, 150, 190, 220));
+            canvas.drawLine(x, y, x - lean, y - length, rainGlowPaint);
+            rainPaint.setStrokeWidth((0.55f + 0.6f * z) * d);
+            rainPaint.setColor(Color.argb(alpha, 205, 224, 242));
+            canvas.drawLine(x, y, x - lean, y - length, rainPaint);
         }
     }
 

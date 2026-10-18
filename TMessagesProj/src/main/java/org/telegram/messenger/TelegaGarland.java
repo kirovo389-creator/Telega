@@ -22,6 +22,8 @@ public final class TelegaGarland {
     };
     private static final float TWO_PI = (float) (Math.PI * 2);
     private static final float CATENARY_K = 2.6f;
+    private static final double CATENARY_EDGE = Math.cosh(CATENARY_K * 0.5);
+    private static final double CATENARY_DENOMINATOR = CATENARY_EDGE - 1.0;
     private static final int SEGMENTS = 28;
 
     private static final Paint wirePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -41,8 +43,7 @@ public final class TelegaGarland {
     }
 
     private static float shape(float u) {
-        double edge = Math.cosh(CATENARY_K * 0.5);
-        return (float) ((edge - Math.cosh(CATENARY_K * (u - 0.5))) / (edge - 1.0));
+        return (float) ((CATENARY_EDGE - Math.cosh(CATENARY_K * (u - 0.5))) / CATENARY_DENOMINATOR);
     }
 
     private static int blendColors(int from, int to, float amount) {

@@ -73,11 +73,13 @@ public final class TelegaLocalBypassProxy {
     private static final int DEFAULT_PORT = 56626;
     private static final int MAX_CONNECTIONS = 64;
     private static final int CONNECT_TIMEOUT_MS = 8_000;
+    private static final int ENDPOINT_CONNECT_TIMEOUT_MS = 4_000;
+    private static final int ENDPOINT_HANDSHAKE_TIMEOUT_MS = 6_000;
     private static final int READ_TIMEOUT_MS = 45_000;
     private static final int HANDSHAKE_TIMEOUT_MS = 10_000;
     private static final int MAX_MESSAGE_BYTES = 16 * 1024 * 1024;
     private static final int WS_HEADER_LIMIT = 32 * 1024;
-    private static final int MAX_ENDPOINT_ATTEMPTS = 8;
+    private static final int MAX_ENDPOINT_ATTEMPTS = 24;
 
     private static volatile ServerSocket listener;
     private static volatile ExecutorService workers;
@@ -935,8 +937,8 @@ public final class TelegaLocalBypassProxy {
             try {
                 raw.setTcpNoDelay(true);
                 raw.setKeepAlive(true);
-                raw.connect(new InetSocketAddress(connectHost, 443), CONNECT_TIMEOUT_MS);
-                raw.setSoTimeout(READ_TIMEOUT_MS);
+                raw.connect(new InetSocketAddress(connectHost, 443), ENDPOINT_CONNECT_TIMEOUT_MS);
+                raw.setSoTimeout(ENDPOINT_HANDSHAKE_TIMEOUT_MS);
 
                 SSLSocket ssl = (SSLSocket) SSLContext.getInstance("TLS").getSocketFactory()
                         .createSocket(raw, tlsHost, 443, true);
@@ -946,7 +948,7 @@ public final class TelegaLocalBypassProxy {
                     parameters.setServerNames(Collections.singletonList(new SNIHostName(tlsHost)));
                     ssl.setSSLParameters(parameters);
                 }
-                ssl.setSoTimeout(READ_TIMEOUT_MS);
+                ssl.setSoTimeout(ENDPOINT_HANDSHAKE_TIMEOUT_MS);
                 ssl.startHandshake();
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N
                         && !HttpsURLConnection.getDefaultHostnameVerifier().verify(tlsHost, ssl.getSession())) {

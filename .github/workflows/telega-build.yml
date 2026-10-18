@@ -75,6 +75,8 @@ jobs:
           grep -Fq 'org.telegram.messenger.TelegaChatEffects.attach(fragmentView);' "$CHAT_ACTIVITY"
           grep -Fq 'TelegaSettings.SNOW_MINECRAFT' TMessagesProj/src/main/java/org/telegram/ui/TelegaCustomizationActivity.java
           grep -Fq 'TelegaSettings.SNOW_REAL' TMessagesProj/src/main/java/org/telegram/ui/TelegaCustomizationActivity.java
+          grep -Fq 'TelegaSettings.SNOW_RAIN' TMessagesProj/src/main/java/org/telegram/ui/TelegaCustomizationActivity.java
+          grep -Fq 'drawRain(canvas, dt)' TMessagesProj/src/main/java/org/telegram/ui/Components/TelegaSnowView.java
           grep -Fq 'TelegaSettings.setGarlandEnabled(enabled)' TMessagesProj/src/main/java/org/telegram/ui/TelegaCustomizationActivity.java
           grep -Fq 'TelegaAutoReplyAgent.ensureInitialized(a)' TMessagesProj/src/main/java/org/telegram/messenger/ApplicationLoader.java
           grep -Fq 'TelegaSettings.isAiAutoReplyEnabled()' TMessagesProj/src/main/java/org/telegram/ui/TelegaOtherSettingsActivity.java
@@ -83,6 +85,9 @@ jobs:
           grep -Fq 'TelegaSettings.setLocalBypassEnabled(enabled)' TMessagesProj/src/main/java/org/telegram/messenger/TelegaLocalBypassProxy.java
           grep -Fq 'new TelegaLocalBypassSettingsActivity()' TMessagesProj/src/main/java/org/telegram/ui/TelegaSettingsActivity.java
           grep -Fq 'canAutoReplyNow' TMessagesProj/src/main/java/org/telegram/messenger/TelegaAutoReplyAgent.java
+          grep -Fq 'startOfflineReplyWorker' TMessagesProj/src/main/java/org/telegram/messenger/TelegaAutoReplyAgent.java
+          grep -Fq 'OFFLINE_REPLY_COOLDOWN_MS = 10L * 60L * 1000L' TMessagesProj/src/main/java/org/telegram/messenger/TelegaAutoReplyAgent.java
+          grep -Fq 'TelegaSettings.isStoriesDisabled()' TMessagesProj/src/main/java/org/telegram/ui/Stories/StoriesUtilities.java
           grep -Fq 'persistLocalProxy' TMessagesProj/src/main/java/org/telegram/messenger/TelegaLocalBypassProxy.java
           grep -Fq 'isLoopbackProxyAddress' TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
           grep -Fq 'org.telegram.messenger.TelegaGlassMessages.draw(' "$CHAT_CELL"

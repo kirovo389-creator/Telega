@@ -11,6 +11,7 @@ public final class TelegaSettings {
     public static final int SNOW_OFF = 0;
     public static final int SNOW_MINECRAFT = 1;
     public static final int SNOW_REAL = 2;
+    public static final int SNOW_RAIN = 3;
 
     private static int snowModeCache = -1;
     private static int garlandCache = -1;
@@ -173,6 +174,29 @@ public final class TelegaSettings {
         }
     }
 
+    // ------------------------------------------------------ Profile and stories
+
+    public static boolean isStoriesDisabled() {
+        SharedPreferences p = prefs();
+        return p != null && p.getBoolean("stories_disabled", false);
+    }
+
+    public static void setStoriesDisabled(boolean disabled) {
+        SharedPreferences p = prefs();
+        if (p != null) {
+            p.edit().putBoolean("stories_disabled", disabled).apply();
+        }
+        AndroidUtilities.runOnUIThread(() -> {
+            for (int account = 0; account < UserConfig.MAX_ACCOUNT_COUNT; account++) {
+                try {
+                    NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.storiesUpdated);
+                } catch (Throwable error) {
+                    FileLog.e(error);
+                }
+            }
+        });
+    }
+
     // ------------------------------------------------------ Local bypass proxy
 
     /** Enables the in-process local SOCKS5/WSS route while Telega is running. */
@@ -267,6 +291,31 @@ public final class TelegaSettings {
         if (p != null) {
             boolean valid = enabled && isAiConnected() && !getAiAutoReplyPrompt().trim().isEmpty();
             p.edit().putBoolean("ai_auto_reply_enabled", valid).apply();
+        }
+    }
+
+    /** Fixed-message auto responder, independent from the optional AI connection. */
+    public static String getOfflineAutoReplyMessage() {
+        SharedPreferences p = prefs();
+        return p == null ? "" : p.getString("offline_auto_reply_message", "");
+    }
+
+    public static void setOfflineAutoReplyMessage(String message) {
+        SharedPreferences p = prefs();
+        if (p != null) p.edit().putString("offline_auto_reply_message", message == null ? "" : message.trim()).apply();
+    }
+
+    public static boolean isOfflineAutoReplyEnabled() {
+        SharedPreferences p = prefs();
+        return p != null && p.getBoolean("offline_auto_reply_enabled", false)
+                && !getOfflineAutoReplyMessage().trim().isEmpty();
+    }
+
+    public static void setOfflineAutoReplyEnabled(boolean enabled) {
+        SharedPreferences p = prefs();
+        if (p != null) {
+            boolean valid = enabled && !getOfflineAutoReplyMessage().trim().isEmpty();
+            p.edit().putBoolean("offline_auto_reply_enabled", valid).apply();
         }
     }
 

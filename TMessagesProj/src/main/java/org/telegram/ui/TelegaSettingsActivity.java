@@ -94,7 +94,7 @@ public class TelegaSettingsActivity extends BaseFragment {
             } else if (position == customRow) {
                 presentFragment(new TelegaCustomizationActivity());
             } else if (position == profileRow) {
-                AndroidUtilities.shakeView(view);
+                presentFragment(new TelegaProfileSettingsActivity());
             }
         });
 
@@ -161,7 +161,7 @@ public class TelegaSettingsActivity extends BaseFragment {
             } else if (position == proxyRow) {
                 cell.setData(R.drawable.telega_ic_wind, "Без VPN", "Обход блокировок Telegram", first, last);
             } else if (position == profileRow) {
-                cell.setData(R.drawable.telega_ic_user, "Профиль", "Скоро", first, last);
+                cell.setData(R.drawable.telega_ic_user, "Профиль", "Истории и настройки профиля", first, last);
             } else if (position == customRow) {
                 cell.setData(R.drawable.telega_ic_snow, "Кастомизация", "Снег и гирлянда в чатах", first, last);
             }

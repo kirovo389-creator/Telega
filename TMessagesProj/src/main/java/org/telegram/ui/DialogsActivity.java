@@ -8,6 +8,8 @@
 
 package org.telegram.ui;
 
+import org.telegram.messenger.TelegaSettings;
+
 import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.AndroidUtilities.dpf2;
 import static org.telegram.messenger.AndroidUtilities.lerp;
@@ -12743,6 +12745,32 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     }
 
     public void updateStoriesVisibility(boolean animated) {
+        if (TelegaSettings.isStoriesDisabled()) {
+            if (storiesVisibilityAnimator != null) {
+                storiesVisibilityAnimator.cancel();
+                storiesVisibilityAnimator = null;
+            }
+            if (storiesVisibilityAnimator2 != null) {
+                storiesVisibilityAnimator2.cancel();
+                storiesVisibilityAnimator2 = null;
+            }
+            hasStories = false;
+            hasOnlySlefStories = false;
+            dialogStoriesCellVisible = false;
+            progressToShowStories = 0;
+            progressToDialogStoriesCell = 0;
+            if (dialogStoriesCell != null) {
+                dialogStoriesCell.setAlpha(1f);
+                dialogStoriesCell.setVisibility(View.GONE);
+            }
+            if (viewPages != null) {
+                for (ViewPage page : viewPages) {
+                    if (page != null && page.listView != null) page.listView.requestLayout();
+                }
+            }
+            if (fragmentView != null) fragmentView.requestLayout();
+            return;
+        }
         if (dialogStoriesCell == null || storiesVisibilityAnimator != null || rightSlidingDialogContainer != null && rightSlidingDialogContainer.hasFragment() || searchIsShowed || actionBar == null || actionBar.isActionModeShowed() || onlySelect) {
             return;
         }

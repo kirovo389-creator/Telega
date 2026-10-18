@@ -39,6 +39,7 @@ import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.SharedConfig;
+import org.telegram.messenger.TelegaSettings;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.Utilities;
 import org.telegram.tgnet.ConnectionsManager;
@@ -497,6 +498,7 @@ public class ProfileStoriesView extends View implements NotificationCenter.Notif
 
     @Override
     protected void dispatchDraw(Canvas canvas) {
+        if (TelegaSettings.isStoriesDisabled()) return;
         float rright = rightAnimated.set(this.right);
         float avatarPullProgress = Utilities.clamp((avatarContainer.getScaleX() - 1f) / 0.4f, 1f, 0f);
         float insetMain = lerp(dpf2(4f), dpf2(3.5f), avatarPullProgress);
@@ -1165,6 +1167,7 @@ public class ProfileStoriesView extends View implements NotificationCenter.Notif
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        if (TelegaSettings.isStoriesDisabled()) return false;
         boolean hit;
         if (expandProgress < .9f) {
             hit = rect2.contains(event.getX(), event.getY());
