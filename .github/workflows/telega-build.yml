@@ -10,6 +10,7 @@ on:
       - 'TMessagesProj/src/main/java/org/telegram/ui/Telega*.java'
       - 'TMessagesProj/src/main/java/org/telegram/messenger/Telega*.java'
       - 'TMessagesProj/src/main/java/org/telegram/ui/Components/TelegaSnowView.java'
+      - 'TMessagesProj/src/main/java/org/telegram/messenger/ApplicationLoader.java'
       - 'TMessagesProj/src/main/res/drawable/telega_ic_*.xml'
 
 permissions:
@@ -71,7 +72,9 @@ jobs:
           grep -Fq 'TelegaSettings.SNOW_MINECRAFT' TMessagesProj/src/main/java/org/telegram/ui/TelegaCustomizationActivity.java
           grep -Fq 'TelegaSettings.SNOW_REAL' TMessagesProj/src/main/java/org/telegram/ui/TelegaCustomizationActivity.java
           grep -Fq 'TelegaSettings.setGarlandEnabled(enabled)' TMessagesProj/src/main/java/org/telegram/ui/TelegaCustomizationActivity.java
-          echo "Deleted label, chat snowfall, animated garland, and customization controls are wired."
+          grep -Fq 'TelegaAutoReplyAgent.ensureInitialized(a)' TMessagesProj/src/main/java/org/telegram/messenger/ApplicationLoader.java
+          grep -Fq 'TelegaSettings.isAiAutoReplyEnabled()' TMessagesProj/src/main/java/org/telegram/ui/TelegaOtherSettingsActivity.java
+          echo "Deleted label, snowfall, garland, customization, and AI auto-responder wiring verified."
 
       - name: Branding package version icon
         run: |
