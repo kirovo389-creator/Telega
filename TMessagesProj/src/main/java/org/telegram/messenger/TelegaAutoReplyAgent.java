@@ -367,7 +367,7 @@ public final class TelegaAutoReplyAgent {
     private static String buildReplyContext(int account, long dialogId, JSONArray records,
                                             ArrayList<Integer> unanswered) {
         TLRPC.User self = UserConfig.getInstance(account).getCurrentUser();
-        TLRPC.User contact = MessagesController.getInstance(account).getUser((int) dialogId);
+        TLRPC.User contact = MessagesController.getInstance(account).getUser(dialogId);
         String selfName = userName(self);
         String contactName = userName(contact);
         String contactHandle = contact != null && !TextUtils.isEmpty(contact.username)
@@ -461,7 +461,7 @@ public final class TelegaAutoReplyAgent {
                         + "которая произошла, пока владелец был не в сети. Выдели кто и что хотел, вопросы, договорённости "
                         + "и то, что требует ответа. Не выдумывай деталей. 2-5 коротких предложений на русском.";
                 String request = "Собеседник: "
-                        + userName(MessagesController.getInstance(account).getUser((int) dialogId))
+                        + userName(MessagesController.getInstance(account).getUser(dialogId))
                         + "\nПереписка, пока владелец отсутствовал:\n" + formatTranscript(snapshot)
                         + "\nПодготовь краткую сводку для владельца.";
                 String summary = TelegaAIAgent.completeWithSystemPrompt(
@@ -484,7 +484,7 @@ public final class TelegaAutoReplyAgent {
                             if (id != 0 && !ids.contains(id)) ids.add(id);
                         }
                         if (!ids.isEmpty()) {
-                            MessagesController.getInstance(account).deleteMessages(ids, null, null, dialogId, false, 0);
+                            MessagesController.getInstance(account).deleteMessages(ids, null, null, dialogId, 0, false, 0);
                         }
                         String cleanSummary = finalSummary.length() > 3500
                                 ? finalSummary.substring(0, 3499) + "…" : finalSummary;
