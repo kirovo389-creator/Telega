@@ -186,6 +186,26 @@ public class TelegaOtherSettingsActivity extends BaseFragment {
         info.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(10), AndroidUtilities.dp(16), AndroidUtilities.dp(10));
         card.addView(info, lp(MP, WC, 0, 0, 0, 0));
 
+        final TextCheckCell autoReply = new TextCheckCell(ctx);
+        autoReply.setTextAndCheck("ИИ автоответчик", TelegaSettings.isAiAutoReplyEnabled(), true);
+        autoReply.setColorfullIcon(0xFF52798B, R.drawable.telega_ic_robot);
+        autoReply.setOnClickListener(v -> {
+            if (TelegaSettings.getAiAutoReplyPrompt().trim().isEmpty()) {
+                presentFragment(new TelegaAutoReplyActivity());
+                return;
+            }
+            boolean enabled = !TelegaSettings.isAiAutoReplyEnabled();
+            TelegaSettings.setAiAutoReplyEnabled(enabled);
+            autoReply.setChecked(enabled);
+        });
+        card.addView(autoReply, lp(MP, WC, 0, 8, 0, 0));
+
+        TextView setupAutoReply = text("Настроить автоответчик", 16, 1f);
+        setupAutoReply.setTextColor(Color.parseColor("#2F80ED"));
+        setupAutoReply.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(13), AndroidUtilities.dp(16), AndroidUtilities.dp(13));
+        setupAutoReply.setOnClickListener(v -> presentFragment(new TelegaAutoReplyActivity()));
+        card.addView(setupAutoReply, lp(MP, WC, 0, 0, 0, 0));
+
         TextView reset = text("Отключить и настроить заново", 16, 1f);
         reset.setTextColor(Color.parseColor("#E23A41"));
         reset.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(12), AndroidUtilities.dp(16), AndroidUtilities.dp(14));
