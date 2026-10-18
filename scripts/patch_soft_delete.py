@@ -8,7 +8,7 @@ def patch_chat_message_cell():
 
     old_time = (
         "        if (TelegaDeletedMessages.isDeleted(messageObject.currentAccount, messageObject.getDialogId(), messageObject.getId(), messageObject.messageOwner == null || messageObject.messageOwner.peer_id == null || messageObject.messageOwner.peer_id.channel_id == 0)) {\n"
-        "            currentTimeString = TextUtils.concat(\"    \", currentTimeString);\n"
+        "            currentTimeString = org.telegram.messenger.TelegaDeletedLabel.label();\n"
         "        }"
     )
     new_time = (
@@ -46,39 +46,10 @@ def patch_chat_message_cell():
         "            deletedIcon.clearColorFilter();\n"
         "        }"
     )
-    new_icon = (
-        "        if (currentMessageObject != null\n"
-        "                && org.telegram.messenger.TelegaSettings.isShowDeletedMessages()\n"
-        "                && TelegaDeletedMessages.isDeleted(\n"
-        "                        currentMessageObject.currentAccount,\n"
-        "                        currentMessageObject.getDialogId(),\n"
-        "                        currentMessageObject.getId(),\n"
-        "                        currentMessageObject.messageOwner == null\n"
-        "                                || currentMessageObject.messageOwner.peer_id == null\n"
-        "                                || currentMessageObject.messageOwner.peer_id.channel_id == 0)) {\n"
-        "            int oldColor = Theme.chat_timePaint.getColor();\n"
-        "            Theme.chat_timePaint.setColor(android.graphics.Color.rgb(226, 58, 65));\n"
-        "            if (timeLayout != null) {\n"
-        "                canvas.save();\n"
-        "                canvas.translate(drawTimeX, drawTimeY);\n"
-        "                SpoilerEffect.layoutDrawMaybe(timeLayout, canvas);\n"
-        "                canvas.restore();\n"
-        "            }\n"
-        "            Theme.chat_timePaint.setColor(oldColor);\n"
-        "            android.graphics.drawable.Drawable deletedIcon = getResources().getDrawable(R.drawable.msg_delete).mutate();\n"
-        "            deletedIcon.setColorFilter(android.graphics.Color.rgb(226, 58, 65), android.graphics.PorterDuff.Mode.SRC_IN);\n"
-        "            int iconSize = dp(11);\n"
-        "            int iconLeft = (int) (drawTimeX + dp(1));\n"
-        "            int layoutH = timeLayout != null ? timeLayout.getHeight() : dp(12);\n"
-        "            int iconTop = (int) (drawTimeY + Math.max(0, (layoutH - iconSize) / 2f));\n"
-        "            deletedIcon.setBounds(iconLeft, iconTop, iconLeft + iconSize, iconTop + iconSize);\n"
-        "            deletedIcon.draw(canvas);\n"
-        "            deletedIcon.clearColorFilter();\n"
-        "        }"
-    )
+    new_icon = ""
     if old_icon in text:
         text = text.replace(old_icon, new_icon, 1)
-        print("Patched red icon")
+        print("Removed duplicate overlay; red trash label is rendered in the time layout")
     else:
         print("WARNING: icon block not found")
 
@@ -117,7 +88,11 @@ def patch_chat_message_cell():
         "            int bgTop = currentBackgroundDrawable != null ? currentBackgroundDrawable.getBounds().top + dp(8) + namesOffset : dp(8);\n"
         "            telegaEditHistoryTop = bgTop;\n"
         "            telegaEditHistoryHelper.draw(canvas, bgLeft, bgTop);\n"
-        "        }"
+        "        }\n"
+        "        if (org.telegram.messenger.TelegaSettings.isGarlandEnabled() && currentBackgroundDrawable != null) {\n"
+        "            android.graphics.Rect telegaGarlandBounds = currentBackgroundDrawable.getBounds();\n"
+        "            org.telegram.messenger.TelegaGarland.draw(canvas, this, telegaGarlandBounds.left, telegaGarlandBounds.top, telegaGarlandBounds.right);\n"
+        }"
     )
     if draw_anchor in text and "telegaEditHistoryHelper.draw" not in text:
         text = text.replace(draw_anchor, draw_insert, 1)
@@ -142,6 +117,29 @@ def patch_chat_message_cell():
 
     path.write_text(text, encoding="utf-8")
     print(f"ChatMessageCell size after patch: {path.stat().st_size}")
+
+
+def patch_chat_activity():
+    path = Path("TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java")
+    if not path.exists():
+        raise RuntimeError("ERROR: ChatActivity.java not found; chat effects cannot be attached")
+    text = path.read_text(encoding="utf-8")
+    marker = "org.telegram.messenger.TelegaChatEffects.attach(fragmentView);"
+    if marker in text:
+        print("Chat effects already attached")
+        return
+
+    method_start = text.find("public View createView(Context context)")
+    if method_start < 0:
+        raise RuntimeError("ERROR: ChatActivity.createView(Context) anchor not found")
+    return_at = text.find("return fragmentView;", method_start)
+    if return_at < 0:
+        raise RuntimeError("ERROR: ChatActivity.createView return anchor not found")
+    line_start = text.rfind("\\n", 0, return_at) + 1
+    indent = text[line_start:return_at]
+    text = text[:line_start] + indent + marker + "\\n" + text[line_start:]
+    path.write_text(text, encoding="utf-8")
+    print("Attached chat-wide snowfall layer")
 
 
 def patch_messages_controller():
@@ -280,6 +278,7 @@ def patch_settings_activity():
 
 if __name__ == "__main__":
     patch_chat_message_cell()
+    patch_chat_activity()
     patch_messages_controller()
     patch_settings_activity()
     print("All Telega patches done")
