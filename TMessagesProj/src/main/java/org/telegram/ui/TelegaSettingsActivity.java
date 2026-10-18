@@ -11,6 +11,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -28,7 +29,7 @@ import org.telegram.ui.Components.RecyclerListView;
 
 /**
  * Telega settings hub — iOS Settings style:
- * gray canvas, inset grouped card, 17pt titles, chevrons, emoji leading icons.
+ * Gray canvas, inset grouped rows, restrained typography, vector leading icons.
  */
 public class TelegaSettingsActivity extends BaseFragment {
 
@@ -86,7 +87,9 @@ public class TelegaSettingsActivity extends BaseFragment {
                 presentFragment(new TelegaMessagesSettingsActivity());
             } else if (position == otherRow) {
                 presentFragment(new TelegaOtherSettingsActivity());
-            } else if (position == profileRow || position == customRow) {
+            } else if (position == customRow) {
+                presentFragment(new TelegaCustomizationActivity());
+            } else if (position == profileRow) {
                 AndroidUtilities.shakeView(view);
             }
         });
@@ -148,19 +151,19 @@ public class TelegaSettingsActivity extends BaseFragment {
             boolean first = position == messagesRow;
             boolean last = position == customRow;
             if (position == messagesRow) {
-                cell.setData("💬", "Сообщения", "Удалённые и изменённые", first, last);
+                cell.setData(R.drawable.telega_ic_chat, "Сообщения", "Удалённые и изменённые", first, last);
             } else if (position == otherRow) {
-                cell.setData("✨", "Другое", "ИИ агент", first, last);
+                cell.setData(R.drawable.telega_ic_robot, "Другое", "ИИ-агент", first, last);
             } else if (position == profileRow) {
-                cell.setData("👤", "Профиль", "Скоро", first, last);
+                cell.setData(R.drawable.telega_ic_user, "Профиль", "Скоро", first, last);
             } else if (position == customRow) {
-                cell.setData("🎨", "Кастомизация", "Скоро", first, last);
+                cell.setData(R.drawable.telega_ic_snow, "Кастомизация", "Снег и гирлянда в чатах", first, last);
             }
         }
     }
 
     private static class CategoryCell extends FrameLayout {
-        private final TextView emoji;
+        private final ImageView iconView;
         private final TextView title;
         private final TextView subtitle;
         private final Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -178,9 +181,10 @@ public class TelegaSettingsActivity extends BaseFragment {
             row.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(11), AndroidUtilities.dp(14), AndroidUtilities.dp(11));
             addView(row, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
-            emoji = new TextView(context);
-            emoji.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
-            row.addView(emoji, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 0, 0, 14, 0));
+            iconView = new ImageView(context);
+            iconView.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+            iconView.setColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            row.addView(iconView, LayoutHelper.createLinear(24, 24, Gravity.CENTER_VERTICAL, 0, 0, 14, 0));
 
             LinearLayout texts = new LinearLayout(context);
             texts.setOrientation(LinearLayout.VERTICAL);
@@ -207,8 +211,8 @@ public class TelegaSettingsActivity extends BaseFragment {
             bgPaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
         }
 
-        void setData(String icon, String t, String s, boolean isFirst, boolean isLast) {
-            emoji.setText(icon);
+        void setData(int icon, String t, String s, boolean isFirst, boolean isLast) {
+            iconView.setImageResource(icon);
             title.setText(t);
             subtitle.setText(s);
             first = isFirst;
