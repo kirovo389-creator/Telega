@@ -25,7 +25,7 @@ def patch_chat_message_cell():
         text = text.replace(old_time, new_time, 1)
         print("Patched timeString + alpha 0.85")
     else:
-        print("WARNING: timeString block not found")
+        raise RuntimeError("ERROR: deleted-message timeString anchor not found; the single red trash label cannot be installed")
 
     old_icon = (
         "        if (currentMessageObject != null\n"
