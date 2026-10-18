@@ -141,8 +141,9 @@ public final class TelegaAutoReplyAgent {
                 continue;
             }
 
-            // Only capture new incoming messages which were unread while the app was in background.
-            if (!isBackground() || !isConfigured() || !message.messageOwner.unread) continue;
+            // The callback is already a new-message event. Telegram may clear the unread flag
+            // during multi-device sync or catch-up; don't silently skip an incoming message.
+            if (!isBackground() || !isConfigured()) continue;
             String body = message.messageOwner.message;
             if (TextUtils.isEmpty(body)) continue;
 
@@ -308,9 +309,7 @@ public final class TelegaAutoReplyAgent {
                             + "входа, платёжные данные или секреты. Если вопрос неясен, уточни его. Не выдумывай факты "
                             + "и не обещай действий, которые не можешь совершить.";
                     String context = buildReplyContext(account, dialogId, records, ids);
-                    String answer = TelegaAIAgent.completeWithSystemPrompt(
-                            TelegaSettings.getAiBaseUrl(), TelegaSettings.getAiApiKey(),
-                            TelegaSettings.getAiModel(), systemPrompt, context);
+                    String answer = requestReplyWithRetry(dialogId, systemPrompt, context);
                     if (TextUtils.isEmpty(answer)) {
                         failed[0] = true;
                         break;
@@ -362,6 +361,35 @@ public final class TelegaAutoReplyAgent {
                 }
             }
         }, "TelegaAutoReply").start();
+    }
+
+    /**
+     * Retry transient provider/network failures, but keep the retry count bounded so
+     * a broken endpoint cannot create a background request loop.
+     */
+    private static String requestReplyWithRetry(long dialogId, String systemPrompt, String context) {
+        for (int attempt = 0; attempt < 3; attempt++) {
+            if (!isBackground() || !isConfigured()) return null;
+            try {
+                String answer = TelegaAIAgent.completeWithSystemPrompt(
+                        TelegaSettings.getAiBaseUrl(), TelegaSettings.getAiApiKey(),
+                        TelegaSettings.getAiModel(), systemPrompt, context);
+                if (!TextUtils.isEmpty(answer)) return answer.trim();
+                FileLog.e(new IllegalStateException(
+                        "AI auto-reply returned an empty response for dialog " + dialogId));
+            } catch (Throwable error) {
+                FileLog.e(error);
+            }
+            if (attempt < 2 && isBackground() && isConfigured()) {
+                try {
+                    Thread.sleep((attempt + 1) * 1500L);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    return null;
+                }
+            }
+        }
+        return null;
     }
 
     private static String buildReplyContext(int account, long dialogId, JSONArray records,

@@ -758,9 +758,26 @@ public class ConnectionsManager extends BaseController {
         return lastPauseTime;
     }
 
+    private static boolean isLoopbackProxyAddress(String address) {
+        return "127.0.0.1".equals(address)
+                || "localhost".equalsIgnoreCase(address)
+                || "::1".equals(address)
+                || "[::1]".equals(address);
+    }
+
     public long checkProxy(ProxySettings settings, RequestTimeDelegate requestTimeDelegate) {
         if (settings == null || !settings.isValid()) {
             return 0;
+        }
+        // Manual loopback entries can point to a previous fallback port. Probe the
+        // live listener selected by Telega, avoiding a false "proxy unavailable" check.
+        if (TelegaLocalBypassProxy.isEnabled()
+                && settings.getType() == ProxySettings.Type.SOCKS5
+                && isLoopbackProxyAddress(settings.getAddress())) {
+            int localPort = TelegaLocalBypassProxy.start();
+            if (localPort > 0) {
+                return native_checkProxy(currentAccount, "127.0.0.1", localPort, "", "", "", requestTimeDelegate);
+            }
         }
         if (settings.getType() == ProxySettings.Type.WEB) {
             WebProxyConnectionTester.getInstance().checkProxy(settings, requestTimeDelegate, this::checkWebProxyInternal);

@@ -104,6 +104,21 @@ public final class TelegaLocalBypassProxy {
     public static int getPort() {
         return isRunning() ? listenPort : 0;
     }
+ 
+    /** Stable preferred port for manual SOCKS5 clients; updated if fallback is required. */
+    private static int getPreferredPort() {
+        try {
+            if (ApplicationLoader.applicationContext != null) {
+                SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences(
+                        "telega_settings", Activity.MODE_PRIVATE);
+                int saved = preferences.getInt("local_bypass_port", DEFAULT_PORT);
+                if (saved >= 1024 && saved <= 65535) return saved;
+            }
+        } catch (Throwable error) {
+            Log.w(TAG, "Unable to read saved local proxy port", error);
+        }
+        return DEFAULT_PORT;
+    }
 
     public static String getStatusText() {
         if (!isEnabled()) {
@@ -130,12 +145,19 @@ public final class TelegaLocalBypassProxy {
             }
             ServerSocket bound = null;
             try {
+                int preferredPort = getPreferredPort();
+                List<Integer> candidatePorts = new ArrayList<>();
+                candidatePorts.add(preferredPort);
                 for (int i = 0; i < PORT_ATTEMPTS; i++) {
+                    int candidatePort = DEFAULT_PORT + i;
+                    if (!candidatePorts.contains(candidatePort)) candidatePorts.add(candidatePort);
+                }
+                for (int port : candidatePorts) {
                     ServerSocket candidate = new ServerSocket();
                     try {
                         candidate.setReuseAddress(true);
                         candidate.bind(new InetSocketAddress(
-                                InetAddress.getByName(LOOPBACK), DEFAULT_PORT + i), 32);
+                                InetAddress.getByName(LOOPBACK), port), 32);
                         bound = candidate;
                         break;
                     } catch (BindException e) {
@@ -157,6 +179,15 @@ public final class TelegaLocalBypassProxy {
                 listener = server;
                 workers = pool;
                 listenPort = server.getLocalPort();
+                try {
+                    if (ApplicationLoader.applicationContext != null) {
+                        ApplicationLoader.applicationContext.getSharedPreferences(
+                                "telega_settings", Activity.MODE_PRIVATE)
+                                .edit().putInt("local_bypass_port", listenPort).apply();
+                    }
+                } catch (Throwable error) {
+                    Log.w(TAG, "Unable to persist local proxy port", error);
+                }
                 lastError = null;
                 running = true;
                 pool.execute(() -> acceptLoop(server, pool));
@@ -314,12 +345,12 @@ public final class TelegaLocalBypassProxy {
 
             Route route = resolveRoute(request.host, request.port);
             if (route == null) {
-                writeSocksReply(output, 2);
+                writeSocksReply(output, 2, client);
                 return;
             }
 
             upstream = connectUpstream(route);
-            writeSocksReply(output, 0);
+            writeSocksReply(output, 0, client);
             connectAccepted = true;
 
             byte[] initBytes = readExact(input, MtProtoObfuscation.INIT_SIZE);
@@ -334,7 +365,7 @@ public final class TelegaLocalBypassProxy {
         } catch (Throwable error) {
             if (connectRequestRead && !connectAccepted) {
                 try {
-                    writeSocksReply(new BufferedOutputStream(client.getOutputStream()), 4);
+                    writeSocksReply(new BufferedOutputStream(client.getOutputStream()), 4, client);
                 } catch (Throwable ignore) {
                 }
             }
@@ -417,6 +448,19 @@ public final class TelegaLocalBypassProxy {
         output.flush();
     }
 
+    /** Include the actual local bind endpoint so SOCKS clients can validate the handshake. */
+    private static void writeSocksReply(OutputStream output, int code, Socket client) throws IOException {
+        byte[] address = client != null && client.getLocalAddress() != null
+                ? client.getLocalAddress().getAddress() : new byte[]{127, 0, 0, 1};
+        int addressType = address.length == 16 ? 4 : 1;
+        output.write(new byte[]{5, (byte) code, 0, (byte) addressType});
+        output.write(address);
+        int port = client != null ? client.getLocalPort() : 0;
+        output.write((port >>> 8) & 0xff);
+        output.write(port & 0xff);
+        output.flush();
+    }
+
     private static Route resolveRoute(String inputHost, int port) {
         if (port != 80 && port != 443 && port != 5222) {
             return null;
@@ -471,16 +515,19 @@ public final class TelegaLocalBypassProxy {
             if (a == 149 && b == 154 && c == 171) return 5;
             return 0;
         }
-        if (address instanceof Inet6Address) {
-            String normalized = address.getHostAddress().toLowerCase(Locale.US).split("%", 2)[0];
-            String prefix = normalized.contains("::")
-                    ? normalized.substring(0, normalized.indexOf("::"))
-                    : normalized;
-            String last = prefix.substring(prefix.lastIndexOf(':') + 1);
-            if (last.length() >= 1) {
-                int marker = Character.digit(last.charAt(last.length() - 1), 16);
-                if (marker >= 1 && marker <= 5) return marker;
-            }
+        if (address instanceof Inet6Address && bytes.length == 16) {
+            // Use the actual address words: Android can expand "::" in getHostAddress(),
+            // making a string-suffix parser misidentify DCs or reject valid Telegram IPv6.
+            int word0 = ((bytes[0] & 0xff) << 8) | (bytes[1] & 0xff);
+            int word1 = ((bytes[2] & 0xff) << 8) | (bytes[3] & 0xff);
+            int word2 = ((bytes[4] & 0xff) << 8) | (bytes[5] & 0xff);
+            int word3 = ((bytes[6] & 0xff) << 8) | (bytes[7] & 0xff);
+            if (word0 != 0x2001) return 0;
+            if (word1 == 0x0b28 && word2 == 0xf23d && word3 == 0xf001) return 1;
+            if (word1 == 0x067c && word2 == 0x04e8 && word3 == 0xf002) return 2;
+            if (word1 == 0x0b28 && word2 == 0xf23d && word3 == 0xf003) return 3;
+            if (word1 == 0x067c && word2 == 0x04e8 && word3 == 0xf004) return 4;
+            if (word1 == 0x0b28 && word2 == 0xf23f && word3 == 0xf005) return 5;
         }
         return 0;
     }
