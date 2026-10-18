@@ -41,33 +41,52 @@ def patch_auto_reply():
     else:
         print("WARN isBackground")
 
-    old_h = """            // Only capture new incoming messages which were unread while the app was in background.
+    # Current tree may already drop the unread check; still switch to canAutoReplyNow.
+    old_h_variants = [
+        """            // Only capture new incoming messages which were unread while the app was in background.
             if (!isBackground() || !isConfigured() || !message.messageOwner.unread) continue;
             String body = message.messageOwner.message;
-            if (TextUtils.isEmpty(body)) continue;"""
+            if (TextUtils.isEmpty(body)) continue;""",
+        """            // The callback is already a new-message event. Telegram may clear the unread flag
+            // before delivery, so do not require messageOwner.unread here.
+            if (!isBackground() || !isConfigured()) continue;
+            String body = message.messageOwner.message;
+            if (TextUtils.isEmpty(body)) continue;""",
+        """            if (!isBackground() || !isConfigured()) continue;
+            String body = message.messageOwner.message;
+            if (TextUtils.isEmpty(body)) continue;""",
+    ]
     new_h = """            // Capture incoming private messages while the app is not in the foreground.
             if (!canAutoReplyNow() || !isConfigured()) continue;
             String body = message.messageOwner.message;
             if (TextUtils.isEmpty(body)) continue;"""
-    if old_h in t:
-        t = t.replace(old_h, new_h, 1)
-        print("patched handle gate")
+    for old_h in old_h_variants:
+        if old_h in t:
+            t = t.replace(old_h, new_h, 1)
+            print("patched handle gate")
+            break
 
-    t = t.replace("if (!isBackground() || !isConfigured()) return;",
-                  "if (!canAutoReplyNow() || !isConfigured()) return;", 1)
-    t = t.replace("while (rounds++ < 8 && isBackground() && isConfigured()) {",
-                  "while (rounds++ < 8 && canAutoReplyNow() && isConfigured()) {", 1)
-    t = t.replace("if (!isBackground() || !isConfigured()) break;",
-                  "if (!canAutoReplyNow() || !isConfigured()) break;", 1)
-    t = t.replace("if (isBackground() && isConfigured()) {",
-                  "if (canAutoReplyNow() && isConfigured()) {", 1)
-    t = t.replace("if (isBackground() && isConfigured()) failed[0] = true;",
-                  "if (canAutoReplyNow() && isConfigured()) failed[0] = true;", 1)
-    t = t.replace(
-        "if (!failed[0] && isBackground() && isConfigured() && hasUnanswered(account, dialogId)) {",
-        "if (!failed[0] && canAutoReplyNow() && isConfigured() && hasUnanswered(account, dialogId)) {",
-        1,
-    )
+    replacements = [
+        ("if (!isBackground() || !isConfigured()) return;",
+         "if (!canAutoReplyNow() || !isConfigured()) return;"),
+        ("while (rounds++ < 8 && isBackground() && isConfigured()) {",
+         "while (rounds++ < 8 && canAutoReplyNow() && isConfigured()) {"),
+        ("if (!isBackground() || !isConfigured()) break;",
+         "if (!canAutoReplyNow() || !isConfigured()) break;"),
+        ("if (isBackground() && isConfigured()) {",
+         "if (canAutoReplyNow() && isConfigured()) {"),
+        ("if (isBackground() && isConfigured()) failed[0] = true;",
+         "if (canAutoReplyNow() && isConfigured()) failed[0] = true;"),
+        ("if (!failed[0] && isBackground() && isConfigured() && hasUnanswered(account, dialogId)) {",
+         "if (!failed[0] && canAutoReplyNow() && isConfigured() && hasUnanswered(account, dialogId)) {"),
+        ("if (!isBackground() || !isConfigured()) return null;",
+         "if (!canAutoReplyNow() || !isConfigured()) return null;"),
+        ("if (attempt < 2 && isBackground() && isConfigured()) {",
+         "if (attempt < 2 && canAutoReplyNow() && isConfigured()) {"),
+    ]
+    for old, new in replacements:
+        if old in t:
+            t = t.replace(old, new)
 
     old_call = """                    String answer = TelegaAIAgent.completeWithSystemPrompt(
                             TelegaSettings.getAiBaseUrl(), TelegaSettings.getAiApiKey(),
@@ -228,8 +247,10 @@ def patch_check_proxy():
     if not path.exists():
         print("ConnectionsManager missing"); return
     t = path.read_text(encoding="utf-8")
-    if "TelegaLocalBypassProxy.ensureRunning" in t:
-        print("checkProxy already patched"); return
+    # Repo already routes loopback checkProxy through the live local SOCKS port.
+    if "isLoopbackProxyAddress" in t or "TelegaLocalBypassProxy.ensureRunning" in t:
+        print("checkProxy already has loopback handling")
+        return
 
     old = """    public long checkProxy(ProxySettings settings, RequestTimeDelegate requestTimeDelegate) {
         if (settings == null || !settings.isValid()) {
@@ -253,15 +274,7 @@ def patch_check_proxy():
 
         try {
             if (org.telegram.messenger.TelegaLocalBypassProxy.isEnabled()) {
-                int port = org.telegram.messenger.TelegaLocalBypassProxy.ensureRunning();
-                if (port > 0 && org.telegram.messenger.TelegaLocalBypassProxy.isLocalEndpoint(
-                        settings.getAddress(), settings.getPort() > 0 ? settings.getPort() : port)) {
-                    if (requestTimeDelegate != null) {
-                        org.telegram.messenger.AndroidUtilities.runOnUIThread(() -> requestTimeDelegate.run(15));
-                        return System.currentTimeMillis();
-                    }
-                    return 1;
-                }
+                int port = org.telegram.messenger.TelegaLocalBypassProxy.start();
                 if (port > 0 && ("127.0.0.1".equals(settings.getAddress())
                         || "localhost".equalsIgnoreCase(settings.getAddress()))) {
                     return native_checkProxy(currentAccount, "127.0.0.1", port, "", "", "", requestTimeDelegate);
