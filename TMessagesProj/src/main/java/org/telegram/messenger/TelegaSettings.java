@@ -140,6 +140,39 @@ public final class TelegaSettings {
         }
     }
 
+    // -------------------------------------------------------- AI auto-responder
+
+    public static String getAiAutoReplyPrompt() {
+        SharedPreferences p = prefs();
+        return p == null ? "" : p.getString("ai_auto_reply_prompt", "");
+    }
+
+    public static void setAiAutoReplyPrompt(String prompt) {
+        SharedPreferences p = prefs();
+        if (p != null) {
+            String value = prompt == null ? "" : prompt.trim();
+            SharedPreferences.Editor editor = p.edit().putString("ai_auto_reply_prompt", value);
+            if (!value.isEmpty()) {
+                editor.putBoolean("ai_auto_reply_enabled", true);
+            }
+            editor.apply();
+        }
+    }
+
+    public static boolean isAiAutoReplyEnabled() {
+        SharedPreferences p = prefs();
+        return p != null && p.getBoolean("ai_auto_reply_enabled", false)
+                && !getAiAutoReplyPrompt().trim().isEmpty() && isAiConnected();
+    }
+
+    public static void setAiAutoReplyEnabled(boolean enabled) {
+        SharedPreferences p = prefs();
+        if (p != null) {
+            boolean valid = enabled && isAiConnected() && !getAiAutoReplyPrompt().trim().isEmpty();
+            p.edit().putBoolean("ai_auto_reply_enabled", valid).apply();
+        }
+    }
+
     /** Forget the connection state; saved fields stay so the form is pre-filled. */
     public static void clearAiConnection() {
         SharedPreferences p = prefs();
