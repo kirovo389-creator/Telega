@@ -60,6 +60,7 @@ jobs:
           python3 scripts/patch_edit_own.py || true
           python3 scripts/patch_edit_text.py
           python3 scripts/patch_ai_agent.py
+          python3 scripts/patch_bugs.py
 
       - name: Verify Telega integration
         run: |
@@ -78,7 +79,10 @@ jobs:
           grep -Fq 'TelegaLocalBypassProxy.start()' TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
           grep -Fq 'TelegaSettings.setLocalBypassEnabled(enabled)' TMessagesProj/src/main/java/org/telegram/messenger/TelegaLocalBypassProxy.java
           grep -Fq 'new TelegaLocalBypassSettingsActivity()' TMessagesProj/src/main/java/org/telegram/ui/TelegaSettingsActivity.java
-          echo "Deleted label, snowfall, garland, customization, AI agent, and local bypass wiring verified."
+          grep -Fq 'canAutoReplyNow' TMessagesProj/src/main/java/org/telegram/messenger/TelegaAutoReplyAgent.java
+          grep -Fq 'persistLocalProxy' TMessagesProj/src/main/java/org/telegram/messenger/TelegaLocalBypassProxy.java
+          grep -Fq 'TelegaLocalBypassProxy.ensureRunning' TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
+          echo "Deleted label, snowfall, garland, customization, AI agent, AutoReply, and local bypass wiring verified."
 
       - name: Branding package version icon
         run: |
@@ -86,7 +90,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq python3-pil python3-pil.imagetk || true
           VERSION_CODE=$(date -u +%s)
-          VERSION_NAME="13.0.5-telega.$(date -u +%Y%m%d-%H%M)"
+          VERSION_NAME="13.0.6-telega.$(date -u +%Y%m%d-%H%M)"
           sed -i "s/^APP_VERSION_CODE=.*/APP_VERSION_CODE=${VERSION_CODE}/" gradle.properties
           sed -i "s/^APP_VERSION_NAME=.*/APP_VERSION_NAME=${VERSION_NAME}/" gradle.properties
           sed -i 's/^APP_PACKAGE=.*/APP_PACKAGE=org.telega.messenger/' gradle.properties
@@ -153,4 +157,4 @@ jobs:
           VER=$(grep '^APP_VERSION_CODE=' gradle.properties | cut -d= -f2)
           gh release create "$TAG" "Telega.apk#Telega.apk" \
             --title "Telega $TAG (v$VER)" \
-            --notes "Telega branding; single red deleted-message label with trash icon; persistent Minecraft-style and motion-reactive snowfall; animated message garland; minimalist settings icons; edit history; AI agent."
+            --notes "• Гирлянда с провисом\n• ИИ-автоответчик (фон)\n• Локальный обход: авто-прокси + правильный порт\n• checkProxy для 127.0.0.1"
