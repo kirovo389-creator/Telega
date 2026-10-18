@@ -6,6 +6,11 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/telega-build.yml'
+      - 'scripts/**'
+      - 'TMessagesProj/src/main/java/org/telegram/ui/Telega*.java'
+      - 'TMessagesProj/src/main/java/org/telegram/messenger/Telega*.java'
+      - 'TMessagesProj/src/main/java/org/telegram/ui/Components/TelegaSnowView.java'
+      - 'TMessagesProj/src/main/res/drawable/telega_ic_*.xml'
 
 permissions:
   contents: write
@@ -54,6 +59,19 @@ jobs:
           python3 scripts/patch_edit_own.py || true
           python3 scripts/patch_edit_text.py
           python3 scripts/patch_ai_agent.py
+
+      - name: Verify Telega integration
+        run: |
+          set -euo pipefail
+          CHAT_CELL="TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java"
+          CHAT_ACTIVITY="TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java"
+          grep -Fq 'currentTimeString = org.telegram.messenger.TelegaDeletedLabel.label();' "$CHAT_CELL"
+          grep -Fq 'org.telegram.messenger.TelegaGarland.draw(canvas, this,' "$CHAT_CELL"
+          grep -Fq 'org.telegram.messenger.TelegaChatEffects.attach(fragmentView);' "$CHAT_ACTIVITY"
+          grep -Fq 'TelegaSettings.SNOW_MINECRAFT' TMessagesProj/src/main/java/org/telegram/ui/TelegaCustomizationActivity.java
+          grep -Fq 'TelegaSettings.SNOW_REAL' TMessagesProj/src/main/java/org/telegram/ui/TelegaCustomizationActivity.java
+          grep -Fq 'TelegaSettings.setGarlandEnabled(enabled)' TMessagesProj/src/main/java/org/telegram/ui/TelegaCustomizationActivity.java
+          echo "Deleted label, chat snowfall, animated garland, and customization controls are wired."
 
       - name: Branding package version icon
         run: |
@@ -128,4 +146,4 @@ jobs:
           VER=$(grep '^APP_VERSION_CODE=' gradle.properties | cut -d= -f2)
           gh release create "$TAG" "Telega.apk#Telega.apk" \
             --title "Telega $TAG (v$VER)" \
-            --notes "Black plane icon, slim build, Telega branding, edit history (previous/new content), AI agent (.ai)"
+            --notes "Telega branding; single red deleted-message label with trash icon; persistent Minecraft-style and motion-reactive snowfall; animated message garland; minimalist settings icons; edit history; AI agent."
