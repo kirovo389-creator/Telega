@@ -15,6 +15,8 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.SystemClock;
 import android.view.View;
+import android.view.Surface;
+import android.view.WindowManager;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.TelegaSettings;
@@ -35,11 +37,13 @@ public class TelegaSnowView extends View implements SensorEventListener {
 
     private static final int MAX_FLAKES = 420;
     private static final float TWO_PI = (float) (Math.PI * 2);
+    private static final String[] PIXEL_SNOW_SMALL = {"010", "111", "010"};
+    private static final String[] PIXEL_SNOW_DIAGONAL = {"101", "010", "101"};
+    private static final String[] PIXEL_SNOW_LARGE = {"00100", "01110", "11111", "01110", "00100"};
 
     private final Random random = new Random();
     private final Paint pixelPaint = new Paint();
     private final Paint softPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-    private final Paint linePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Rect srcRect = new Rect();
     private final RectF dstRect = new RectF();
 
@@ -53,12 +57,9 @@ public class TelegaSnowView extends View implements SensorEventListener {
     private int mode = -1;
     private long lastTime;
     private float time;
-    private float blizzard;
     private float windTilt;
-    private float windDir = 1f;
-    private float shakeLevel;
-    private volatile float shakePeak;
     private volatile float tiltX;
+    private volatile float tiltY;
     private final float[] gravity = new float[3];
     private boolean gravityReady;
     private boolean sensorOn;
@@ -79,7 +80,6 @@ public class TelegaSnowView extends View implements SensorEventListener {
         pixelPaint.setAntiAlias(false);
         pixelPaint.setFilterBitmap(false);
         pixelPaint.setStyle(Paint.Style.FILL);
-        linePaint.setStrokeCap(Paint.Cap.ROUND);
     }
 
     @Override
@@ -135,8 +135,6 @@ public class TelegaSnowView extends View implements SensorEventListener {
             Sensor s = sm != null ? sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) : null;
             if (s != null) {
                 gravityReady = false;
-                shakePeak = 0;
-                shakeLevel = 0;
                 sm.registerListener(this, s, SensorManager.SENSOR_DELAY_GAME);
                 sensorOn = true;
             }
@@ -168,20 +166,15 @@ public class TelegaSnowView extends View implements SensorEventListener {
             gravity[1] = e.values[1];
             gravity[2] = e.values[2];
             gravityReady = true;
-            return;
-        }
-        final float a = 0.88f;
-        for (int i = 0; i < 3; i++) {
-            gravity[i] = a * gravity[i] + (1f - a) * e.values[i];
-        }
-        float lx = e.values[0] - gravity[0];
-        float ly = e.values[1] - gravity[1];
-        float lz = e.values[2] - gravity[2];
-        float mag = (float) Math.sqrt(lx * lx + ly * ly + lz * lz);
-        if (mag > shakePeak) {
-            shakePeak = mag;
+        } else {
+            // Low-pass filter avoids abrupt changes from small hand movements.
+            final float a = 0.88f;
+            for (int i = 0; i < 3; i++) {
+                gravity[i] = a * gravity[i] + (1f - a) * e.values[i];
+            }
         }
         tiltX = gravity[0];
+        tiltY = gravity[1];
     }
 
     @Override
@@ -196,7 +189,6 @@ public class TelegaSnowView extends View implements SensorEventListener {
         if (m != mode) {
             mode = m;
             lastTime = 0;
-            blizzard = 0;
             windTilt = 0;
             reseed();
             if (mode == TelegaSettings.SNOW_REAL) {
@@ -230,58 +222,60 @@ public class TelegaSnowView extends View implements SensorEventListener {
         float d = AndroidUtilities.density;
         int w = getWidth();
         int h = getHeight();
-        boolean dark = Theme.isCurrentThemeDark();
         int dpArea = (int) ((w / d) * (h / d));
-        int count = Math.max(60, Math.min(190, dpArea / 2400));
+        int count = Math.max(55, Math.min(130, dpArea / 2600));
 
         for (int i = 0; i < count; i++) {
             float z = fz[i];
-            int texel = Math.max(2, Math.round((1.6f + 2.2f * z) * d));
-            float vy = (38f + 52f * z) * d * fv[i];
-            float vx = (5f + 8f * (float) Math.sin(time * 0.9f + fp[i])) * d;
+            float cell = (1.15f + 0.65f * z) * d;
+            float vy = (34f + 48f * z) * d * fv[i];
+            float vx = (float) Math.sin(time * 0.65f + fp[i]) * (5f + 7f * z) * d;
             fy[i] += vy * dt;
             fx[i] += vx * dt;
-            if (fy[i] > h + texel * 3) {
-                fy[i] = -texel * 3;
+
+            String[] pattern = ft[i] == 1 ? PIXEL_SNOW_DIAGONAL
+                    : (ft[i] == 2 ? PIXEL_SNOW_LARGE : PIXEL_SNOW_SMALL);
+            float size = pattern.length * cell;
+            if (fy[i] > h + size) {
+                fy[i] = -size;
                 fx[i] = random.nextFloat() * w;
             }
-            if (fx[i] > w + texel * 3) {
-                fx[i] = -texel * 3;
-            } else if (fx[i] < -texel * 3) {
-                fx[i] = w + texel * 3;
+            if (fx[i] > w + size) {
+                fx[i] = -size;
+            } else if (fx[i] < -size) {
+                fx[i] = w + size;
             }
-            int px = (int) fx[i];
-            int py = (int) fy[i];
-            int pw = texel;
-            int ph = texel;
-            if (ft[i] == 1) {
-                ph = texel * 2;
-            } else if (ft[i] == 2) {
-                pw = texel * 2;
-                ph = texel * 2;
+
+            int alpha = Math.min(255, (int) (232 + 23 * z));
+            pixelPaint.setColor(Color.argb(alpha,
+                    ft[i] == 2 ? 238 : 255,
+                    ft[i] == 2 ? 248 : 255,
+                    255));
+            float px = fx[i];
+            float py = fy[i];
+            for (int row = 0; row < pattern.length; row++) {
+                String line = pattern[row];
+                for (int col = 0; col < line.length(); col++) {
+                    if (line.charAt(col) == '1') {
+                        canvas.drawRect(px + col * cell, py + row * cell,
+                                px + (col + 1) * cell, py + (row + 1) * cell, pixelPaint);
+                    }
+                }
             }
-            int alpha = (int) (170 + 85 * z);
-            if (!dark) {
-                pixelPaint.setColor(Color.argb(Math.min(255, alpha / 2), 60, 80, 110));
-                canvas.drawRect(px + 1, py + 1, px + pw + 1, py + ph + 1, pixelPaint);
-            }
-            pixelPaint.setColor(Color.argb(alpha, 255, 255, 255));
-            canvas.drawRect(px, py, px + pw, py + ph, pixelPaint);
         }
     }
 
     private Bitmap flakeBitmap() {
         if (flake == null) {
-            int s = 48;
-            flake = Bitmap.createBitmap(s, s, Bitmap.Config.ARGB_8888);
+            int size = 48;
+            flake = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
             Canvas c = new Canvas(flake);
             Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-            // faint cool rim keeps the flakes visible on light wallpapers
-            p.setColor(Color.argb(44, 90, 110, 140));
-            c.drawCircle(s / 2f, s / 2f, s / 2f - 1, p);
-            p.setShader(new RadialGradient(s / 2f, s / 2f, s / 2f - 4,
-                    new int[]{0xFFFFFFFF, 0xF2FFFFFF, 0x00FFFFFF}, new float[]{0f, 0.55f, 1f}, Shader.TileMode.CLAMP));
-            c.drawCircle(s / 2f, s / 2f, s / 2f - 4, p);
+            // A white center and a soft transparent edge; no gray outline or tint.
+            p.setShader(new RadialGradient(size / 2f, size / 2f, size / 2f - 2,
+                    new int[]{0xFFFFFFFF, 0xFFFFFFFF, 0x00FFFFFF},
+                    new float[]{0f, 0.58f, 1f}, Shader.TileMode.CLAMP));
+            c.drawCircle(size / 2f, size / 2f, size / 2f - 2, p);
         }
         return flake;
     }
@@ -291,70 +285,58 @@ public class TelegaSnowView extends View implements SensorEventListener {
         int w = getWidth();
         int h = getHeight();
 
-        // shake -> blizzard
-        float level = Math.max(shakeLevel - dt * 4f, shakePeak);
-        shakePeak = 0;
-        shakeLevel = level;
-        float target = Math.max(0f, Math.min(1f, (level - 4.5f) / 10f));
-        if (target > blizzard) {
-            blizzard += (target - blizzard) * Math.min(1f, dt * 5f);
-        } else {
-            blizzard = Math.max(0f, blizzard - dt * 0.2f);
+        // Convert gravity to screen axes, including landscape and reverse-landscape rotation.
+        WindowManager wm = (WindowManager) getContext().getSystemService(Context.WINDOW_SERVICE);
+        int rotation = wm != null && wm.getDefaultDisplay() != null
+                ? wm.getDefaultDisplay().getRotation() : Surface.ROTATION_0;
+        float screenTiltX;
+        switch (rotation) {
+            case Surface.ROTATION_90:
+                screenTiltX = -tiltY;
+                break;
+            case Surface.ROTATION_180:
+                screenTiltX = -tiltX;
+                break;
+            case Surface.ROTATION_270:
+                screenTiltX = tiltY;
+                break;
+            case Surface.ROTATION_0:
+            default:
+                screenTiltX = tiltX;
+                break;
         }
-
-        // tilt -> wind (tilt the phone to the right and the snow slides to the right)
-        float tiltTarget = Math.max(-1f, Math.min(1f, -tiltX / 9.81f)) * 70f * d;
-        windTilt += (tiltTarget - windTilt) * Math.min(1f, dt * 3f);
-        if (Math.abs(windTilt) > 8f * d) {
-            windDir = windTilt > 0 ? 1f : -1f;
-        }
+        float tiltTarget = Math.max(-1f, Math.min(1f, -screenTiltX / 9.81f)) * 42f * d;
+        windTilt += (tiltTarget - windTilt) * Math.min(1f, dt * 1.7f);
+        float slant = 4f * d + windTilt;
 
         int dpArea = (int) ((w / d) * (h / d));
-        int base = Math.max(70, Math.min(210, dpArea / 2200));
-        int active = (int) (base + (MAX_FLAKES - base) * blizzard);
-
-        float gust = 0.6f + 0.4f * (float) Math.sin(time * 1.7f) + 0.2f * (float) Math.sin(time * 3.1f);
-        float slant = 12f * d + windTilt;
-        float blow = blizzard * 330f * d * gust * windDir;
-        float streak = 0.012f + 0.04f * blizzard;
-
-        if (blizzard > 0.05f) {
-            canvas.drawColor(Color.argb((int) (34 * blizzard), 235, 242, 250));
-        }
-
+        int active = Math.max(75, Math.min(190, dpArea / 2350));
         Bitmap bmp = flakeBitmap();
         srcRect.set(0, 0, bmp.getWidth(), bmp.getHeight());
 
         for (int i = 0; i < active; i++) {
             float z = fz[i];
-            float r = (1.0f + 3.6f * z) * d;
-            float vy = (24f + 62f * z) * d * fv[i] * (1f + 1.3f * blizzard);
-            float wobble = (float) Math.cos(time * (1.0f + fv[i] * 0.8f) + fp[i]) * (7f + 11f * z) * d * (1f + 1.5f * blizzard);
-            float vx = slant * (0.4f + 0.6f * z) + blow * (0.35f + 0.65f * z) + wobble;
+            float r = (1.15f + 3.25f * z) * d;
+            float vy = (26f + 54f * z) * d * fv[i];
+            float wobble = (float) Math.cos(time * (0.85f + fv[i] * 0.65f) + fp[i])
+                    * (5f + 8f * z) * d;
+            float vx = slant * (0.25f + 0.75f * z) + wobble;
 
             fx[i] += vx * dt;
             fy[i] += vy * dt;
-
-            if (fy[i] > h + r * 2) {
-                fy[i] = -r * 2;
+            if (fy[i] > h + r * 2f) {
+                fy[i] = -r * 2f;
                 fx[i] = random.nextFloat() * w;
             }
-            if (fx[i] > w + r * 2) {
-                fx[i] = -r * 2;
-            } else if (fx[i] < -r * 2) {
-                fx[i] = w + r * 2;
+            if (fx[i] > w + r * 2f) {
+                fx[i] = -r * 2f;
+            } else if (fx[i] < -r * 2f) {
+                fx[i] = w + r * 2f;
             }
 
-            int alpha = (int) (255 * (0.35f + 0.65f * z));
-            if (blizzard > 0.3f) {
-                linePaint.setStrokeWidth(r * 1.3f);
-                linePaint.setColor(Color.argb(alpha, 255, 255, 255));
-                canvas.drawLine(fx[i], fy[i], fx[i] - vx * streak, fy[i] - vy * streak, linePaint);
-            } else {
-                softPaint.setAlpha(alpha);
-                dstRect.set(fx[i] - r, fy[i] - r, fx[i] + r, fy[i] + r);
-                canvas.drawBitmap(bmp, srcRect, dstRect, softPaint);
-            }
+            softPaint.setAlpha(255);
+            dstRect.set(fx[i] - r, fy[i] - r, fx[i] + r, fy[i] + r);
+            canvas.drawBitmap(bmp, srcRect, dstRect, softPaint);
         }
     }
 }
