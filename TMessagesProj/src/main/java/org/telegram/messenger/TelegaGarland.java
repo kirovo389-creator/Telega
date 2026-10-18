@@ -63,11 +63,12 @@ public final class TelegaGarland {
         int colorShift = (idHash >> 8) & 0x7;
 
         float x0 = left + 7f * d;
-        float y0 = top + 4.5f * d;
+        // Keep the strand and bulbs in a narrow top padding zone, away from text.
+        float y0 = top + 0.65f * d;
 
-        float sagBase = Math.max(5f * d, Math.min(15f * d, span * 0.09f));
-        float sag = sagBase * (1f + 0.07f * (float) Math.sin(sec * 1.1f + seed));
-        float sway = (float) Math.sin(sec * 0.75f + seed * 0.5f) * 1.4f * d;
+        float sagBase = Math.max(0.25f * d, Math.min(1.15f * d, span * 0.018f));
+        float sag = sagBase * (1f + 0.05f * (float) Math.sin(sec * 1.1f + seed));
+        float sway = (float) Math.sin(sec * 0.75f + seed * 0.5f) * 0.35f * d;
 
         // wire
         wirePaint.setStrokeWidth(1.2f * d);
@@ -87,8 +88,8 @@ public final class TelegaGarland {
 
         // wire ends
         fillPaint.setColor(0xFF27332B);
-        canvas.drawCircle(x0, y0, 1.9f * d, fillPaint);
-        canvas.drawCircle(x0 + span, y0, 1.9f * d, fillPaint);
+        canvas.drawCircle(x0, y0, 0.8f * d, fillPaint);
+        canvas.drawCircle(x0 + span, y0, 0.8f * d, fillPaint);
 
         // bulbs
         int n = Math.max(3, Math.round(span / (30f * d)));
@@ -103,7 +104,7 @@ public final class TelegaGarland {
             float py2 = y0 + sag * shape(u2);
             float tangent = (float) Math.atan2(py2 - py, px2 - px);
 
-            float swing = (float) Math.sin(sec * 1.6f + seed + i * 1.3f) * 0.16f;
+            float swing = (float) Math.sin(sec * 1.6f + seed + i * 1.3f) * 0.06f;
             float rotation = (float) Math.toDegrees(tangent * 0.6f + swing);
 
             float blink = 0.5f + 0.5f * (float) Math.sin(sec * TWO_PI / 3.4f + i * 0.95f + seed);
@@ -115,20 +116,21 @@ public final class TelegaGarland {
             canvas.rotate(rotation);
 
             fillPaint.setColor(0xFF2A2F2C);
-            oval.set(-1.4f * d, -0.2f * d, 1.4f * d, 2.4f * d);
-            canvas.drawRoundRect(oval, 0.6f * d, 0.6f * d, fillPaint);
+            oval.set(-0.55f * d, -0.1f * d, 0.55f * d, 1.25f * d);
+            canvas.drawRoundRect(oval, 0.35f * d, 0.35f * d, fillPaint);
 
-            fillPaint.setColor(withAlpha(color, (int) (58 * bright)));
-            canvas.drawCircle(0, 5.4f * d, 7.6f * d, fillPaint);
-            fillPaint.setColor(withAlpha(color, (int) (96 * bright)));
-            canvas.drawCircle(0, 5.4f * d, 4.8f * d, fillPaint);
+            // Tiny bulbs keep their glow and slow blink without touching the message text.
+            fillPaint.setColor(withAlpha(color, (int) (34 * bright)));
+            canvas.drawCircle(0, 1.8f * d, 2.0f * d, fillPaint);
+            fillPaint.setColor(withAlpha(color, (int) (70 * bright)));
+            canvas.drawCircle(0, 1.8f * d, 1.25f * d, fillPaint);
 
             fillPaint.setColor(withAlpha(color, (int) (255 * (0.55f + 0.45f * bright))));
-            oval.set(-2.4f * d, 2.2f * d, 2.4f * d, 8.6f * d);
+            oval.set(-0.85f * d, 1.0f * d, 0.85f * d, 3.0f * d);
             canvas.drawOval(oval, fillPaint);
 
-            fillPaint.setColor(Color.argb((int) (175 * bright), 255, 255, 255));
-            canvas.drawCircle(-0.8f * d, 4.2f * d, 0.8f * d, fillPaint);
+            fillPaint.setColor(Color.argb((int) (170 * bright), 255, 255, 255));
+            canvas.drawCircle(-0.25f * d, 1.55f * d, 0.3f * d, fillPaint);
 
             canvas.restore();
         }
