@@ -42,7 +42,7 @@ public class TelegaMessagesSettingsActivity extends BaseFragment {
     public View createView(Context context) {
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
         actionBar.setAllowOverlayTitle(true);
-        actionBar.setTitle("💬  Сообщения");
+        actionBar.setTitle("Сообщения");
         actionBar.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
         actionBar.setTitleColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
         actionBar.setItemsColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText), false);
@@ -128,9 +128,11 @@ public class TelegaMessagesSettingsActivity extends BaseFragment {
             }
             TextCheckCell cell = (TextCheckCell) holder.itemView;
             if (position == deletedRow) {
-                cell.setTextAndCheck("🗑  Удалённые сообщения", TelegaSettings.isShowDeletedMessages(), true);
+                cell.setTextAndCheck("Удалённые сообщения", TelegaSettings.isShowDeletedMessages(), true);
+                cell.setColorfullIcon(0xFFE23A41, R.drawable.telega_ic_trash);
             } else if (position == editedRow) {
-                cell.setTextAndCheck("✏️  Изменённые сообщения", TelegaSettings.isShowEditedMessages(), false);
+                cell.setTextAndCheck("Изменённые сообщения", TelegaSettings.isShowEditedMessages(), false);
+                cell.setColorfullIcon(0xFF52798B, R.drawable.telega_ic_edit);
             }
         }
     }
