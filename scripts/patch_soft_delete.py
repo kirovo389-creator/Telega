@@ -8,12 +8,12 @@ def patch_chat_message_cell():
 
     old_time = (
         "        if (TelegaDeletedMessages.isDeleted(messageObject.currentAccount, messageObject.getDialogId(), messageObject.getId(), messageObject.messageOwner == null || messageObject.messageOwner.peer_id == null || messageObject.messageOwner.peer_id.channel_id == 0)) {\n"
-        "            currentTimeString = org.telegram.messenger.TelegaDeletedLabel.label();\n"
+        "            currentTimeString = TextUtils.concat(\"    \", currentTimeString);\n"
         "        }"
     )
     new_time = (
         "        if (org.telegram.messenger.TelegaSettings.isShowDeletedMessages() && TelegaDeletedMessages.isDeleted(messageObject.currentAccount, messageObject.getDialogId(), messageObject.getId(), messageObject.messageOwner == null || messageObject.messageOwner.peer_id == null || messageObject.messageOwner.peer_id.channel_id == 0)) {\n"
-        "            currentTimeString = \"    \u0423\u0434\u0430\u043b\u0435\u043d\u043e\";\n"
+        "            currentTimeString = org.telegram.messenger.TelegaDeletedLabel.label();\n"
         "            if (Math.abs(getAlpha() - 0.85f) > 0.01f) {\n"
         "                setAlpha(0.85f);\n"
         "            }\n"
@@ -135,9 +135,9 @@ def patch_chat_activity():
     return_at = text.find("return fragmentView;", method_start)
     if return_at < 0:
         raise RuntimeError("ERROR: ChatActivity.createView return anchor not found")
-    line_start = text.rfind("\\n", 0, return_at) + 1
+    line_start = text.rfind("\n", 0, return_at) + 1
     indent = text[line_start:return_at]
-    text = text[:line_start] + indent + marker + "\\n" + text[line_start:]
+    text = text[:line_start] + indent + marker + "\n" + text[line_start:]
     path.write_text(text, encoding="utf-8")
     print("Attached chat-wide snowfall layer")
 
