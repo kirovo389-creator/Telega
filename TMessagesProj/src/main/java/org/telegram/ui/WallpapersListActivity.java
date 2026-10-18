@@ -20,6 +20,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.Spannable;
 import android.text.SpannableString;
@@ -54,6 +55,7 @@ import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.messenger.SendMessagesHelper;
+import org.telegram.messenger.TelegaSettings;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.Utilities;
 import org.telegram.tgnet.ConnectionsManager;
@@ -78,6 +80,7 @@ import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.NumberTextView;
 import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.WallpaperUpdater;
+import org.telegram.ui.Components.TelegaVideoWallpaperView;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -89,6 +92,9 @@ public class WallpapersListActivity extends BaseFragment implements Notification
     private int rowCount;
     @Keep
     private int uploadImageRow;
+    private int videoWallpaperRow;
+    private int removeVideoWallpaperRow;
+    private static final int REQUEST_CHAT_VIDEO_WALLPAPER = 7231;
     private int setColorRow;
     private int sectionRow;
     private int wallPaperStartRow;
@@ -736,6 +742,12 @@ public class WallpapersListActivity extends BaseFragment implements Notification
             }
             if (position == uploadImageRow) {
                 updater.openGallery();
+            } else if (position == videoWallpaperRow) {
+                openVideoWallpaperPicker();
+            } else if (position == removeVideoWallpaperRow) {
+                TelegaSettings.setChatVideoWallpaperUri("");
+                TelegaVideoWallpaperView.refreshAll();
+                updateRows();
             } else if (position == setColorRow) {
                 WallpapersListActivity activity = new WallpapersListActivity(TYPE_COLOR);
                 activity.patterns = patterns;
@@ -863,8 +875,52 @@ public class WallpapersListActivity extends BaseFragment implements Notification
         fixLayout();
     }
 
+    private void openVideoWallpaperPicker() {
+        Activity activity = getParentActivity();
+        if (activity == null) {
+            return;
+        }
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("video/*");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        try {
+            activity.startActivityForResult(intent, REQUEST_CHAT_VIDEO_WALLPAPER);
+        } catch (Exception error) {
+            FileLog.e(error);
+        }
+    }
+
     @Override
     public void onActivityResultFragment(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_CHAT_VIDEO_WALLPAPER) {
+            if (resultCode != Activity.RESULT_OK || data == null || data.getData() == null) {
+                return;
+            }
+            Uri selectedUri = data.getData();
+            int flags = data.getFlags();
+            if ((flags & Intent.FLAG_GRANT_READ_URI_PERMISSION) == 0
+                    || (flags & Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) == 0) {
+                android.widget.Toast.makeText(getParentActivity(),
+                        "Не удалось сохранить доступ к видео. Выберите файл ещё раз.",
+                        android.widget.Toast.LENGTH_LONG).show();
+                return;
+            }
+            try {
+                getParentActivity().getContentResolver().takePersistableUriPermission(
+                        selectedUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            } catch (SecurityException | IllegalArgumentException error) {
+                FileLog.e(error);
+                android.widget.Toast.makeText(getParentActivity(),
+                        "Нет постоянного доступа к выбранному видео.",
+                        android.widget.Toast.LENGTH_LONG).show();
+                return;
+            }
+            TelegaSettings.setChatVideoWallpaperUri(selectedUri.toString());
+            TelegaVideoWallpaperView.refreshAll();
+            updateRows();
+            return;
+        }
         updater.onActivityResult(requestCode, resultCode, data);
     }
 
@@ -1356,18 +1412,24 @@ public class WallpapersListActivity extends BaseFragment implements Notification
         rowCount = 0;
         if (currentType == TYPE_ALL) {
             uploadImageRow = rowCount++;
+            videoWallpaperRow = rowCount++;
+            removeVideoWallpaperRow = TextUtils.isEmpty(TelegaSettings.getChatVideoWallpaperUri()) ? -1 : rowCount++;
             setColorRow = rowCount++;
             sectionRow = rowCount++;
             galleryRow = -1;
             galleryHintRow = -1;
         } else if (currentType == TYPE_CHANNEL_PATTERNS) {
             uploadImageRow = -1;
+            videoWallpaperRow = -1;
+            removeVideoWallpaperRow = -1;
             setColorRow = -1;
             sectionRow = -1;
             galleryRow = rowCount++;
             galleryHintRow = rowCount++;
         } else {
             uploadImageRow = -1;
+            videoWallpaperRow = -1;
+            removeVideoWallpaperRow = -1;
             setColorRow = -1;
             sectionRow = -1;
             galleryRow = -1;
@@ -1857,6 +1919,10 @@ public class WallpapersListActivity extends BaseFragment implements Notification
                     TextCell textCell = (TextCell) holder.itemView;
                     if (position == uploadImageRow) {
                         textCell.setTextAndIcon(LocaleController.getString(R.string.SelectFromGallery), R.drawable.msg_photos, true);
+                    } else if (position == videoWallpaperRow) {
+                        textCell.setTextAndIcon("Выбрать видеообои", R.drawable.msg_photos, true);
+                    } else if (position == removeVideoWallpaperRow) {
+                        textCell.setTextAndIcon("Убрать видеообои", R.drawable.msg_delete, true);
                     } else if (position == setColorRow) {
                         textCell.setTextAndIcon(LocaleController.getString(R.string.SetColor), R.drawable.msg_palette, true);
                     } else if (position == resetRow) {
@@ -1947,7 +2013,7 @@ public class WallpapersListActivity extends BaseFragment implements Notification
 
         @Override
         public int getItemViewType(int position) {
-            if (position == uploadImageRow || position == galleryRow || position == setColorRow || position == resetRow) {
+            if (position == uploadImageRow || position == videoWallpaperRow || position == removeVideoWallpaperRow || position == galleryRow || position == setColorRow || position == resetRow) {
                 return 0;
             } else if (position == sectionRow || position == resetSectionRow) {
                 return 1;

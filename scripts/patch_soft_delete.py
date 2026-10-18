@@ -6,6 +6,17 @@ def patch_chat_message_cell():
     path = Path("TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java")
     text = path.read_text(encoding="utf-8")
 
+    # ChatMessageCell is committed as a complete source file with these hooks.
+    # Avoid patching the same source twice during CI builds.
+    if (
+        "currentTimeString = org.telegram.messenger.TelegaDeletedLabel.label();" in text
+        and "org.telegram.messenger.TelegaGarland.draw(canvas, this," in text
+        and "telegaEditHistoryHelper.draw(canvas" in text
+        and "telegaEditHistoryHelper.onTouchEvent(event)" in text
+    ):
+        print("ChatMessageCell already integrated in source; preserving it")
+        return
+
     old_time = (
         "        if (TelegaDeletedMessages.isDeleted(messageObject.currentAccount, messageObject.getDialogId(), messageObject.getId(), messageObject.messageOwner == null || messageObject.messageOwner.peer_id == null || messageObject.messageOwner.peer_id.channel_id == 0)) {\n"
         "            currentTimeString = TextUtils.concat(\"    \", currentTimeString);\n"

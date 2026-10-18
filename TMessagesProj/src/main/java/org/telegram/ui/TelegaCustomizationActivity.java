@@ -30,6 +30,8 @@ public class TelegaCustomizationActivity extends BaseFragment {
     private TextCheckCell minecraftSnowCell;
     private TextCheckCell realSnowCell;
     private TextCheckCell garlandCell;
+    private TextCheckCell glassCell;
+    private TextCheckCell glassAnimationCell;
 
     @Override
     public boolean onFragmentCreate() {
@@ -124,6 +126,37 @@ public class TelegaCustomizationActivity extends BaseFragment {
         garlandInfo.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(10), AndroidUtilities.dp(16), AndroidUtilities.dp(14));
         garlandCard.addView(garlandInfo, lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0, 0, 0, 0));
 
+        addSectionTitle(content, "Стеклянные сообщения");
+        LinearLayout glassCard = newCard();
+        content.addView(glassCard, lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 16, 4, 16, 0));
+
+        glassCell = createCheckCell(
+                "Стеклянные пузыри",
+                R.drawable.msg_background,
+                0xFF7F9EAF,
+                TelegaSettings.isGlassMessagesEnabled(),
+                true
+        );
+        glassCard.addView(glassCell, lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0, 0, 0, 0));
+
+        glassAnimationCell = createCheckCell(
+                "Анимация отражения",
+                R.drawable.msg_photos,
+                0xFF8A9EAA,
+                TelegaSettings.isGlassMessagesAnimationEnabled(),
+                false
+        );
+        glassCard.addView(glassAnimationCell, lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0, 0, 0, 0));
+        glassAnimationCell.setEnabled(TelegaSettings.isGlassMessagesEnabled());
+
+        TextView glassInfo = text(
+                "Полупрозрачные пузыри с мягким бликом и тонкой светлой кромкой. Движение отражения можно отключить отдельно.",
+                13,
+                0.65f
+        );
+        glassInfo.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(9), AndroidUtilities.dp(16), AndroidUtilities.dp(14));
+        glassCard.addView(glassInfo, lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0, 0, 0, 0));
+
         minecraftSnowCell.setOnClickListener(v -> {
             int next = TelegaSettings.getSnowMode() == TelegaSettings.SNOW_MINECRAFT
                     ? TelegaSettings.SNOW_OFF : TelegaSettings.SNOW_MINECRAFT;
@@ -140,6 +173,21 @@ public class TelegaCustomizationActivity extends BaseFragment {
             boolean enabled = !TelegaSettings.isGarlandEnabled();
             TelegaSettings.setGarlandEnabled(enabled);
             garlandCell.setChecked(enabled);
+        });
+
+        glassCell.setOnClickListener(v -> {
+            boolean enabled = !TelegaSettings.isGlassMessagesEnabled();
+            TelegaSettings.setGlassMessagesEnabled(enabled);
+            glassCell.setChecked(enabled);
+            glassAnimationCell.setEnabled(enabled);
+        });
+        glassAnimationCell.setOnClickListener(v -> {
+            if (!TelegaSettings.isGlassMessagesEnabled()) {
+                return;
+            }
+            boolean enabled = !TelegaSettings.isGlassMessagesAnimationEnabled();
+            TelegaSettings.setGlassMessagesAnimationEnabled(enabled);
+            glassAnimationCell.setChecked(enabled);
         });
 
         fragmentView = root;

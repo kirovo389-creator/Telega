@@ -6,6 +6,7 @@ import android.widget.FrameLayout;
 
 import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.TelegaSnowView;
+import org.telegram.ui.Components.TelegaVideoWallpaperView;
 
 /** Puts the snow layer into every chat (private chats, groups, channels). */
 public final class TelegaChatEffects {
@@ -19,24 +20,39 @@ public final class TelegaChatEffects {
             return;
         }
         final ViewGroup group = (ViewGroup) root;
+        TelegaVideoWallpaperView videoWallpaper = null;
+        TelegaSnowView snowView = null;
         for (int i = 0; i < group.getChildCount(); i++) {
-            if (group.getChildAt(i) instanceof TelegaSnowView) {
-                return;
+            View child = group.getChildAt(i);
+            if (child instanceof TelegaVideoWallpaperView) {
+                videoWallpaper = (TelegaVideoWallpaperView) child;
+            } else if (child instanceof TelegaSnowView) {
+                snowView = (TelegaSnowView) child;
             }
         }
+
+        if (videoWallpaper == null) {
+            videoWallpaper = new TelegaVideoWallpaperView(group.getContext());
+            int insertIndex = snowView != null ? group.indexOfChild(snowView) : findInsertIndex(group);
+            group.addView(videoWallpaper, insertIndex,
+                    new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        } else {
+            videoWallpaper.reloadFromSettings();
+        }
+        if (snowView != null) {
+            return;
+        }
+
         final TelegaSnowView snow = new TelegaSnowView(group.getContext());
-        // right before the message list: above the wallpaper, below the bubbles
         group.addView(snow, findInsertIndex(group),
                 new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        // custom chat layouts may skip unknown children: make sure the layer always has the full size
         group.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
             @Override
             public void onLayoutChange(View v, int l, int t, int r, int b, int ol, int ot, int orr, int ob) {
                 int w = r - l;
                 int h = b - t;
                 if (w > 0 && h > 0 && (snow.getWidth() != w || snow.getHeight() != h)) {
-                    snow.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY),
-                            View.MeasureSpec.makeMeasureSpec(h, View.MeasureSpec.EXACTLY));
+                    snow.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(h, View.MeasureSpec.EXACTLY));
                     snow.layout(0, 0, w, h);
                 }
             }

@@ -14,6 +14,8 @@ public final class TelegaSettings {
 
     private static int snowModeCache = -1;
     private static int garlandCache = -1;
+    private static int glassMessagesCache = -1;
+    private static int glassAnimationCache = -1;
 
     private TelegaSettings() {
     }
@@ -88,6 +90,62 @@ public final class TelegaSettings {
         SharedPreferences p = prefs();
         if (p != null) {
             p.edit().putBoolean("garland", value).apply();
+        }
+    }
+
+    // --------------------------------------------------------- Glass messages
+
+    /** Enables translucent glass-style message bubbles. */
+    public static boolean isGlassMessagesEnabled() {
+        if (glassMessagesCache < 0) {
+            SharedPreferences p = prefs();
+            if (p == null) {
+                return false;
+            }
+            glassMessagesCache = p.getBoolean("glass_messages_enabled", false) ? 1 : 0;
+        }
+        return glassMessagesCache == 1;
+    }
+
+    public static void setGlassMessagesEnabled(boolean enabled) {
+        glassMessagesCache = enabled ? 1 : 0;
+        SharedPreferences p = prefs();
+        if (p != null) {
+            p.edit().putBoolean("glass_messages_enabled", enabled).apply();
+        }
+    }
+
+    /** The moving highlight can be toggled independently from the glass surface. */
+    public static boolean isGlassMessagesAnimationEnabled() {
+        if (glassAnimationCache < 0) {
+            SharedPreferences p = prefs();
+            if (p == null) {
+                return true;
+            }
+            glassAnimationCache = p.getBoolean("glass_messages_animation", true) ? 1 : 0;
+        }
+        return glassAnimationCache == 1;
+    }
+
+    public static void setGlassMessagesAnimationEnabled(boolean enabled) {
+        glassAnimationCache = enabled ? 1 : 0;
+        SharedPreferences p = prefs();
+        if (p != null) {
+            p.edit().putBoolean("glass_messages_animation", enabled).apply();
+        }
+    }
+
+    // ----------------------------------------------------------- Video wallpaper
+
+    public static String getChatVideoWallpaperUri() {
+        SharedPreferences p = prefs();
+        return p == null ? "" : p.getString("chat_video_wallpaper_uri", "");
+    }
+
+    public static void setChatVideoWallpaperUri(String uri) {
+        SharedPreferences p = prefs();
+        if (p != null) {
+            p.edit().putString("chat_video_wallpaper_uri", uri == null ? "" : uri).apply();
         }
     }
 

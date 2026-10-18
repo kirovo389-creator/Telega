@@ -10,6 +10,9 @@ on:
       - 'TMessagesProj/src/main/java/org/telegram/ui/Telega*.java'
       - 'TMessagesProj/src/main/java/org/telegram/messenger/Telega*.java'
       - 'TMessagesProj/src/main/java/org/telegram/ui/Components/TelegaSnowView.java'
+      - 'TMessagesProj/src/main/java/org/telegram/ui/Components/TelegaVideoWallpaperView.java'
+      - 'TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java'
+      - 'TMessagesProj/src/main/java/org/telegram/ui/WallpapersListActivity.java'
       - 'TMessagesProj/src/main/java/org/telegram/messenger/ApplicationLoader.java'
       - 'TMessagesProj/src/main/res/drawable/telega_ic_*.xml'
 
@@ -53,9 +56,6 @@ jobs:
       - name: Patch sources
         run: |
           set -euo pipefail
-          GOOD_COMMIT="e0956597f8657b7b503b3d7ff0f71bd8247909ac"
-          TARGET="TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java"
-          git show "${GOOD_COMMIT}:${TARGET}" > "$TARGET"
           python3 scripts/patch_soft_delete.py
           python3 scripts/patch_edit_own.py || true
           python3 scripts/patch_edit_text.py
@@ -82,7 +82,12 @@ jobs:
           grep -Fq 'canAutoReplyNow' TMessagesProj/src/main/java/org/telegram/messenger/TelegaAutoReplyAgent.java
           grep -Fq 'persistLocalProxy' TMessagesProj/src/main/java/org/telegram/messenger/TelegaLocalBypassProxy.java
           grep -Fq 'isLoopbackProxyAddress' TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
-          echo "Deleted label, snowfall, garland, customization, AI agent, AutoReply, and local bypass wiring verified."
+          grep -Fq 'org.telegram.messenger.TelegaGlassMessages.draw(' "$CHAT_CELL"
+          grep -Fq 'TelegaSettings.isGlassMessagesEnabled()' TMessagesProj/src/main/java/org/telegram/ui/TelegaCustomizationActivity.java
+          grep -Fq 'TelegaSettings.setChatVideoWallpaperUri(selectedUri.toString())' TMessagesProj/src/main/java/org/telegram/ui/WallpapersListActivity.java
+          grep -Fq 'TelegaVideoWallpaperView.refreshAll()' TMessagesProj/src/main/java/org/telegram/ui/WallpapersListActivity.java
+          grep -Fq 'TelegaVideoWallpaperView' TMessagesProj/src/main/java/org/telegram/messenger/TelegaChatEffects.java
+          echo "Message cell, animated garland, glass messages, video wallpaper, and existing Telega integrations verified."
 
       - name: Branding package version icon
         run: |

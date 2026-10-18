@@ -44,6 +44,15 @@ public final class TelegaGarland {
         return (float) ((edge - Math.cosh(CATENARY_K * (u - 0.5))) / (edge - 1.0));
     }
 
+    private static int blendColors(int from, int to, float amount) {
+        float t = Math.max(0f, Math.min(1f, amount));
+        int a = Math.round(Color.alpha(from) + (Color.alpha(to) - Color.alpha(from)) * t);
+        int r = Math.round(Color.red(from) + (Color.red(to) - Color.red(from)) * t);
+        int g = Math.round(Color.green(from) + (Color.green(to) - Color.green(from)) * t);
+        int b = Math.round(Color.blue(from) + (Color.blue(to) - Color.blue(from)) * t);
+        return Color.argb(a, r, g, b);
+    }
+
     private static int withAlpha(int color, int alpha) {
         if (alpha < 0) alpha = 0;
         if (alpha > 255) alpha = 255;
@@ -67,7 +76,7 @@ public final class TelegaGarland {
         float y0 = top + 1.2f * d;
 
         // Visible catenary sag: ~8–16 dp depending on bubble width.
-        float sagBase = Math.max(12f * d, Math.min(25f * d, span * 0.13f));
+        float sagBase = Math.max(5f * d, Math.min(9f * d, span * 0.055f));
         float sag = sagBase * (1f + 0.06f * (float) Math.sin(sec * 1.1f + seed));
         float sway = (float) Math.sin(sec * 0.75f + seed * 0.5f) * 0.6f * d;
 
@@ -108,9 +117,17 @@ public final class TelegaGarland {
             float swing = (float) Math.sin(sec * 1.6f + seed + i * 1.3f) * 0.08f;
             float rotation = (float) Math.toDegrees(tangent * 0.7f + swing);
 
+            float colorPhase = sec * 0.62f + i * 0.66f + colorShift * 0.19f;
+            float colorWrapped = colorPhase % COLORS.length;
+            if (colorWrapped < 0f) {
+                colorWrapped += COLORS.length;
+            }
+            int colorIndex = (int) colorWrapped;
+            float colorBlend = colorWrapped - colorIndex;
+            colorBlend = colorBlend * colorBlend * (3f - 2f * colorBlend);
+            int color = blendColors(COLORS[colorIndex], COLORS[(colorIndex + 1) % COLORS.length], colorBlend);
             float blink = 0.5f + 0.5f * (float) Math.sin(sec * TWO_PI / 3.4f + i * 0.95f + seed);
             float bright = 0.40f + 0.60f * blink;
-            int color = COLORS[(i + colorShift) % COLORS.length];
 
             canvas.save();
             canvas.translate(px, py);
