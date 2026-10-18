@@ -294,6 +294,7 @@ public final class TelegaAutoReplyAgent {
         if (!REPLYING.add(key)) return;
 
         new Thread(() -> {
+            final boolean[] failed = {false};
             try {
                 int rounds = 0;
                 while (rounds++ < 8 && isBackground() && isConfigured()) {
@@ -310,7 +311,11 @@ public final class TelegaAutoReplyAgent {
                     String answer = TelegaAIAgent.completeWithSystemPrompt(
                             TelegaSettings.getAiBaseUrl(), TelegaSettings.getAiApiKey(),
                             TelegaSettings.getAiModel(), systemPrompt, context);
-                    if (TextUtils.isEmpty(answer) || !isBackground() || !isConfigured()) break;
+                    if (TextUtils.isEmpty(answer)) {
+                        failed[0] = true;
+                        break;
+                    }
+                    if (!isBackground() || !isConfigured()) break;
 
                     final String response = answer.trim();
                     final Set<Integer> handled = new HashSet<>(ids);
@@ -341,14 +346,18 @@ public final class TelegaAutoReplyAgent {
                             latch.countDown();
                         }
                     });
-                    if (!latch.await(12, TimeUnit.SECONDS) || !sent[0]) break;
+                    if (!latch.await(12, TimeUnit.SECONDS) || !sent[0]) {
+                        if (isBackground() && isConfigured()) failed[0] = true;
+                        break;
+                    }
                 }
             } catch (Throwable t) {
+                failed[0] = true;
                 FileLog.e(t);
             } finally {
                 REPLYING.remove(key);
-                // Close a race where a new message arrived after the loop checked the queue.
-                if (isBackground() && isConfigured() && hasUnanswered(account, dialogId)) {
+                // Retry only after successful processing, never in a tight loop after API failure.
+                if (!failed[0] && isBackground() && isConfigured() && hasUnanswered(account, dialogId)) {
                     startReplyWorker(account, dialogId);
                 }
             }
