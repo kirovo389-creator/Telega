@@ -227,6 +227,57 @@ public final class TelegaLocalBypassProxy {
      * Persists the option, activates the local route, or restores the user's regular
      * proxy settings. A failed start never leaves Telegram pointed at a dead port.
      */
+    /**
+     * Probe both the loopback SOCKS5 listener and the actual Telegram WSS upstream.
+     * This avoids reporting a transport as unavailable merely because it is not a
+     * conventional SOCKS proxy endpoint.
+     */
+    public static void checkLocalEndpoint(int port, org.telegram.tgnet.RequestTimeDelegate callback) {
+        if (callback == null) return;
+        new Thread(() -> {
+            long started = System.currentTimeMillis();
+            long result = -1;
+            try (Socket socket = new Socket()) {
+                socket.connect(new InetSocketAddress(LOOPBACK, port), CONNECT_TIMEOUT_MS);
+                socket.setSoTimeout(READ_TIMEOUT_MS);
+                BufferedInputStream input = new BufferedInputStream(socket.getInputStream());
+                BufferedOutputStream output = new BufferedOutputStream(socket.getOutputStream());
+                output.write(new byte[]{5, 1, 0});
+                output.flush();
+                if (readByte(input) != 5 || readByte(input) != 0) {
+                    throw new IOException("Локальный SOCKS5 не принял соединение");
+                }
+
+                byte[] host = "kws1.web.telegram.org".getBytes(StandardCharsets.US_ASCII);
+                output.write(new byte[]{5, 1, 0, 3, (byte) host.length});
+                output.write(host);
+                output.write(new byte[]{1, (byte) 0xbb});
+                output.flush();
+
+                if (readByte(input) != 5) throw new IOException("Некорректный ответ SOCKS5");
+                int reply = readByte(input);
+                readByte(input);
+                int addressType = readByte(input);
+                if (reply != 0) throw new IOException("Маршрут Telegram недоступен: SOCKS5 " + reply);
+                if (addressType == 1) {
+                    readExact(input, 4);
+                } else if (addressType == 3) {
+                    readExact(input, readByte(input));
+                } else if (addressType == 4) {
+                    readExact(input, 16);
+                } else {
+                    throw new IOException("Неизвестный тип адреса в ответе SOCKS5");
+                }
+                readExact(input, 2);
+                result = Math.max(1L, System.currentTimeMillis() - started);
+            } catch (Throwable error) {
+                Log.w(TAG, "Local proxy connectivity check failed: " + safeMessage(error));
+            }
+            final long elapsed = result;
+            AndroidUtilities.runOnUIThread(() -> callback.run(elapsed));
+        }, "TelegaBypassProbe").start();
+    }
+
     public static boolean isLocalEndpoint(String address, int port) {
         if (address == null) return false;
         String host = address.trim();

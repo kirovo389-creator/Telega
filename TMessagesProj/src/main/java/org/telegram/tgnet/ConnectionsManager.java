@@ -774,14 +774,16 @@ public class ConnectionsManager extends BaseController {
             return 0;
         }
 
-        // If a manual loopback entry contains an old fallback port, test the live
-        // endpoint selected by Telega rather than the stale configured port.
+        // Test the Telega bridge with a real SOCKS handshake and Telegram WSS route.
+        // The generic native proxy checker cannot reliably assess this custom transport.
         try {
             if (TelegaLocalBypassProxy.isEnabled()
-                    && settings.getType() == ProxySettings.Type.SOCKS5) {
+                    && settings.getType() == ProxySettings.Type.SOCKS5
+                    && isLoopbackProxyAddress(settings.getAddress())) {
                 int localPort = TelegaLocalBypassProxy.ensureRunning();
-                if (localPort > 0 && isLoopbackProxyAddress(settings.getAddress())) {
-                    return native_checkProxy(currentAccount, "127.0.0.1", localPort, "", "", "", requestTimeDelegate);
+                if (localPort > 0) {
+                    TelegaLocalBypassProxy.checkLocalEndpoint(localPort, requestTimeDelegate);
+                    return System.currentTimeMillis();
                 }
             }
         } catch (Throwable error) {
