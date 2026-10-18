@@ -173,7 +173,8 @@ public class TelegaOtherSettingsActivity extends BaseFragment {
         content.addView(card, lp(MP, WC, 16, 0, 16, 0));
 
         final TextCheckCell cell = new TextCheckCell(ctx);
-        cell.setTextAndCheck("\uD83E\uDD16  ИИ Агент", TelegaSettings.isAiEnabled(), true);
+        cell.setTextAndCheck("ИИ-агент", TelegaSettings.isAiEnabled(), true);
+        cell.setColorfullIcon(0xFF52798B, R.drawable.telega_ic_robot);
         cell.setOnClickListener(v -> {
             boolean n = !TelegaSettings.isAiEnabled();
             TelegaSettings.setAiEnabled(n);
