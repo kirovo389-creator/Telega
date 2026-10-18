@@ -85,7 +85,7 @@ public final class TelegaLocalBypassProxy {
     private static volatile boolean running;
     private static volatile int listenPort;
     private static volatile String lastError;
-    private static final Set<Socket> clients = ConcurrentHashMap.newKeySet();
+    private static final Set<Socket> clients = Collections.newSetFromMap(new ConcurrentHashMap<Socket, Boolean>());
     private static final Semaphore connectionPermits = new Semaphore(MAX_CONNECTIONS);
     private static final Map<String, Endpoint> lastSuccessfulEndpoints = new ConcurrentHashMap<>();
 
@@ -833,12 +833,12 @@ public final class TelegaLocalBypassProxy {
 
                 SSLSocket ssl = (SSLSocket) SSLContext.getInstance("TLS").getSocketFactory()
                         .createSocket(raw, tlsHost, 443, true);
-                SSLParameters parameters = ssl.getSSLParameters();
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    SSLParameters parameters = ssl.getSSLParameters();
                     parameters.setEndpointIdentificationAlgorithm("HTTPS");
                     parameters.setServerNames(Collections.singletonList(new SNIHostName(tlsHost)));
+                    ssl.setSSLParameters(parameters);
                 }
-                ssl.setSSLParameters(parameters);
                 ssl.setSoTimeout(READ_TIMEOUT_MS);
                 ssl.startHandshake();
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N
