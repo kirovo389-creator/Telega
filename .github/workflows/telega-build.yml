@@ -74,7 +74,11 @@ jobs:
           grep -Fq 'TelegaSettings.setGarlandEnabled(enabled)' TMessagesProj/src/main/java/org/telegram/ui/TelegaCustomizationActivity.java
           grep -Fq 'TelegaAutoReplyAgent.ensureInitialized(a)' TMessagesProj/src/main/java/org/telegram/messenger/ApplicationLoader.java
           grep -Fq 'TelegaSettings.isAiAutoReplyEnabled()' TMessagesProj/src/main/java/org/telegram/ui/TelegaOtherSettingsActivity.java
-          echo "Deleted label, snowfall, garland, customization, and AI auto-responder wiring verified."
+          grep -Fq 'TelegaLocalBypassProxy.isEnabled()' TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
+          grep -Fq 'TelegaLocalBypassProxy.start()' TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
+          grep -Fq 'TelegaSettings.setLocalBypassEnabled(enabled)' TMessagesProj/src/main/java/org/telegram/messenger/TelegaLocalBypassProxy.java
+          grep -Fq 'new TelegaLocalBypassSettingsActivity()' TMessagesProj/src/main/java/org/telegram/ui/TelegaSettingsActivity.java
+          echo "Deleted label, snowfall, garland, customization, AI agent, and local bypass wiring verified."
 
       - name: Branding package version icon
         run: |

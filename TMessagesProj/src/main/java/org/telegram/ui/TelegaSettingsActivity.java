@@ -36,6 +36,7 @@ public class TelegaSettingsActivity extends BaseFragment {
     private int headerRow;
     private int messagesRow;
     private int otherRow;
+    private int proxyRow;
     private int profileRow;
     private int customRow;
     private int footerRow;
@@ -48,6 +49,7 @@ public class TelegaSettingsActivity extends BaseFragment {
         headerRow = rowCount++;
         messagesRow = rowCount++;
         otherRow = rowCount++;
+        proxyRow = rowCount++;
         profileRow = rowCount++;
         customRow = rowCount++;
         footerRow = rowCount++;
@@ -87,6 +89,8 @@ public class TelegaSettingsActivity extends BaseFragment {
                 presentFragment(new TelegaMessagesSettingsActivity());
             } else if (position == otherRow) {
                 presentFragment(new TelegaOtherSettingsActivity());
+            } else if (position == proxyRow) {
+                presentFragment(new TelegaLocalBypassSettingsActivity());
             } else if (position == customRow) {
                 presentFragment(new TelegaCustomizationActivity());
             } else if (position == profileRow) {
@@ -154,6 +158,8 @@ public class TelegaSettingsActivity extends BaseFragment {
                 cell.setData(R.drawable.telega_ic_chat, "Сообщения", "Удалённые и изменённые", first, last);
             } else if (position == otherRow) {
                 cell.setData(R.drawable.telega_ic_robot, "Другое", "ИИ-агент", first, last);
+            } else if (position == proxyRow) {
+                cell.setData(R.drawable.telega_ic_wind, "Без VPN", "Обход блокировок Telegram", first, last);
             } else if (position == profileRow) {
                 cell.setData(R.drawable.telega_ic_user, "Профиль", "Скоро", first, last);
             } else if (position == customRow) {

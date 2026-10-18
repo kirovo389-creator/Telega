@@ -91,6 +91,21 @@ public final class TelegaSettings {
         }
     }
 
+    // ------------------------------------------------------ Local bypass proxy
+
+    /** Enables the in-process local SOCKS5/WSS route while Telega is running. */
+    public static boolean isLocalBypassEnabled() {
+        SharedPreferences p = prefs();
+        return p != null && p.getBoolean("local_bypass_enabled", false);
+    }
+
+    public static void setLocalBypassEnabled(boolean enabled) {
+        SharedPreferences p = prefs();
+        if (p != null) {
+            p.edit().putBoolean("local_bypass_enabled", enabled).apply();
+        }
+    }
+
     // ---------------------------------------------------------------- AI agent
 
     public static String getAiBaseUrl() {

@@ -43,6 +43,7 @@ import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.PushListenerController;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.StatsController;
+import org.telegram.messenger.TelegaLocalBypassProxy;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.Utilities;
 import org.telegram.utils.proxy.WebProxyConnectionTester;
@@ -648,7 +649,15 @@ public class ConnectionsManager extends BaseController {
     public void init(int version, int layer, int apiId, String deviceModel, String systemVersion, String appVersion, String langCode, String systemLangCode, String configPath, String logPath, String regId, String cFingerprint, int timezoneOffset, long userId, boolean userPremium, boolean enablePushConnection) {
         final SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
         final ProxySettings proxySettings = ProxySettings.fromSharedPreferences(preferences);
-        if (preferences.getBoolean("proxy_enabled", false) && proxySettings.isValid()) {
+        boolean localBypassApplied = false;
+        if (TelegaLocalBypassProxy.isEnabled()) {
+            int localPort = TelegaLocalBypassProxy.start();
+            if (localPort > 0) {
+                native_setProxySettings(currentAccount, "127.0.0.1", localPort, "", "", "");
+                localBypassApplied = true;
+            }
+        }
+        if (!localBypassApplied && preferences.getBoolean("proxy_enabled", false) && proxySettings.isValid()) {
             if (proxySettings.getType() == ProxySettings.Type.WEB) {
                 int localPort = WebProxyTransport.start(proxySettings.getAddress(), proxySettings.getSecret());
                 native_setProxySettings(currentAccount, "127.0.0.1", localPort != 0 ? localPort : 9, "", "",
@@ -959,6 +968,22 @@ public class ConnectionsManager extends BaseController {
     }
 
     public static void setProxySettings(boolean enabled, ProxySettings settings) {
+        // The Telega-only bypass takes precedence over regular user proxy settings.
+        // The native MTProto client connects to the local SOCKS5 port, not to VPN APIs.
+        if (TelegaLocalBypassProxy.isEnabled()) {
+            int localPort = TelegaLocalBypassProxy.start();
+            if (localPort > 0) {
+                enabled = true;
+                settings = ProxySettings.builder()
+                        .setType(ProxySettings.Type.SOCKS5)
+                        .setAddress("127.0.0.1")
+                        .setPort(localPort)
+                        .setUser("")
+                        .setPassword("")
+                        .setSecret("")
+                        .build();
+            }
+        }
         String address = "";
         int port = 0;
         String username = "";
