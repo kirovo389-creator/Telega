@@ -7,6 +7,14 @@ import android.content.SharedPreferences;
 public final class TelegaSettings {
     private static final String PREFS = "telega_settings";
 
+    /** Snow modes of the chat background. */
+    public static final int SNOW_OFF = 0;
+    public static final int SNOW_MINECRAFT = 1;
+    public static final int SNOW_REAL = 2;
+
+    private static int snowModeCache = -1;
+    private static int garlandCache = -1;
+
     private TelegaSettings() {
     }
 
@@ -38,6 +46,48 @@ public final class TelegaSettings {
         SharedPreferences p = prefs();
         if (p != null) {
             p.edit().putBoolean("show_edited_messages", value).apply();
+        }
+    }
+
+    // ------------------------------------------------------------ customization
+
+    /** 0 = off, 1 = Minecraft snow, 2 = real snow (tilt + shake blizzard). Cached: read on every frame. */
+    public static int getSnowMode() {
+        if (snowModeCache < 0) {
+            SharedPreferences p = prefs();
+            if (p == null) {
+                return SNOW_OFF;
+            }
+            snowModeCache = p.getInt("snow_mode", SNOW_OFF);
+        }
+        return snowModeCache;
+    }
+
+    public static void setSnowMode(int mode) {
+        snowModeCache = mode;
+        SharedPreferences p = prefs();
+        if (p != null) {
+            p.edit().putInt("snow_mode", mode).apply();
+        }
+    }
+
+    /** Garland on the top edge of every message bubble. Cached: read on every draw. */
+    public static boolean isGarlandEnabled() {
+        if (garlandCache < 0) {
+            SharedPreferences p = prefs();
+            if (p == null) {
+                return false;
+            }
+            garlandCache = p.getBoolean("garland", false) ? 1 : 0;
+        }
+        return garlandCache == 1;
+    }
+
+    public static void setGarlandEnabled(boolean value) {
+        garlandCache = value ? 1 : 0;
+        SharedPreferences p = prefs();
+        if (p != null) {
+            p.edit().putBoolean("garland", value).apply();
         }
     }
 
