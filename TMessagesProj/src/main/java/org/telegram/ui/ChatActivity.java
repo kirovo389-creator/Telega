@@ -14773,6 +14773,9 @@ public class ChatActivity extends BaseFragment implements
     }
 
     public void hideFieldPanel(boolean animated) {
+        if (telegaLocalEditInProgress) {
+            cancelTelegaLocalEdit();
+        }
         showFieldPanel(false, null, null, null, null, true, 0, null, false, 0, animated);
     }
 
@@ -33923,6 +33926,13 @@ public class ChatActivity extends BaseFragment implements
                     // Open the standard Telegram edit composer; saving is intercepted locally.
                     telegaLocalEditInProgress = true;
                     startEditingMessageObject(target, false);
+                    String localOverride = org.telegram.messenger.TelegaLocalMessageEdits.getOverride(
+                            currentAccount, target.getDialogId(), target.getId());
+                    if (localOverride != null && chatActivityEnterView != null) {
+                        chatActivityEnterView.setFieldText(localOverride, true);
+                        chatActivityEnterView.setFieldFocused();
+                        chatActivityEnterView.openKeyboard();
+                    }
                 }
                 selectedObject = null;
                 selectedObjectGroup = null;
