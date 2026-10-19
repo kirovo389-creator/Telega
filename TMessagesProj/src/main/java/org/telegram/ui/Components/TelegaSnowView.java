@@ -344,6 +344,7 @@ public class TelegaSnowView extends View implements SensorEventListener {
         int w = getWidth();
         int h = getHeight();
         int count = Math.max(70, Math.min(150, (int) ((w / d) * (h / d) / 2300)));
+        softPaint.setColor(Color.WHITE);
         for (int i = 0; i < count; i++) {
             float twinkle = 0.28f + 0.72f * (0.5f + 0.5f * (float) Math.sin(time * (0.8f + fz[i]) + fp[i]));
             int alpha = Math.max(0, Math.min(230, (int) ((70f + 150f * fz[i]) * twinkle)));
