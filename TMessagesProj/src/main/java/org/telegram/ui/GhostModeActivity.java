@@ -15,6 +15,8 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessagesController;
+import org.telegram.messenger.TelegaGhostMode;
+import org.telegram.messenger.TelegaSettings;
 import org.telegram.messenger.R;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLRPC;
@@ -80,11 +82,13 @@ public class GhostModeActivity extends BaseFragment {
         statusDot.setText("●");
         statusDot.setTextSize(12);
         statusDot.setGravity(Gravity.CENTER);
-        statusDot.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+        statusDot.setTextColor(Theme.getColor(TelegaSettings.isGhostModeEnabled()
+                ? Theme.key_featuredStickers_addButton : Theme.key_windowBackgroundWhiteGrayText));
         statusCard.addView(statusDot, LayoutHelper.createLinear(dp(20), LayoutHelper.WRAP_CONTENT));
 
         statusView = new TextView(context);
-        statusView.setText(LocaleController.getString(R.string.GhostModeStatusUnverified));
+        statusView.setText(LocaleController.getString(TelegaSettings.isGhostModeEnabled()
+                ? R.string.GhostModeEnabled : R.string.GhostModeStatusUnverified));
         statusView.setTextSize(14);
         statusView.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         statusView.setLineSpacing(dp(2), 1f);
@@ -93,7 +97,8 @@ public class GhostModeActivity extends BaseFragment {
                 0, LayoutHelper.WRAP_CONTENT, 1f));
 
         activateButton = new TextView(context);
-        activateButton.setText(LocaleController.getString(R.string.GhostModeActivate));
+        activateButton.setText(LocaleController.getString(TelegaSettings.isGhostModeEnabled()
+                ? R.string.GhostModeDeactivate : R.string.GhostModeActivate));
         activateButton.setTextSize(15);
         activateButton.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         activateButton.setTextColor(Theme.getColor(Theme.key_featuredStickers_buttonText));
@@ -129,71 +134,33 @@ public class GhostModeActivity extends BaseFragment {
     }
 
     private void activateStealthMode(View view) {
-        if (getParentActivity() == null || fragmentView == null || activateButton == null || requestInFlight) {
-            return;
-        }
+        if (getParentActivity() == null || fragmentView == null || activateButton == null || requestInFlight) return;
+        final boolean enable = !TelegaSettings.isGhostModeEnabled();
         requestInFlight = true;
         activateButton.setEnabled(false);
         activateButton.setAlpha(0.6f);
-        if (statusView != null) {
-            statusView.setText(LocaleController.getString(R.string.GhostModeRequesting));
-        }
-        if (statusDot != null) {
-            statusDot.setTextColor(Theme.getColor(Theme.key_featuredStickers_addButton));
-        }
-
-        TL_stories.TL_stories_activateStealthMode request = new TL_stories.TL_stories_activateStealthMode();
-        request.past = true;
-        request.future = true;
-        try {
-            ConnectionsManager.getInstance(currentAccount).sendRequest(request, (response, error) ->
-                AndroidUtilities.runOnUIThread(() -> {
-                    // A response may arrive after the fragment has been destroyed.
-                    if (fragmentView == null || activateButton == null || statusView == null) {
-                        return;
-                    }
-                    requestInFlight = false;
-                    activateButton.setEnabled(true);
-                    activateButton.setAlpha(1f);
-
-                    if (response instanceof TLRPC.Updates && error == null) {
-                        TLRPC.Updates updates = (TLRPC.Updates) response;
-                        MessagesController.getInstance(currentAccount).processUpdateArray(
-                                updates.updates, updates.users, updates.chats, false, updates.date);
-                        statusView.setText(LocaleController.getString(R.string.GhostModeRequestAcceptedUnverified));
-                        if (statusDot != null) {
-                            statusDot.setTextColor(Theme.getColor(Theme.key_featuredStickers_addButton));
-                        }
-                        if (getParentActivity() != null) {
-                            Toast.makeText(getParentActivity(), LocaleController.getString(R.string.GhostModeRequestAcceptedToast), Toast.LENGTH_SHORT).show();
-                        }
-                    } else {
-                        String message = error != null && error.text != null && !error.text.isEmpty()
-                                ? error.text
-                                : LocaleController.getString(R.string.GhostModeActivationError);
-                        statusView.setText(LocaleController.getString(R.string.GhostModeErrorPrefix) + message);
-                        if (statusDot != null) {
-                            statusDot.setTextColor(0xffe05252);
-                        }
-                        if (getParentActivity() != null) {
-                            Toast.makeText(getParentActivity(), message, Toast.LENGTH_LONG).show();
-                        }
-                    }
-                }));
-        } catch (Throwable error) {
+        if (statusView != null) statusView.setText(LocaleController.getString(R.string.GhostModeRequesting));
+        if (statusDot != null) statusDot.setTextColor(Theme.getColor(Theme.key_featuredStickers_addButton));
+        TelegaGhostMode.setEnabled(currentAccount, enable, (success, message) -> {
+            if (fragmentView == null || activateButton == null || statusView == null) return;
             requestInFlight = false;
-            if (activateButton != null) {
-                activateButton.setEnabled(true);
-                activateButton.setAlpha(1f);
+            activateButton.setEnabled(true);
+            activateButton.setAlpha(1f);
+            if (success) {
+                activateButton.setText(LocaleController.getString(enable ? R.string.GhostModeDeactivate : R.string.GhostModeActivate));
+                statusView.setText(LocaleController.getString(enable ? R.string.GhostModeEnabled : R.string.GhostModeDisabled));
+                if (statusDot != null) statusDot.setTextColor(Theme.getColor(enable
+                        ? Theme.key_featuredStickers_addButton : Theme.key_windowBackgroundWhiteGrayText));
+                Toast.makeText(getParentActivity(), LocaleController.getString(enable
+                        ? R.string.GhostModeEnabled : R.string.GhostModeDisabled), Toast.LENGTH_SHORT).show();
+            } else {
+                String errorText = message == null || message.isEmpty()
+                        ? LocaleController.getString(R.string.GhostModeActivationError) : message;
+                statusView.setText(LocaleController.getString(R.string.GhostModeErrorPrefix) + errorText);
+                if (statusDot != null) statusDot.setTextColor(0xffe05252);
+                Toast.makeText(getParentActivity(), errorText, Toast.LENGTH_LONG).show();
             }
-            if (statusView != null) {
-                statusView.setText(LocaleController.getString(R.string.GhostModeActivationError));
-            }
-            if (statusDot != null) {
-                statusDot.setTextColor(0xffe05252);
-            }
-            FileLog.e(error);
-        }
+        });
     }
 
     @Override
