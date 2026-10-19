@@ -158,6 +158,11 @@ def patch_chat_activity(text):
     return text
 
 def patch_dialogs(text):
+    # A broader archive filter is already committed directly in DialogsActivity.
+    # Do not try to wrap the original upstream method a second time during CI.
+    if "getDialogsArrayInternal" in text:
+        print("Archive filter already integrated; preserving existing implementation")
+        return text
     old = """    @NonNull
     public ArrayList<TLRPC.Dialog> getDialogsArray(int currentAccount, int dialogsType, int folderId, boolean frozen) {
         if (frozen && frozenDialogsList != null) {
