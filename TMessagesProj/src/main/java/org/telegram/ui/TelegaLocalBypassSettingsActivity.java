@@ -133,14 +133,29 @@ public class TelegaLocalBypassSettingsActivity extends BaseFragment {
             connectButton.setText("Подключить");
             connectButton.setEnabled(true);
         }
-        if (status != null) {
-            status.setText(TelegaLocalBypassProxy.getStatusText());
-        }
         if (!succeeded) {
+            if (status != null) {
+                status.setText(TelegaLocalBypassProxy.getStatusText());
+            }
             toast("Не удалось запустить локальный прокси. Обычные настройки сохранены.", true);
         } else if (enabled) {
-            toast("Обход блокировок включён", false);
+            if (status != null) {
+                status.setText("Проверяю реальный маршрут Telegram через локальный прокси…");
+            }
+            TelegaLocalBypassProxy.checkLocalEndpoint(TelegaLocalBypassProxy.getPort(), elapsed -> {
+                if (status == null || context == null || !TelegaSettings.isLocalBypassEnabled()) return;
+                if (elapsed > 0) {
+                    status.setText("Маршрут Telegram отвечает через 127.0.0.1:" + TelegaLocalBypassProxy.getPort() + " (" + elapsed + " мс).");
+                } else {
+                    String routeError = TelegaLocalBypassProxy.getLastRouteError();
+                    status.setText("Локальный прокси запущен, но маршрут Telegram НЕ подтверждён."
+                            + (routeError == null || routeError.isEmpty() ? " Нажми «Подключить» для повторной проверки."
+                            : "\\nПричина: " + routeError));
+                }
+            });
+            toast("Обход включён; проверяю соединение с Telegram", false);
         } else {
+            if (status != null) status.setText(TelegaLocalBypassProxy.getStatusText());
             toast("Обход блокировок выключен", false);
         }
     }
