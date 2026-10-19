@@ -273,4 +273,5 @@
     <string name="GhostModeActivationError">Не удалось подтвердить активацию режима</string>
     <string name="GhostModeLimitation">Этот экран управляет только невидимостью историй. Скрытие прочтения обычных сообщений, статуса «в сети» и индикатора набора текста здесь не реализовано.</string>
     <string name="GhostModeRequestAcceptedToast">Запрос на невидимость историй принят</string>
+    <string name="GhostModeErrorPrefix">Ошибка: </string>
 </resources>
