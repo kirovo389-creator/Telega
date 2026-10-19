@@ -263,4 +263,14 @@
     <string name="RemindTodayAt">\'Отправить сегодня в\' HH:mm</string>
     <string name="RemindDayAt">\'Отправить\' d MMM \'в\' HH:mm</string>
     <string name="RemindDayYearAt">\'Напомнить\' d MMM yyyy \'в\' HH:mm</string>
+    <string name="GhostModeTitle">Призрак</string>
+    <string name="GhostModeStoriesTitle">Невидимость в историях</string>
+    <string name="GhostModeStoriesDescription">Включает серверный режим скрытого просмотра историй. Сервер ограничивает действие по времени; реакции и ответы могут раскрыть просмотр.</string>
+    <string name="GhostModeStatusUnverified">Статус не проверен</string>
+    <string name="GhostModeActivate">Включить невидимость</string>
+    <string name="GhostModeRequesting">Выполняется запрос…</string>
+    <string name="GhostModeRequestAcceptedUnverified">Запрос принят сервером; состояние режима не подтверждено клиентом</string>
+    <string name="GhostModeActivationError">Не удалось подтвердить активацию режима</string>
+    <string name="GhostModeLimitation">Этот экран управляет только невидимостью историй. Скрытие прочтения обычных сообщений, статуса «в сети» и индикатора набора текста здесь не реализовано.</string>
+    <string name="GhostModeRequestAcceptedToast">Запрос на невидимость историй принят</string>
 </resources>
