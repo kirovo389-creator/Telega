@@ -257,7 +257,13 @@ public final class TelegaLocalBypassProxy {
                 } else {
                     throw new IOException("Неизвестный тип адреса в ответе SOCKS5");
                 }
-                readExact(input, 2);
+                SSLSocket tls = (SSLSocket) SSLContext.getDefault().getSocketFactory()
+                        .createSocket(socket, "kws1.web.telegram.org", 443, true);
+                tls.setSoTimeout(CONNECT_TIMEOUT_MS);
+                SSLParameters tlsParameters = tls.getSSLParameters();
+                tlsParameters.setServerNames(Collections.singletonList(new SNIHostName("kws1.web.telegram.org")));
+                tls.setSSLParameters(tlsParameters);
+                tls.startHandshake();
                 result = Math.max(1L, System.currentTimeMillis() - started);
                 routeVerified = true;
                 lastRouteError = null;
