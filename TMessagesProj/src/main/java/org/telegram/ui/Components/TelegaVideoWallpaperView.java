@@ -42,10 +42,10 @@ public final class TelegaVideoWallpaperView extends FrameLayout implements Textu
         setClickable(false);
         setFocusable(false);
         setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        setAlpha(0.76f);
+        setAlpha(1f);
 
         textureView = new TextureView(context);
-        textureView.setOpaque(false);
+        textureView.setOpaque(true);
         textureView.setSurfaceTextureListener(this);
         addView(textureView, new FrameLayout.LayoutParams(
                 LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
