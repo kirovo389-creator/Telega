@@ -45,6 +45,7 @@ import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.StatsController;
 import org.telegram.messenger.TelegaLocalBypassProxy;
 import org.telegram.messenger.TelegaSettings;
+import org.telegram.tgnet.tl.TL_account;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.Utilities;
 import org.telegram.utils.proxy.WebProxyConnectionTester;
@@ -409,6 +410,10 @@ public class ConnectionsManager extends BaseController {
     }
 
     private void sendRequestInternal(TLObject object, RequestDelegate onComplete, RequestDelegateTimestamp onCompleteTimestamp, QuickAckDelegate onQuickAck, WriteToSocketDelegate onWriteToSocket, int flags, int datacenterId, int connectionType, boolean immediate, int requestToken) {
+        if (TelegaSettings.isGhostModeEnabled() && object instanceof TL_account.updateStatus) {
+            // Ask Telegram to consider this account offline even while Telega is active.
+            ((TL_account.updateStatus) object).offline = true;
+        }
         if (TelegaSettings.isGhostModeEnabled() && isGhostReadAcknowledgement(object)) {
             if (BuildVars.LOGS_ENABLED) FileLog.d("Ghost Mode suppressed read acknowledgement: " + object.getClass().getSimpleName());
             // The UI maintains local unread state; do not acknowledge this read to Telegram.
