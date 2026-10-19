@@ -273,7 +273,7 @@ public class TelegaSnowView extends View implements SensorEventListener {
         }
     }
 
-    /** Natural rain streaks with depth-based speed and wind drift. */
+    /** Natural, mostly vertical rain with subtle slowly-changing wind gusts. */
     private void drawRain(Canvas canvas, float dt) {
         float d = AndroidUtilities.density;
         int w = getWidth();
@@ -281,35 +281,48 @@ public class TelegaSnowView extends View implements SensorEventListener {
         int dpArea = (int) ((w / d) * (h / d));
         int active = Math.max(120, Math.min(300, dpArea / 1450));
 
-        float targetWind = Math.max(-1f, Math.min(1f, -tiltX / 9.81f)) * 24f * d;
-        windTilt += (targetWind - windTilt) * Math.min(1f, dt * 1.8f);
-        float baseDrift = 6f * d + windTilt;
+        // Rain direction should not depend directly on the phone's resting orientation.
+        // A low-amplitude, slowly changing gust keeps drops realistic without making them crooked.
+        float gust = ((float) Math.sin(time * 0.32f)
+                + 0.42f * (float) Math.sin(time * 0.71f + 1.4f)) * 5.0f * d;
+        windTilt += (gust - windTilt) * Math.min(1f, dt * 0.7f);
+        float baseDrift = 1.4f * d + windTilt * 0.28f;
 
         for (int i = 0; i < active; i++) {
             float z = fz[i];
-            float length = (8f + 17f * z) * d;
-            float speed = (600f + 900f * z) * d * fv[i];
+            float length = (9f + 19f * z) * d;
+            float speed = (520f + 760f * z) * d * fv[i];
             float drift = baseDrift * (0.4f + 0.7f * z);
-            float wobble = (float) Math.sin(time * 0.7f + fp[i]) * (1.5f + 2f * z) * d;
+            float wobble = (float) Math.sin(time * 0.48f + fp[i]) * (0.35f + 0.85f * z) * d;
             fx[i] += (drift + wobble) * dt;
             fy[i] += speed * dt;
+
             if (fy[i] > h + length) {
                 fy[i] = -length;
                 fx[i] = random.nextFloat() * w;
             }
-            if (fx[i] > w + length) fx[i] = -length;
-            else if (fx[i] < -length) fx[i] = w + length;
+            if (fx[i] > w + length) {
+                fx[i] = -length;
+            } else if (fx[i] < -length) {
+                fx[i] = w + length;
+            }
 
-            float lean = length * (0.12f + 0.14f * z) + windTilt * 0.055f;
+            float lean = length * (0.025f + 0.045f * z) + windTilt * 0.012f;
+            float maxLean = length * 0.12f;
+            lean = Math.max(-maxLean, Math.min(maxLean, lean));
             float x = fx[i];
             float y = fy[i];
-            int alpha = (int) (70f + 120f * z);
-            rainGlowPaint.setStrokeWidth((1.8f + 1.7f * z) * d);
-            rainGlowPaint.setColor(Color.argb(alpha / 4, 150, 190, 220));
-            canvas.drawLine(x, y, x - lean, y - length, rainGlowPaint);
-            rainPaint.setStrokeWidth((0.55f + 0.6f * z) * d);
-            rainPaint.setColor(Color.argb(alpha, 205, 224, 242));
-            canvas.drawLine(x, y, x - lean, y - length, rainPaint);
+
+            // Dim, soft halo plus a narrow cool highlight; far drops are shorter and fainter.
+            int alpha = (int) (55f + 135f * z);
+            rainGlowPaint.setStrokeWidth((1.25f + 1.5f * z) * d);
+            rainGlowPaint.setColor(Color.argb(alpha / 5, 155, 190, 220));
+            canvas.drawLine(x - lean, y - length, x, y, rainGlowPaint);
+
+            rainPaint.setStrokeWidth((0.45f + 0.55f * z) * d);
+            rainPaint.setColor(Color.argb(alpha, 198 + (int) (18f * z),
+                    218 + (int) (20f * z), 238 + (int) (17f * z)));
+            canvas.drawLine(x - lean, y - length, x, y, rainPaint);
         }
     }
 
