@@ -1625,6 +1625,10 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
             }
         }
 
+        if (org.telegram.messenger.TelegaSettings.isArchiveHidden() && folderId == 1) {
+            array = new ArrayList<>();
+        }
+
         if (org.telegram.messenger.TelegaSettings.isAntiBotEnabled()) {
             array = new ArrayList<>(array);
             for (int i = array.size() - 1; i >= 0; i--) {
