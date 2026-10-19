@@ -8686,6 +8686,45 @@ public class MessageObject {
     }
 
     public void generateLayout(TLRPC.User fromUser) {
+        CharSequence telegaSaved = messageText;
+        String telegaLocalText = org.telegram.messenger.TelegaLocalMessageEdits.getTextForLayout(this);
+        if (telegaLocalText != null && type == TYPE_TEXT) {
+            java.util.ArrayList<TLRPC.MessageEntity> telegaSavedEntities =
+                    messageOwner != null ? messageOwner.entities : null;
+            messageText = telegaLocalText;
+            if (messageOwner != null) {
+                messageOwner.entities = new java.util.ArrayList<>();
+            }
+            try {
+                generateLayoutTelegaOriginal(fromUser);
+            } finally {
+                messageText = telegaSaved;
+                if (messageOwner != null) {
+                    messageOwner.entities = telegaSavedEntities;
+                }
+            }
+            return;
+        }
+
+        CharSequence telegaWrapped = org.telegram.messenger.TelegaEditedText.wrap(this, telegaSaved);
+        int telegaShift = telegaWrapped != null && telegaSaved != null
+                ? telegaWrapped.length() - telegaSaved.length() : 0;
+        if (telegaShift > 0) {
+            messageText = telegaWrapped;
+            org.telegram.messenger.TelegaEditedText.shiftEntities(messageOwner, telegaShift);
+        }
+        try {
+            generateLayoutTelegaOriginal(fromUser);
+        } finally {
+            if (telegaShift > 0) {
+                org.telegram.messenger.TelegaEditedText.shiftEntities(messageOwner, -telegaShift);
+            }
+            // Rendering can use the temporary text, but callers keep the server text.
+            messageText = telegaSaved;
+        }
+    }
+
+    private void generateLayoutTelegaOriginal(TLRPC.User fromUser) {
         if (type == TYPE_ARTICLE) {
             final int maxWidth = getMaxMessageTextWidth();
             if (richLayout == null || messageOwner != null && richLayout.needsUpdate(getDisplayRichMessage(), maxWidth)) {

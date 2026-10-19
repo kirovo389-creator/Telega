@@ -90,6 +90,20 @@ public final class TelegaSettings {
         });
     }
 
+    /** Image file used behind the main chat list; stored only in this app's private files. */
+    public static String getDialogsWallpaperPath() {
+        SharedPreferences p = prefs();
+        return p == null ? "" : p.getString("dialogs_wallpaper_path", "");
+    }
+
+    public static void setDialogsWallpaperPath(String path) {
+        SharedPreferences p = prefs();
+        if (p != null) {
+            p.edit().putString("dialogs_wallpaper_path", path == null ? "" : path).apply();
+        }
+        TelegaDialogWallpaper.invalidateCache();
+    }
+
     // ------------------------------------------------------------ customization
 
     /** 0 = off, 1 = Minecraft snow, 2 = real snow (tilt + shake blizzard). Cached: read on every frame. */

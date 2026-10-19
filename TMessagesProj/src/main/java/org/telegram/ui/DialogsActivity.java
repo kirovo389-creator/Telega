@@ -286,6 +286,8 @@ import me.vkryl.android.animator.FactorAnimator;
 import me.vkryl.android.util.ClickHelper;
 
 public class DialogsActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate, FloatingDebugProvider, FactorAnimator.Target, MainTabsActivity.TabFragmentDelegate {
+    private static final int REQUEST_TELEGA_DIALOG_WALLPAPER = 9583;
+
     private final int ADDITIONAL_LIST_HEIGHT_DP = Build.VERSION.SDK_INT >= 31 ? 48 : 0;
 
     private static final boolean TMP_DISABLE_TOPICS_TWO_COLUMNS = false;
@@ -4073,7 +4075,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             viewPage.listView.setClipToPadding(false);
             viewPage.listView.setPivotY(0);
             if (initialDialogsType == DIALOGS_TYPE_BOT_REQUEST_PEER) {
-                viewPage.listView.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
+                viewPage.listView.setBackground(org.telegram.messenger.TelegaDialogWallpaper.createDrawable(context, getThemedColor(Theme.key_windowBackgroundGray)));
             }
             viewPage.dialogsItemAnimator = new DialogsItemAnimator(viewPage.listView) {
                 @Override
@@ -13823,10 +13825,175 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         }
 
         io.addGap();
-        io.add(R.drawable.msg_gallery, "Обои", () -> presentFragment(new WallpapersListActivity(WallpapersListActivity.TYPE_ALL)));
+        io.add(R.drawable.msg_gallery, "Обои", this::pickDialogsWallpaper);
+        if (!TextUtils.isEmpty(org.telegram.messenger.TelegaSettings.getDialogsWallpaperPath())) {
+            io.addGap();
+            io.add(R.drawable.msg_delete, "Убрать обои", this::clearDialogsWallpaper);
+        }
 
         io.show();
         io.setTranslationY(-dp(64));
+    }
+
+
+    private void pickDialogsWallpaper() {
+        android.app.Activity activity = getParentActivity();
+        if (activity == null) {
+            return;
+        }
+        android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(android.content.Intent.CATEGORY_OPENABLE);
+        intent.setType("image/*");
+        try {
+            startActivityForResult(intent, REQUEST_TELEGA_DIALOG_WALLPAPER);
+        } catch (Exception error) {
+            FileLog.e(error);
+            android.widget.Toast.makeText(activity, "Не удалось открыть выбор фотографий", android.widget.Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    public void onActivityResultFragment(int requestCode, int resultCode, android.content.Intent data) {
+        super.onActivityResultFragment(requestCode, resultCode, data);
+        if (requestCode != REQUEST_TELEGA_DIALOG_WALLPAPER || resultCode != android.app.Activity.RESULT_OK || data == null) {
+            return;
+        }
+        android.net.Uri uri = data.getData();
+        if (uri == null) {
+            return;
+        }
+        String path = importDialogsWallpaper(uri);
+        if (TextUtils.isEmpty(path)) {
+            android.app.Activity activity = getParentActivity();
+            if (activity != null) {
+                android.widget.Toast.makeText(activity, "Не удалось загрузить изображение. Выбери другое фото до 35 МБ.", android.widget.Toast.LENGTH_LONG).show();
+            }
+            return;
+        }
+        showDialogsWallpaperPreview(path);
+    }
+
+    private String importDialogsWallpaper(android.net.Uri uri) {
+        android.app.Activity activity = getParentActivity();
+        if (activity == null) {
+            return null;
+        }
+        java.io.File outputFile = null;
+        try {
+            java.io.File directory = new java.io.File(activity.getFilesDir(), "telega_dialog_wallpapers");
+            if (!directory.isDirectory() && !directory.mkdirs()) {
+                return null;
+            }
+            outputFile = java.io.File.createTempFile("pending-wallpaper-", ".img", directory);
+            java.io.InputStream input = activity.getContentResolver().openInputStream(uri);
+            if (input == null) {
+                outputFile.delete();
+                return null;
+            }
+            try (java.io.InputStream in = input;
+                 java.io.FileOutputStream out = new java.io.FileOutputStream(outputFile)) {
+                byte[] buffer = new byte[16 * 1024];
+                long total = 0;
+                int read;
+                while ((read = in.read(buffer)) != -1) {
+                    total += read;
+                    if (total > 35L * 1024L * 1024L) {
+                        throw new java.io.IOException("Wallpaper exceeds 35 MB");
+                    }
+                    out.write(buffer, 0, read);
+                }
+                out.flush();
+            }
+            android.graphics.BitmapFactory.Options bounds = new android.graphics.BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            android.graphics.BitmapFactory.decodeFile(outputFile.getAbsolutePath(), bounds);
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0
+                    || (long) bounds.outWidth * (long) bounds.outHeight > 80000000L) {
+                outputFile.delete();
+                return null;
+            }
+            return outputFile.getAbsolutePath();
+        } catch (Exception error) {
+            if (outputFile != null) {
+                outputFile.delete();
+            }
+            FileLog.e(error);
+            return null;
+        }
+    }
+
+    private void showDialogsWallpaperPreview(String path) {
+        android.app.Activity activity = getParentActivity();
+        if (activity == null) {
+            org.telegram.messenger.TelegaDialogWallpaper.deleteManagedFile(null, path);
+            return;
+        }
+        android.graphics.Bitmap bitmap = org.telegram.messenger.TelegaDialogWallpaper.decodePreview(
+                path, AndroidUtilities.dp(350), AndroidUtilities.dp(230));
+        if (bitmap == null) {
+            org.telegram.messenger.TelegaDialogWallpaper.deleteManagedFile(activity, path);
+            android.widget.Toast.makeText(activity, "Файл не удалось прочитать как изображение", android.widget.Toast.LENGTH_LONG).show();
+            return;
+        }
+        android.widget.FrameLayout preview = new android.widget.FrameLayout(activity);
+        android.graphics.drawable.GradientDrawable previewBackground = new android.graphics.drawable.GradientDrawable();
+        previewBackground.setColor(getThemedColor(Theme.key_windowBackgroundGray));
+        previewBackground.setCornerRadius(AndroidUtilities.dp(14));
+        preview.setBackground(previewBackground);
+        preview.setClipToOutline(true);
+        android.widget.ImageView image = new android.widget.ImageView(activity);
+        image.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+        image.setImageBitmap(bitmap);
+        image.setClipToOutline(true);
+        preview.addView(image, new android.widget.FrameLayout.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT, AndroidUtilities.dp(220)));
+
+        org.telegram.ui.ActionBar.AlertDialog.Builder builder =
+                new org.telegram.ui.ActionBar.AlertDialog.Builder(activity);
+        builder.setTitle("Обои списка чатов");
+        builder.setMessage("Так фото будет выглядеть за полупрозрачными чатами. Установка изменит фон только в Telega на этом устройстве.");
+        builder.setView(preview);
+        builder.setPositiveButton("Установить", (dialog, which) -> installDialogsWallpaper(path));
+        builder.setNegativeButton("Отмена", (dialog, which) ->
+                org.telegram.messenger.TelegaDialogWallpaper.deleteManagedFile(activity, path));
+        builder.setCancelable(false);
+        showDialog(builder.create());
+    }
+
+    private void installDialogsWallpaper(String path) {
+        String previous = org.telegram.messenger.TelegaSettings.getDialogsWallpaperPath();
+        org.telegram.messenger.TelegaSettings.setDialogsWallpaperPath(path);
+        refreshDialogsWallpaper();
+        if (!TextUtils.isEmpty(previous) && !previous.equals(path)) {
+            org.telegram.messenger.TelegaDialogWallpaper.deleteManagedFile(getParentActivity(), previous);
+        }
+        android.app.Activity activity = getParentActivity();
+        if (activity != null) {
+            android.widget.Toast.makeText(activity, "Обои установлены", android.widget.Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void clearDialogsWallpaper() {
+        String previous = org.telegram.messenger.TelegaSettings.getDialogsWallpaperPath();
+        org.telegram.messenger.TelegaSettings.setDialogsWallpaperPath("");
+        refreshDialogsWallpaper();
+        org.telegram.messenger.TelegaDialogWallpaper.deleteManagedFile(getParentActivity(), previous);
+    }
+
+    private void refreshDialogsWallpaper() {
+        if (viewPages != null) {
+            for (int i = 0; i < viewPages.length; i++) {
+                ViewPage page = viewPages[i];
+                if (page != null && page.listView != null) {
+                    page.listView.setBackground(org.telegram.messenger.TelegaDialogWallpaper.createDrawable(
+                            page.listView.getContext(), getThemedColor(Theme.key_windowBackgroundGray)));
+                    page.listView.invalidate();
+                }
+            }
+        }
+        if (fragmentView != null) {
+            fragmentView.invalidate();
+        }
     }
 
     @Override

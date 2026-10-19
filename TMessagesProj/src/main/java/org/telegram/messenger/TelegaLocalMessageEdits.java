@@ -38,9 +38,15 @@ public final class TelegaLocalMessageEdits {
 
     public static void saveOverride(int account, long dialogId, int messageId, String text) {
         android.content.SharedPreferences p = preferences(account);
-        if (p != null && messageId > 0) {
-            p.edit().putString(key(dialogId, messageId), text == null ? "" : text).apply();
+        if (p == null || messageId <= 0) {
+            return;
         }
+        if (text == null || text.trim().isEmpty()) {
+            p.edit().remove(key(dialogId, messageId)).apply();
+            return;
+        }
+        String safeText = text.length() > 16000 ? text.substring(0, 16000) : text;
+        p.edit().putString(key(dialogId, messageId), safeText).apply();
     }
 
     public static void clearOverride(int account, long dialogId, int messageId) {

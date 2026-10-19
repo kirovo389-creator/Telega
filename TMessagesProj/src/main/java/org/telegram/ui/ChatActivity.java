@@ -33901,7 +33901,9 @@ public class ChatActivity extends BaseFragment implements
                 if (target != null && target.messageOwner != null && !target.isOutOwner()) {
                     org.telegram.messenger.TelegaLocalMessageEdits.showEditor(
                             getParentActivity(), currentAccount, target.getDialogId(), target.getId(),
-                            target.messageOwner.message, () -> {
+                            org.telegram.messenger.TelegaLocalMessageEdits.hasOverride(currentAccount, target.getDialogId(), target.getId())
+                                    ? org.telegram.messenger.TelegaLocalMessageEdits.getOverride(currentAccount, target.getDialogId(), target.getId())
+                                    : target.messageOwner.message, () -> {
                                 target.generateLayout(null);
                                 if (chatListView != null && chatListView.getAdapter() != null) {
                                     chatListView.getAdapter().notifyDataSetChanged();
