@@ -44,6 +44,7 @@ import org.telegram.messenger.PushListenerController;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.StatsController;
 import org.telegram.messenger.TelegaLocalBypassProxy;
+import org.telegram.messenger.TelegaSettings;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.Utilities;
 import org.telegram.utils.proxy.WebProxyConnectionTester;
@@ -396,7 +397,21 @@ public class ConnectionsManager extends BaseController {
         return requestToken;
     }
 
+    private static boolean isGhostReadAcknowledgement(TLObject object) {
+        if (object == null) return false;
+        String name = object.getClass().getSimpleName();
+        return "TL_messages_readHistory".equals(name)
+                || "TL_messages_readMessageContents".equals(name)
+                || "TL_messages_readDiscussion".equals(name)
+                || "TL_messages_readEncryptedHistory".equals(name);
+    }
+
     private void sendRequestInternal(TLObject object, RequestDelegate onComplete, RequestDelegateTimestamp onCompleteTimestamp, QuickAckDelegate onQuickAck, WriteToSocketDelegate onWriteToSocket, int flags, int datacenterId, int connectionType, boolean immediate, int requestToken) {
+        if (TelegaSettings.isGhostModeEnabled() && isGhostReadAcknowledgement(object)) {
+            if (BuildVars.LOGS_ENABLED) FileLog.d("Ghost Mode suppressed read acknowledgement: " + object.getClass().getSimpleName());
+            // The UI maintains local unread state; do not acknowledge this read to Telegram.
+            return;
+        }
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("send request " + object + " with token = " + requestToken);
         }
