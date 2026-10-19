@@ -583,6 +583,14 @@
         <receiver android:name=".WearReplyReceiver" android:enabled="true"/>
 
         <service
+            android:name=".GcmPushListenerService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <service
             android:name=".WearAuthListenerService"
             android:exported="true">
             <intent-filter>
