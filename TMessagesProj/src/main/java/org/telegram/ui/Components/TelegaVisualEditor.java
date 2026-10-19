@@ -77,8 +77,8 @@ public final class TelegaVisualEditor {
         private final SharedPreferences preferences;
         private final Map<View,float[]> originals=new WeakHashMap<>();
         private final Map<TextView,CharSequence> originalTexts=new WeakHashMap<>();
-        private final Map<TextView,Boolean> originalLongClickable=new WeakHashMap<>();
-        private final Map<TextView,Boolean> editorLongClickInstalled=new WeakHashMap<>();
+        private final Map<View,Boolean> originalLongClickable=new WeakHashMap<>();
+        private final Map<View,Boolean> editorLongClickInstalled=new WeakHashMap<>();
         private final Map<String,View> views=new HashMap<>();
         private final Map<String,String> draftTexts=new HashMap<>();
         private LinearLayout toolbar;
@@ -96,19 +96,19 @@ public final class TelegaVisualEditor {
             views.put(path,v);
             originals.put(v,new float[]{v.getTranslationX(),v.getTranslationY(),v.getScaleX(),v.getScaleY(),v.getRotation()});
             applyTransform(v,path);
+            boolean wasLongClickable=v.isLongClickable();
+            originalLongClickable.put(v,wasLongClickable);
+            // Keep built-in long-press behaviour such as message menus intact.
+            if(!wasLongClickable){
+                v.setOnLongClickListener(w->{select(w);return true;});
+                v.setLongClickable(true);
+                editorLongClickInstalled.put(v,true);
+            }else{
+                editorLongClickInstalled.put(v,false);
+            }
             if(v instanceof TextView){
                 TextView t=(TextView)v;originalTexts.put(t,t.getText());
-                boolean wasLongClickable=t.isLongClickable();
-                originalLongClickable.put(t,wasLongClickable);
                 String saved=preferences.getString(textKey(path),null);if(saved!=null)t.setText(saved);
-                // Do not replace built-in message menus or selectable-text long presses.
-                if(!wasLongClickable){
-                    t.setOnLongClickListener(w->{select(w);return true;});
-                    t.setLongClickable(true);
-                    editorLongClickInstalled.put(t,true);
-                }else{
-                    editorLongClickInstalled.put(t,false);
-                }
             }
             if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int i=0;i<g.getChildCount();i++)register(g.getChildAt(i),path+"."+i);}
         }
@@ -209,7 +209,7 @@ public final class TelegaVisualEditor {
         }
         private void reset(){
             SharedPreferences.Editor ed=preferences.edit();for(String k:preferences.getAll().keySet())if(k.startsWith("text_"+target+"_")||k.startsWith("transform_"+target+"_")||k.startsWith("photo_"+target))ed.remove(k);ed.apply();
-            restoreOriginals();draftTexts.clear();selected=null;selectedPath=null;if(photo!=null)root.removeView(photo);photo=null;photoUri=null;
+            restoreOriginals();draftTexts.clear();if(selected!=null)selected.setOnTouchListener(null);selected=null;selectedPath=null;if(photo!=null)root.removeView(photo);photo=null;photoUri=null;
             if(label!=null)label.setText("Изменения сброшены");if(editButton!=null)editButton.setVisibility(View.GONE);
         }
         private void restoreOriginals(){
@@ -219,10 +219,10 @@ public final class TelegaVisualEditor {
         private void exit(){setTarget("");detach(false);synchronized(ACTIVE){ACTIVE.remove(fragment);}}
         void detach(boolean revert){
             if(detached)return;detached=true;if(revert)restoreOriginals();
-            for(TextView t:originalTexts.keySet())if(t!=null){
-                if(Boolean.TRUE.equals(editorLongClickInstalled.get(t)))t.setOnLongClickListener(null);
-                Boolean old=originalLongClickable.get(t);
-                if(old!=null)t.setLongClickable(old);
+            for(View v:originalLongClickable.keySet())if(v!=null){
+                if(Boolean.TRUE.equals(editorLongClickInstalled.get(v)))v.setOnLongClickListener(null);
+                Boolean old=originalLongClickable.get(v);
+                if(old!=null)v.setLongClickable(old);
             }
             if(selected!=null)selected.setOnTouchListener(null);
             if(photo!=null){photo.setOnTouchListener(null);if(revert)root.removeView(photo);}
