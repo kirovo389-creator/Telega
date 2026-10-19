@@ -26,7 +26,7 @@ public class TelegaAntiBotSettingsActivity extends BaseFragment {
     public View createView(Context context) {
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
         actionBar.setAllowOverlayTitle(true);
-        actionBar.setTitle("Анти-бот");
+        actionBar.setTitle("Анти-бот и архив");
         actionBar.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
         actionBar.setTitleColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
         actionBar.setItemsColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText), false);
@@ -47,12 +47,12 @@ public class TelegaAntiBotSettingsActivity extends BaseFragment {
         listView.setAdapter(new RecyclerListView.SelectionAdapter() {
             @Override
             public int getItemCount() {
-                return 2;
+                return 4;
             }
 
             @Override
             public int getItemViewType(int position) {
-                return position == 0 ? 0 : 1;
+                return position <= 1 ? 0 : 1;
             }
 
             @Override
@@ -85,11 +85,18 @@ public class TelegaAntiBotSettingsActivity extends BaseFragment {
                     TextCheckCell cell = (TextCheckCell) holder.itemView;
                     cell.setTextAndCheck("Скрывать ботов и заглушать уведомления", TelegaSettings.isAntiBotEnabled(), true);
                     cell.setColorfullIcon(0xFF367CC0, R.drawable.telega_ic_robot);
-                } else {
+                } else if (position == 1) {
+                    TextCheckCell cell = (TextCheckCell) holder.itemView;
+                    cell.setTextAndCheck("Скрыть архив полностью", TelegaSettings.isHideArchiveEnabled(), true);
+                    cell.setColorfullIcon(0xFF52798B, R.drawable.telega_ic_archive);
+                } else if (position == 2) {
                     ((TextView) holder.itemView).setText(
                             "Боты исчезают из списков чатов и не создают уведомления. " +
-                            "Переписки не удаляются: отключи фильтр, чтобы снова увидеть их. " +
-                            "Настройка действует только в Telega на этом устройстве.");
+                            "Переписки не удаляются: отключи фильтр, чтобы снова увидеть их.");
+                } else {
+                    ((TextView) holder.itemView).setText(
+                            "Скрывает архив целиком: личные чаты, группы, каналы, ботов и Избранное. " +
+                            "Уведомления из архивных диалогов не показываются. Данные не удаляются и вернутся после выключения функции.");
                 }
             }
         });
@@ -100,6 +107,10 @@ public class TelegaAntiBotSettingsActivity extends BaseFragment {
             if (position == 0) {
                 boolean enabled = !TelegaSettings.isAntiBotEnabled();
                 TelegaSettings.setAntiBotEnabled(enabled);
+                if (view instanceof TextCheckCell) ((TextCheckCell) view).setChecked(enabled);
+            } else if (position == 1) {
+                boolean enabled = !TelegaSettings.isHideArchiveEnabled();
+                TelegaSettings.setHideArchiveEnabled(enabled);
                 if (view instanceof TextCheckCell) ((TextCheckCell) view).setChecked(enabled);
             }
         });
