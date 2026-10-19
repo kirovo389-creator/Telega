@@ -64,6 +64,7 @@ jobs:
           python3 scripts/patch_edit_text.py
           python3 scripts/patch_ai_agent.py
           python3 scripts/patch_bugs.py
+          python3 scripts/patch_proxy_autoreply.py
 
       - name: Verify Telega integration
         run: |
@@ -86,22 +87,17 @@ jobs:
           grep -Fq 'new TelegaLocalBypassSettingsActivity()' TMessagesProj/src/main/java/org/telegram/ui/TelegaSettingsActivity.java
           grep -Fq 'canAutoReplyNow' TMessagesProj/src/main/java/org/telegram/messenger/TelegaAutoReplyAgent.java
           grep -Fq 'startOfflineReplyWorker' TMessagesProj/src/main/java/org/telegram/messenger/TelegaAutoReplyAgent.java
-          grep -Fq 'OFFLINE_REPLY_COOLDOWN_MS = 10L * 60L * 1000L' TMessagesProj/src/main/java/org/telegram/messenger/TelegaAutoReplyAgent.java
+          grep -Fq 'flushPendingReplies' TMessagesProj/src/main/java/org/telegram/messenger/TelegaAutoReplyAgent.java
           grep -Fq 'TelegaSettings.isStoriesDisabled()' TMessagesProj/src/main/java/org/telegram/ui/Stories/StoriesUtilities.java
           grep -Fq 'persistLocalProxy' TMessagesProj/src/main/java/org/telegram/messenger/TelegaLocalBypassProxy.java
+          grep -Fq 'proxy_enabled' TMessagesProj/src/main/java/org/telegram/messenger/TelegaLocalBypassProxy.java
+          grep -Fq 'SharedConfig.currentProxy' TMessagesProj/src/main/java/org/telegram/messenger/TelegaLocalBypassProxy.java
           grep -Fq 'isLoopbackProxyAddress' TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
-          grep -Fq 'org.telegram.messenger.TelegaGlassMessages.draw(' "$CHAT_CELL"
-          grep -Fq 'TelegaSettings.isGlassMessagesEnabled()' TMessagesProj/src/main/java/org/telegram/ui/TelegaCustomizationActivity.java
-          grep -Fq 'TelegaSettings.setChatVideoWallpaperUri(selectedUri.toString())' TMessagesProj/src/main/java/org/telegram/ui/WallpapersListActivity.java
-          grep -Fq 'TelegaVideoWallpaperView.refreshAll()' TMessagesProj/src/main/java/org/telegram/ui/WallpapersListActivity.java
-          grep -Fq 'TelegaVideoWallpaperView' TMessagesProj/src/main/java/org/telegram/messenger/TelegaChatEffects.java
-          grep -Fq 'TelegaAvatarFrameView' TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java
-          grep -Fq 'TelegaSettings.isAvatarFrameEnabled()' TMessagesProj/src/main/java/org/telegram/ui/Components/TelegaAvatarFrameView.java
+          grep -Fq 'TelegaProfileColor' TMessagesProj/src/main/java/org/telegram/messenger/TelegaProfileColor.java
+          grep -Fq 'Палитра' TMessagesProj/src/main/java/org/telegram/ui/TelegaProfileSettingsActivity.java
+          grep -Fq 'TelegaProfileColor' TMessagesProj/src/main/java/org/telegram/ui/Components/AvatarDrawable.java
           grep -Fq 'DEFAULT_PORT = 56626' TMessagesProj/src/main/java/org/telegram/messenger/TelegaLocalBypassProxy.java
-          grep -Fq 'TextView connectButton' TMessagesProj/src/main/java/org/telegram/ui/TelegaLocalBypassSettingsActivity.java
-          grep -Fq '"Подключить"' TMessagesProj/src/main/java/org/telegram/ui/TelegaLocalBypassSettingsActivity.java
-          grep -Fq 'FRAME_INTERVAL_MS = 112L' TMessagesProj/src/main/java/org/telegram/messenger/TelegaGlassMessages.java
-          echo "Garland clipping, shared glass animation, fixed local proxy port, and profile avatar frame verified."
+          echo "Proxy SharedConfig, auto-reply flush, and profile color verified."
 
       - name: Branding package version icon
         run: |
@@ -109,7 +105,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq python3-pil python3-pil.imagetk || true
           VERSION_CODE=$(date -u +%s)
-          VERSION_NAME="13.0.6-telega.$(date -u +%Y%m%d-%H%M)"
+          VERSION_NAME="13.0.7-telega.$(date -u +%Y%m%d-%H%M)"
           sed -i "s/^APP_VERSION_CODE=.*/APP_VERSION_CODE=${VERSION_CODE}/" gradle.properties
           sed -i "s/^APP_VERSION_NAME=.*/APP_VERSION_NAME=${VERSION_NAME}/" gradle.properties
           sed -i 's/^APP_PACKAGE=.*/APP_PACKAGE=org.telega.messenger/' gradle.properties
@@ -176,4 +172,4 @@ jobs:
           VER=$(grep '^APP_VERSION_CODE=' gradle.properties | cut -d= -f2)
           gh release create "$TAG" "Telega.apk#Telega.apk" \
             --title "Telega $TAG (v$VER)" \
-            --notes "• Гирлянда с провисом\n• ИИ-автоответчик (фон)\n• Локальный обход: авто-прокси + правильный порт\n• checkProxy для 127.0.0.1"
+            --notes "• Прокси: SharedConfig + mainconfig + переподключение\n• Автоответчик: очередь в фоне\n• Цвет профиля (палитра)"
