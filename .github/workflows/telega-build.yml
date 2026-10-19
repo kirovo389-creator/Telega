@@ -20,6 +20,7 @@ on:
       - 'TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java'
       - 'TMessagesProj/src/main/java/org/telegram/ui/WallpapersListActivity.java'
       - 'TMessagesProj/src/main/java/org/telegram/messenger/ApplicationLoader.java'
+      - 'TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java'
       - 'TMessagesProj/src/main/res/drawable/telega_ic_*.xml'
 
 permissions:
