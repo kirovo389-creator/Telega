@@ -79,32 +79,24 @@ public final class TelegaLocalMessageEdits {
         input.setPadding(padding, padding, padding, padding);
         input.setSelection(input.length());
 
-        final android.app.AlertDialog dialog = new android.app.AlertDialog.Builder(context)
-                .setTitle("Изменить сообщение только у себя")
-                .setMessage("Изменение сохраняется на этом устройстве. Оригинал в Telegram не меняется.")
+        input.setTextColor(org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_dialogTextBlack));
+        input.setHintTextColor(org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_dialogTextHint));
+        input.setHint("Сообщение");
+
+        // Telegram-themed editor, matching the app's regular edit-dialog styling.
+        org.telegram.ui.ActionBar.AlertDialog dialog = new org.telegram.ui.ActionBar.AlertDialog.Builder(context)
+                .setTitle("Изменить сообщение")
                 .setView(input)
                 .setNegativeButton("Отмена", null)
                 .setNeutralButton("Сбросить", (d, which) -> {
                     clearOverride(account, dialogId, messageId);
                     if (onChanged != null) onChanged.run();
                 })
-                .setPositiveButton("Сохранить", (d, which) -> {
+                .setPositiveButton("Готово", (d, which) -> {
                     saveOverride(account, dialogId, messageId, input.getText().toString());
                     if (onChanged != null) onChanged.run();
                 })
                 .create();
-        dialog.setOnShowListener(d -> {
-            int color = org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_dialogTextBlack);
-            if (dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE) != null) {
-                dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setTextColor(color);
-            }
-            if (dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE) != null) {
-                dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE).setTextColor(color);
-            }
-            if (dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL) != null) {
-                dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL).setTextColor(color);
-            }
-        });
         dialog.show();
     }
 }
