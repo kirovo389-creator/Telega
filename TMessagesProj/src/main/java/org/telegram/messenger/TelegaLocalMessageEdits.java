@@ -12,7 +12,7 @@ import android.util.LruCache;
  */
 public final class TelegaLocalMessageEdits {
     private static final String PREFS = "telega_local_message_edits";
-    private static final String NO_OVERRIDE = "\u0000";
+    private static final String NO_OVERRIDE = String.valueOf((char) 0);
     private static final LruCache<String, String> OVERRIDE_CACHE = new LruCache<>(512);
 
     private TelegaLocalMessageEdits() {
