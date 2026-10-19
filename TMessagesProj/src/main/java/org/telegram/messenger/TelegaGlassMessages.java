@@ -23,7 +23,7 @@ import java.util.WeakHashMap;
  * invalidates visible message cells instead of each bubble running its own timer.
  */
 public final class TelegaGlassMessages {
-    private static final long FRAME_INTERVAL_MS = 112L;
+    private static final long FRAME_INTERVAL_MS = 64L;
     private static final Object LOCK = new Object();
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final WeakHashMap<View, Layer> LAYERS = new WeakHashMap<>();
@@ -32,11 +32,11 @@ public final class TelegaGlassMessages {
     private static boolean tickScheduled;
 
     private static final int[] SURFACE_COLORS = {
-            0x20FFFFFF, 0x07FFFFFF, 0x13FFFFFF
+            0x2AFFFFFF, 0x0EFFFFFF, 0x18FFFFFF
     };
     private static final float[] SURFACE_POSITIONS = {0f, 0.52f, 1f};
     private static final int[] SHIMMER_COLORS = {
-            0x00FFFFFF, 0x11FFFFFF, 0x22FFFFFF, 0x11FFFFFF, 0x00FFFFFF
+            0x00FFFFFF, 0x15FFFFFF, 0x1CFFFFFF, 0x15FFFFFF, 0x00FFFFFF
     };
     private static final float[] SHIMMER_POSITIONS = {0f, 0.34f, 0.5f, 0.66f, 1f};
 
@@ -74,7 +74,7 @@ public final class TelegaGlassMessages {
             return originalAlpha;
         }
         // Keep bubble colours readable; the glass shader supplies the sheen.
-        return Math.max(0, Math.min(255, Math.round(originalAlpha * 0.92f)));
+        return Math.max(0, Math.min(255, Math.round(originalAlpha * 0.82f)));
     }
 
     public static void refreshAnimationState() {

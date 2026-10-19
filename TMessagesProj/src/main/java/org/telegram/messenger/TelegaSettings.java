@@ -101,6 +101,19 @@ public final class TelegaSettings {
         if (p != null) {
             p.edit().putBoolean("hide_archive", enabled).apply();
         }
+        if (enabled) {
+            for (int account = 0; account < UserConfig.MAX_ACCOUNT_COUNT; account++) {
+                try {
+                    for (org.telegram.tgnet.TLRPC.Dialog dialog : MessagesController.getInstance(account).getDialogs(1)) {
+                        if (dialog != null && !DialogObject.isFolderDialogId(dialog.id)) {
+                            NotificationsController.getInstance(account).removeNotificationsForDialog(dialog.id);
+                        }
+                    }
+                } catch (Throwable error) {
+                    FileLog.e(error);
+                }
+            }
+        }
         AndroidUtilities.runOnUIThread(() -> {
             for (int account = 0; account < UserConfig.MAX_ACCOUNT_COUNT; account++) {
                 try {

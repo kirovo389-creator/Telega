@@ -143,15 +143,25 @@ public class TelegaLocalBypassSettingsActivity extends BaseFragment {
                 status.setText("Проверяю реальный маршрут Telegram через локальный прокси…");
             }
             TelegaLocalBypassProxy.checkLocalEndpoint(TelegaLocalBypassProxy.getPort(), elapsed -> {
-                if (status == null || context == null || !TelegaSettings.isLocalBypassEnabled()) return;
-                if (elapsed > 0) {
-                    status.setText("Маршрут Telegram отвечает через 127.0.0.1:" + TelegaLocalBypassProxy.getPort() + " (" + elapsed + " мс).");
-                } else {
+                if (!TelegaSettings.isLocalBypassEnabled()) return;
+                if (elapsed <= 0) {
                     String routeError = TelegaLocalBypassProxy.getLastRouteError();
-                    status.setText("Локальный прокси запущен, но маршрут Telegram НЕ подтверждён."
-                            + (routeError == null || routeError.isEmpty() ? " Нажми «Подключить» для повторной проверки."
-                            : "\\nПричина: " + routeError));
+                    String failure = "Маршрут Telegram не подтверждён. Обход выключен, чтобы не показывать ложное подключение."
+                            + (routeError == null || routeError.isEmpty() ? " Проверь сеть и повтори подключение."
+                            : "\nПричина: " + routeError);
+                    TelegaLocalBypassProxy.setEnabled(false);
+                    if (toggle != null) toggle.setChecked(false);
+                    if (connectButton != null) {
+                        connectButton.setVisibility(View.VISIBLE);
+                        connectButton.setText("Подключить");
+                    }
+                    if (status != null) status.setText(failure);
+                    if (context != null) toast("Маршрут Telegram не ответил; обход выключен.", true);
+                    return;
                 }
+                if (status == null || context == null) return;
+                status.setText("Маршрут Telegram отвечает через 127.0.0.1:"
+                        + TelegaLocalBypassProxy.getPort() + " (" + elapsed + " мс).");
             });
             toast("Обход включён; проверяю соединение с Telegram", false);
         } else {
@@ -194,25 +204,30 @@ public class TelegaLocalBypassSettingsActivity extends BaseFragment {
             status.setText("Проверяю маршрут через 127.0.0.1:" + probePort + "…");
         }
         TelegaLocalBypassProxy.checkLocalEndpoint(probePort, elapsed -> {
-            if (connectButton == null || context == null) {
+            if (!TelegaSettings.isLocalBypassEnabled()) return;
+            if (elapsed <= 0) {
+                String routeError = TelegaLocalBypassProxy.getLastRouteError();
+                String failure = "Маршрут Telegram не ответил. Обход выключен, чтобы не показывать ложное подключение."
+                        + (routeError == null || routeError.isEmpty() ? " Проверь сеть и повтори подключение."
+                        : "\nПричина: " + routeError);
+                TelegaLocalBypassProxy.setEnabled(false);
+                if (toggle != null) toggle.setChecked(false);
+                if (connectButton != null) {
+                    connectButton.setEnabled(true);
+                    connectButton.setVisibility(View.VISIBLE);
+                    connectButton.setText("Подключить");
+                }
+                if (status != null) status.setText(failure);
+                if (context != null) toast("Маршрут Telegram не ответил; обход выключен.", true);
                 return;
             }
+            if (connectButton == null || context == null) return;
             connectButton.setEnabled(true);
             connectButton.setText("Подключить");
-            if (elapsed > 0) {
-                if (status != null) {
-                    status.setText("Маршрут Telegram отвечает через 127.0.0.1:" + probePort + " (" + elapsed + " мс).");
-                }
-                toast("Проверка маршрута Telegram пройдена.", false);
-            } else {
-                if (status != null) {
-                    String routeError = TelegaLocalBypassProxy.getLastRouteError();
-                    status.setText("Локальный SOCKS5 запущен, но маршрут Telegram не ответил."
-                            + (routeError == null || routeError.isEmpty() ? " Проверь сеть и повтори подключение."
-                            : "\nПричина: " + routeError));
-                }
-                toast("Порт запущен, но маршрут Telegram не ответил.", true);
+            if (status != null) {
+                status.setText("Маршрут Telegram отвечает через 127.0.0.1:" + probePort + " (" + elapsed + " мс).");
             }
+            toast("Проверка маршрута Telegram пройдена.", false);
         });
     }
 

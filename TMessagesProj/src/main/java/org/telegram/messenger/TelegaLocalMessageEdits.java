@@ -68,46 +68,114 @@ public final class TelegaLocalMessageEdits {
         if (context == null || messageId <= 0) {
             return;
         }
+
+        final android.app.Dialog dialog = new android.app.Dialog(context);
+        final android.widget.LinearLayout root = new android.widget.LinearLayout(context);
+        root.setOrientation(android.widget.LinearLayout.VERTICAL);
+        root.setPadding(AndroidUtilities.dp(18), AndroidUtilities.dp(14), AndroidUtilities.dp(18), AndroidUtilities.dp(16));
+        android.graphics.drawable.GradientDrawable panel = new android.graphics.drawable.GradientDrawable();
+        panel.setColor(org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_windowBackgroundWhite));
+        float radius = AndroidUtilities.dp(22);
+        panel.setCornerRadii(new float[]{radius, radius, radius, radius, 0, 0, 0, 0});
+        root.setBackground(panel);
+        root.setElevation(AndroidUtilities.dp(12));
+
+        android.widget.LinearLayout header = new android.widget.LinearLayout(context);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+        android.widget.TextView title = new android.widget.TextView(context);
+        title.setText("Изменить для себя");
+        title.setTextSize(18);
+        title.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
+        title.setTextColor(org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_windowBackgroundWhiteBlackText));
+        header.addView(title, new android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        android.widget.TextView close = new android.widget.TextView(context);
+        close.setText("×");
+        close.setTextSize(28);
+        close.setGravity(Gravity.CENTER);
+        close.setTextColor(org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_windowBackgroundWhiteGrayText2));
+        header.addView(close, new android.widget.LinearLayout.LayoutParams(AndroidUtilities.dp(36), AndroidUtilities.dp(36)));
+        root.addView(header, new android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT));
+
         EditText input = new EditText(context);
         input.setText(original == null ? "" : original);
         input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         input.setGravity(Gravity.TOP | Gravity.START);
         input.setMinLines(2);
-        input.setMaxLines(10);
+        input.setMaxLines(8);
         input.setTextSize(16);
-        int padding = AndroidUtilities.dp(14);
-        input.setPadding(padding, padding, padding, padding);
-        input.setSelection(input.length());
-        input.setTextColor(org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_dialogTextBlack));
-        input.setHintTextColor(org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_dialogTextHint));
+        input.setPadding(AndroidUtilities.dp(14), AndroidUtilities.dp(12), AndroidUtilities.dp(14), AndroidUtilities.dp(12));
+        input.setTextColor(org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_windowBackgroundWhiteBlackText));
+        input.setHintTextColor(org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_windowBackgroundWhiteGrayText2));
         input.setHint("Сообщение");
-        input.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+        android.graphics.drawable.GradientDrawable inputBackground = new android.graphics.drawable.GradientDrawable();
+        inputBackground.setColor(org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_windowBackgroundGray));
+        inputBackground.setCornerRadius(AndroidUtilities.dp(14));
+        input.setBackground(inputBackground);
+        android.widget.LinearLayout.LayoutParams inputParams = new android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
+        inputParams.topMargin = AndroidUtilities.dp(12);
+        root.addView(input, inputParams);
 
-        final org.telegram.ui.ActionBar.AlertDialog dialog = new org.telegram.ui.ActionBar.AlertDialog.Builder(context)
-                .setTitle("Изменить сообщение")
-                .setView(input)
-                .setNegativeButton("Отмена", null)
-                .setNeutralButton("Сбросить", (d, which) -> {
-                    clearOverride(account, dialogId, messageId);
-                    if (onChanged != null) onChanged.run();
-                })
-                .setPositiveButton("Готово", (d, which) -> {
-                    saveOverride(account, dialogId, messageId, input.getText().toString());
-                    if (onChanged != null) onChanged.run();
-                })
-                .create();
+        android.widget.LinearLayout actions = new android.widget.LinearLayout(context);
+        actions.setGravity(Gravity.CENTER_VERTICAL);
+        actions.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+        android.widget.TextView reset = actionText(context, "Сбросить", org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_windowBackgroundWhiteGrayText2), false);
+        android.widget.TextView cancel = actionText(context, "Отмена", org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_windowBackgroundWhiteBlackText), false);
+        android.widget.TextView save = actionText(context, "Сохранить", android.graphics.Color.WHITE, true);
+        actions.addView(reset, new android.widget.LinearLayout.LayoutParams(0, AndroidUtilities.dp(42), 1f));
+        actions.addView(cancel, new android.widget.LinearLayout.LayoutParams(0, AndroidUtilities.dp(42), 1f));
+        actions.addView(save, new android.widget.LinearLayout.LayoutParams(0, AndroidUtilities.dp(42), 1.25f));
+        android.widget.LinearLayout.LayoutParams actionParams = new android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
+        actionParams.topMargin = AndroidUtilities.dp(10);
+        root.addView(actions, actionParams);
+
+        close.setOnClickListener(v -> dialog.dismiss());
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        reset.setOnClickListener(v -> {
+            clearOverride(account, dialogId, messageId);
+            dialog.dismiss();
+            if (onChanged != null) onChanged.run();
+        });
+        save.setOnClickListener(v -> {
+            saveOverride(account, dialogId, messageId, input.getText().toString());
+            dialog.dismiss();
+            if (onChanged != null) onChanged.run();
+        });
+        dialog.setContentView(root);
+        dialog.setCanceledOnTouchOutside(true);
         dialog.setOnShowListener(d -> {
-            int color = org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_dialogTextBlack);
-            if (dialog.getButton(org.telegram.ui.ActionBar.AlertDialog.BUTTON_POSITIVE) != null) {
-                ((android.widget.TextView) dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)).setTextColor(color);
+            android.view.Window window = dialog.getWindow();
+            if (window != null) {
+                window.setBackgroundDrawableResource(android.R.color.transparent);
+                window.setGravity(Gravity.BOTTOM);
+                window.setLayout(android.view.WindowManager.LayoutParams.MATCH_PARENT,
+                        android.view.WindowManager.LayoutParams.WRAP_CONTENT);
+                window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+                        | android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
             }
-            if (dialog.getButton(org.telegram.ui.ActionBar.AlertDialog.BUTTON_NEGATIVE) != null) {
-                ((android.widget.TextView) dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)).setTextColor(color);
-            }
-            if (dialog.getButton(org.telegram.ui.ActionBar.AlertDialog.BUTTON_NEUTRAL) != null) {
-                ((android.widget.TextView) dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL)).setTextColor(color);
-            }
+            input.requestFocus();
+            AndroidUtilities.showKeyboard(input);
         });
         dialog.show();
     }
+
+    private static android.widget.TextView actionText(Context context, String label, int textColor, boolean primary) {
+        android.widget.TextView view = new android.widget.TextView(context);
+        view.setText(label);
+        view.setTextSize(14);
+        view.setGravity(Gravity.CENTER);
+        view.setTextColor(textColor);
+        view.setPadding(AndroidUtilities.dp(8), 0, AndroidUtilities.dp(8), 0);
+        if (primary) {
+            android.graphics.drawable.GradientDrawable background = new android.graphics.drawable.GradientDrawable();
+            background.setColor(0xFF3688F5);
+            background.setCornerRadius(AndroidUtilities.dp(12));
+            view.setBackground(background);
+        }
+        return view;
+    }
+
 }
