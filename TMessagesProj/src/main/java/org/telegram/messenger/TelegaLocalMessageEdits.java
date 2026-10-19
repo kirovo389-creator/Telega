@@ -4,6 +4,7 @@ import android.content.Context;
 import android.text.InputType;
 import android.view.Gravity;
 import android.widget.EditText;
+import android.util.LruCache;
 
 /**
  * Per-device visual overrides for incoming text messages.
@@ -11,6 +12,8 @@ import android.widget.EditText;
  */
 public final class TelegaLocalMessageEdits {
     private static final String PREFS = "telega_local_message_edits";
+    private static final String NO_OVERRIDE = "\u0000";
+    private static final LruCache<String, String> OVERRIDE_CACHE = new LruCache<>(512);
 
     private TelegaLocalMessageEdits() {
     }
@@ -31,9 +34,26 @@ public final class TelegaLocalMessageEdits {
         return p != null && messageId > 0 && p.contains(key(dialogId, messageId));
     }
 
+    private static String cacheKey(int account, long dialogId, int messageId) {
+        return account + "_" + key(dialogId, messageId);
+    }
+
     public static String getOverride(int account, long dialogId, int messageId) {
+        if (messageId <= 0) {
+            return null;
+        }
+        String memoryKey = cacheKey(account, dialogId, messageId);
+        String cached = OVERRIDE_CACHE.get(memoryKey);
+        if (cached != null) {
+            return NO_OVERRIDE.equals(cached) ? null : cached;
+        }
         android.content.SharedPreferences p = preferences(account);
-        return p == null || messageId <= 0 ? null : p.getString(key(dialogId, messageId), null);
+        if (p == null) {
+            return null;
+        }
+        String value = p.getString(key(dialogId, messageId), null);
+        OVERRIDE_CACHE.put(memoryKey, value == null ? NO_OVERRIDE : value);
+        return value;
     }
 
     public static void saveOverride(int account, long dialogId, int messageId, String text) {
@@ -41,18 +61,23 @@ public final class TelegaLocalMessageEdits {
         if (p == null || messageId <= 0) {
             return;
         }
+        String preferenceKey = key(dialogId, messageId);
+        String memoryKey = cacheKey(account, dialogId, messageId);
         if (text == null || text.trim().isEmpty()) {
-            p.edit().remove(key(dialogId, messageId)).apply();
+            p.edit().remove(preferenceKey).apply();
+            OVERRIDE_CACHE.put(memoryKey, NO_OVERRIDE);
             return;
         }
         String safeText = text.length() > 16000 ? text.substring(0, 16000) : text;
-        p.edit().putString(key(dialogId, messageId), safeText).apply();
+        p.edit().putString(preferenceKey, safeText).apply();
+        OVERRIDE_CACHE.put(memoryKey, safeText);
     }
 
     public static void clearOverride(int account, long dialogId, int messageId) {
         android.content.SharedPreferences p = preferences(account);
         if (p != null && messageId > 0) {
             p.edit().remove(key(dialogId, messageId)).apply();
+            OVERRIDE_CACHE.put(cacheKey(account, dialogId, messageId), NO_OVERRIDE);
         }
     }
 
