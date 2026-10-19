@@ -25,6 +25,7 @@ public class GhostModeActivity extends BaseFragment {
 
     private TextView statusView;
     private TextView activateButton;
+    private boolean requestInFlight;
 
     @Override
     public View createView(Context context) {
@@ -48,7 +49,7 @@ public class GhostModeActivity extends BaseFragment {
         content.addView(title, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
         TextView description = new TextView(context);
-        description.setText("Включает серверный режим скрытого просмотра историй: просмотренные истории не должны появляться у автора в списке просмотров. Действие ограничено Telegram и автоматически заканчивается по таймеру сервера. Реакции и ответы могут раскрыть просмотр.");
+        description.setText("Включает серверный режим скрытого просмотра историй. Сервер ограничивает действие по времени; реакции и ответы могут раскрыть просмотр.");
         description.setTextSize(14);
         description.setLineSpacing(dp(2), 1f);
         description.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
@@ -57,7 +58,7 @@ public class GhostModeActivity extends BaseFragment {
         content.addView(description, descriptionParams);
 
         statusView = new TextView(context);
-        statusView.setText("Режим не активирован");
+        statusView.setText("Статус не проверен");
         statusView.setTextSize(14);
         statusView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
         LinearLayout.LayoutParams statusParams = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT);
@@ -78,7 +79,7 @@ public class GhostModeActivity extends BaseFragment {
         content.addView(activateButton, buttonParams);
 
         TextView limitation = new TextView(context);
-        limitation.setText("Важно: это включает только штатную невидимость историй. Скрытие прочтения обычных сообщений, статуса «в сети» и индикатора набора текста требует отдельных изменений сетевой логики и здесь пока не заявляется как работающая функция.");
+        limitation.setText("Этот экран управляет только невидимостью историй. Скрытие прочтения обычных сообщений, статуса «в сети» и индикатора набора текста здесь не реализовано.");
         limitation.setTextSize(13);
         limitation.setLineSpacing(dp(2), 1f);
         limitation.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
@@ -97,36 +98,40 @@ public class GhostModeActivity extends BaseFragment {
     }
 
     private void activateStealthMode(View view) {
-        if (getParentActivity() == null || activateButton == null) {
+        if (getParentActivity() == null || fragmentView == null || activateButton == null || requestInFlight) {
             return;
         }
+        requestInFlight = true;
         activateButton.setEnabled(false);
         activateButton.setAlpha(0.6f);
+        if (statusView != null) {
+            statusView.setText("Выполняется запрос…");
+        }
 
         TL_stories.TL_stories_activateStealthMode request = new TL_stories.TL_stories_activateStealthMode();
         request.past = true;
         request.future = true;
         ConnectionsManager.getInstance(currentAccount).sendRequest(request, (response, error) ->
                 AndroidUtilities.runOnUIThread(() -> {
-                    if (activateButton == null) {
+                    // A response may arrive after the fragment has been destroyed.
+                    if (fragmentView == null || activateButton == null || statusView == null) {
                         return;
                     }
+                    requestInFlight = false;
                     activateButton.setEnabled(true);
                     activateButton.setAlpha(1f);
-                    if (response instanceof TLRPC.Updates) {
+
+                    if (response instanceof TLRPC.Updates && error == null) {
                         TLRPC.Updates updates = (TLRPC.Updates) response;
                         MessagesController.getInstance(currentAccount).processUpdateArray(
                                 updates.updates, updates.users, updates.chats, false, updates.date);
-                        statusView.setText("Запрос принят сервером");
-                        activateButton.setText("Активировать повторно");
-                        if (getParentActivity() != null) {
-                            Toast.makeText(getParentActivity(), "Невидимость историй включена", Toast.LENGTH_SHORT).show();
-                        }
+                        statusView.setText("Запрос принят сервером; состояние режима не подтверждено клиентом");
+                        Toast.makeText(getParentActivity(), "Запрос на невидимость историй принят", Toast.LENGTH_SHORT).show();
                     } else {
-                        String message = error != null && error.text != null
+                        String message = error != null && error.text != null && !error.text.isEmpty()
                                 ? error.text
-                                : "Не удалось включить режим. Возможно, действует ограничение по времени.";
-                        statusView.setText(message);
+                                : "Не удалось подтвердить активацию режима";
+                        statusView.setText("Ошибка: " + message);
                         if (getParentActivity() != null) {
                             Toast.makeText(getParentActivity(), message, Toast.LENGTH_LONG).show();
                         }
@@ -136,6 +141,7 @@ public class GhostModeActivity extends BaseFragment {
 
     @Override
     public void onFragmentDestroy() {
+        requestInFlight = false;
         statusView = null;
         activateButton = null;
         super.onFragmentDestroy();
