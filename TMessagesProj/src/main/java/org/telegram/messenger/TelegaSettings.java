@@ -90,6 +90,29 @@ public final class TelegaSettings {
         });
     }
 
+    /** Hides every dialog in the Archive folder and suppresses its notifications. */
+    public static boolean isArchiveHidden() {
+        SharedPreferences p = prefs();
+        return p != null && p.getBoolean("hide_archive", false);
+    }
+
+    public static void setArchiveHidden(boolean enabled) {
+        SharedPreferences p = prefs();
+        if (p != null) {
+            p.edit().putBoolean("hide_archive", enabled).apply();
+        }
+        AndroidUtilities.runOnUIThread(() -> {
+            for (int account = 0; account < UserConfig.MAX_ACCOUNT_COUNT; account++) {
+                try {
+                    NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.dialogsNeedReload);
+                    NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.updateInterfaces, 0);
+                } catch (Throwable error) {
+                    FileLog.e(error);
+                }
+            }
+        });
+    }
+
     /** Image file used behind the main chat list; stored only in this app's private files. */
     public static String getDialogsWallpaperPath() {
         SharedPreferences p = prefs();
