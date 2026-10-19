@@ -88,7 +88,7 @@ public class TelegaAntiBotSettingsActivity extends BaseFragment {
                 } else if (position == 1) {
                     TextCheckCell cell = (TextCheckCell) holder.itemView;
                     cell.setTextAndCheck("Скрыть архив полностью", TelegaSettings.isHideArchiveEnabled(), true);
-                    cell.setColorfullIcon(0xFF52798B, R.drawable.telega_ic_archive);
+                    cell.setColorfullIcon(0xFF52798B, R.drawable.telega_ic_chat);
                 } else if (position == 2) {
                     ((TextView) holder.itemView).setText(
                             "Боты исчезают из списков чатов и не создают уведомления. " +
