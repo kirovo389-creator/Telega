@@ -67,6 +67,14 @@ public class TelegaSnowView extends View implements SensorEventListener {
     private boolean sensorOn;
     private boolean checkPosted;
     private Bitmap flake;
+    private long nextMeteorAt;
+    private int activeMeteors;
+    private final float[] meteorX = new float[40];
+    private final float[] meteorY = new float[40];
+    private final float[] meteorVx = new float[40];
+    private final float[] meteorVy = new float[40];
+    private final float[] meteorAge = new float[40];
+    private final float[] meteorDuration = new float[40];
 
     private final Runnable checkRunnable = new Runnable() {
         @Override
@@ -196,6 +204,8 @@ public class TelegaSnowView extends View implements SensorEventListener {
             mode = m;
             lastTime = 0;
             windTilt = 0;
+            activeMeteors = 0;
+            nextMeteorAt = 0;
             reseed();
             if (mode == TelegaSettings.SNOW_REAL || mode == TelegaSettings.SNOW_RAIN) {
                 registerSensor();
@@ -220,6 +230,8 @@ public class TelegaSnowView extends View implements SensorEventListener {
             drawMinecraft(canvas, dt);
         } else if (mode == TelegaSettings.SNOW_RAIN) {
             drawRain(canvas, dt);
+        } else if (mode == TelegaSettings.SNOW_STARS) {
+            drawStars(canvas, dt, now);
         } else {
             drawReal(canvas, dt);
         }
@@ -323,6 +335,54 @@ public class TelegaSnowView extends View implements SensorEventListener {
             rainPaint.setColor(Color.argb(alpha, 198 + (int) (18f * z),
                     218 + (int) (20f * z), 238 + (int) (17f * z)));
             canvas.drawLine(x - lean, y - length, x, y, rainPaint);
+        }
+    }
+
+    /** Soft star field with a rare, gently fading group of shooting stars. */
+    private void drawStars(Canvas canvas, float dt, long now) {
+        float d = AndroidUtilities.density;
+        int w = getWidth();
+        int h = getHeight();
+        int count = Math.max(70, Math.min(150, (int) ((w / d) * (h / d) / 2300)));
+        for (int i = 0; i < count; i++) {
+            float twinkle = 0.28f + 0.72f * (0.5f + 0.5f * (float) Math.sin(time * (0.8f + fz[i]) + fp[i]));
+            int alpha = Math.max(0, Math.min(230, (int) ((70f + 150f * fz[i]) * twinkle)));
+            softPaint.setAlpha(alpha);
+            float radius = (0.55f + fz[i] * 1.35f) * d;
+            canvas.drawCircle(fx[i], fy[i], radius, softPaint);
+        }
+        softPaint.setAlpha(255);
+        if (nextMeteorAt == 0L) {
+            nextMeteorAt = now + 5000L + random.nextInt(3001);
+        } else if (now >= nextMeteorAt) {
+            activeMeteors = 1 + random.nextInt(40);
+            for (int i = 0; i < activeMeteors; i++) {
+                meteorX[i] = random.nextFloat() * w;
+                meteorY[i] = random.nextFloat() * Math.max(1, h * 0.48f);
+                meteorVx[i] = (32f + random.nextFloat() * 105f) * d;
+                meteorVy[i] = (150f + random.nextFloat() * 300f) * d;
+                meteorAge[i] = -random.nextFloat() * 0.9f;
+                meteorDuration[i] = 1.25f + random.nextFloat() * 1.4f;
+            }
+            nextMeteorAt = now + 5000L + random.nextInt(3001);
+        }
+        for (int i = 0; i < activeMeteors; i++) {
+            meteorAge[i] += dt;
+            float age = meteorAge[i];
+            float duration = meteorDuration[i];
+            if (age < 0f || age >= duration) continue;
+            float fade = Math.min(1f, Math.min(age / 0.28f, (duration - age) / 0.42f));
+            fade = Math.max(0f, fade);
+            meteorX[i] += meteorVx[i] * dt;
+            meteorY[i] += meteorVy[i] * dt;
+            float tail = (18f + 34f * (meteorVy[i] / (450f * d))) * d;
+            int alpha = (int) (205f * fade);
+            rainGlowPaint.setStrokeWidth(2.4f * d);
+            rainGlowPaint.setColor(Color.argb(alpha / 5, 150, 205, 255));
+            canvas.drawLine(meteorX[i] - meteorVx[i] * 0.12f, meteorY[i] - tail, meteorX[i], meteorY[i], rainGlowPaint);
+            rainPaint.setStrokeWidth(0.85f * d);
+            rainPaint.setColor(Color.argb(alpha, 226, 240, 255));
+            canvas.drawLine(meteorX[i] - meteorVx[i] * 0.12f, meteorY[i] - tail, meteorX[i], meteorY[i], rainPaint);
         }
     }
 
