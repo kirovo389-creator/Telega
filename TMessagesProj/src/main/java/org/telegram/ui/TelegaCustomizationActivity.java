@@ -35,6 +35,7 @@ public class TelegaCustomizationActivity extends BaseFragment {
     private TextCheckCell garlandCell;
     private TextCheckCell glassCell;
     private TextCheckCell glassAnimationCell;
+    private TextCheckCell glassChatsCell;
     private TextCheckCell avatarFrameCell;
 
     @Override
@@ -179,6 +180,28 @@ public class TelegaCustomizationActivity extends BaseFragment {
         glassInfo.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(9), AndroidUtilities.dp(16), AndroidUtilities.dp(14));
         glassCard.addView(glassInfo, lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0, 0, 0, 0));
 
+        addSectionTitle(content, "Стеклянные чаты");
+        LinearLayout glassChatsCard = newCard();
+        content.addView(glassChatsCard, lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 16, 4, 16, 0));
+        glassChatsCell = createCheckCell(
+                "Жидкое стекло в списке чатов",
+                R.drawable.msg_background,
+                0xFF7F9EAF,
+                TelegaSettings.isGlassChatsEnabled(),
+                false
+        );
+        glassChatsCard.addView(glassChatsCell,
+                lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0, 0, 0, 0));
+        TextView glassChatsInfo = text(
+                "Полупрозрачные закруглённые карточки диалогов с тонкой кромкой и мягким отражением. Сообщения внутри открытого чата не затрагиваются этой настройкой.",
+                13,
+                0.65f
+        );
+        glassChatsInfo.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(9),
+                AndroidUtilities.dp(16), AndroidUtilities.dp(14));
+        glassChatsCard.addView(glassChatsInfo,
+                lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0, 0, 0, 0));
+
         addSectionTitle(content, "Рамка аватара");
         LinearLayout avatarFrameCard = newCard();
         content.addView(avatarFrameCard, lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 16, 4, 16, 0));
@@ -245,6 +268,12 @@ public class TelegaCustomizationActivity extends BaseFragment {
             boolean enabled = !TelegaSettings.isGlassMessagesAnimationEnabled();
             TelegaSettings.setGlassMessagesAnimationEnabled(enabled);
             glassAnimationCell.setChecked(enabled);
+        });
+
+        glassChatsCell.setOnClickListener(v -> {
+            boolean enabled = !TelegaSettings.isGlassChatsEnabled();
+            TelegaSettings.setGlassChatsEnabled(enabled);
+            glassChatsCell.setChecked(enabled);
         });
 
         avatarFrameCell.setOnClickListener(v -> {
