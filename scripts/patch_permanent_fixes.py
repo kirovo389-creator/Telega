@@ -42,9 +42,9 @@ def patch_bypass():
                 SharedConfig.loadProxyList();
                 SharedConfig.ProxyInfo info = SharedConfig.addProxy(new SharedConfig.ProxyInfo(local));
                 SharedConfig.currentProxy = info;
-                info.available = true;
+                info.available = false;
                 info.checking = false;
-                info.ping = Math.max(1, info.ping);
+                info.ping = 0;
             } catch (Throwable error) {
                 Log.w(TAG, "Unable to update SharedConfig proxy list", error);
             }
@@ -110,9 +110,9 @@ def patch_bypass():
             try {
                 NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.proxySettingsChanged);
                 if (SharedConfig.currentProxy != null) {
-                    SharedConfig.currentProxy.available = true;
+                    SharedConfig.currentProxy.available = false;
                     SharedConfig.currentProxy.checking = false;
-                    SharedConfig.currentProxy.ping = 1;
+                    SharedConfig.currentProxy.ping = 0;
                     NotificationCenter.getGlobalInstance().postNotificationName(
                             NotificationCenter.proxyCheckDone, SharedConfig.currentProxy);
                 }
@@ -148,9 +148,9 @@ def patch_bypass():
             try {
                 NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.proxySettingsChanged);
                 if (SharedConfig.currentProxy != null) {
-                    SharedConfig.currentProxy.available = true;
+                    SharedConfig.currentProxy.available = false;
                     SharedConfig.currentProxy.checking = false;
-                    SharedConfig.currentProxy.ping = 1;
+                    SharedConfig.currentProxy.ping = 0;
                     NotificationCenter.getGlobalInstance().postNotificationName(
                             NotificationCenter.proxyCheckDone, SharedConfig.currentProxy);
                 }
@@ -183,9 +183,9 @@ def patch_bypass():
             try {
                 NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.proxySettingsChanged);
                 if (SharedConfig.currentProxy != null) {
-                    SharedConfig.currentProxy.available = true;
+                    SharedConfig.currentProxy.available = false;
                     SharedConfig.currentProxy.checking = false;
-                    SharedConfig.currentProxy.ping = 1;
+                    SharedConfig.currentProxy.ping = 0;
                     NotificationCenter.getGlobalInstance().postNotificationName(
                             NotificationCenter.proxyCheckDone, SharedConfig.currentProxy);
                 }
