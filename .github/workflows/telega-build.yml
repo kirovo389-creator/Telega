@@ -15,6 +15,7 @@ on:
       - 'TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java'
       - 'TMessagesProj/src/main/java/org/telegram/ui/ProxyListActivity.java'
       - 'TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java'
+      - 'TMessagesProj/src/main/java/org/telegram/ui/Adapters/DialogsAdapter.java'
       - 'TMessagesProj/src/main/java/org/telegram/ui/Cells/DialogCell.java'
       - 'TMessagesProj/src/main/java/org/telegram/ui/TelegaLocalBypassSettingsActivity.java'
       - 'TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java'
