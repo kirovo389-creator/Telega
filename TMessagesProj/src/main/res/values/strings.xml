@@ -11535,4 +11535,14 @@
     <string name="CreateManagedBotUsernameBotLimit">This bot already has a Premium username. Remove it before adding another.</string>
     <string name="CreateManagedBotUsernameSuffixMissing">The username must end in %1$s.</string>
     <string name="CreateManagedBotUsernameCheckFailed">Couldn\'t check this username. Please try again.</string>
+    <string name="GhostModeTitle">Ghost mode</string>
+    <string name="GhostModeStoriesTitle">Invisible story viewing</string>
+    <string name="GhostModeStoriesDescription">Enables Telegram’s server-side stealth mode for story views. The server limits how long it remains active; reactions and replies may reveal that you viewed a story.</string>
+    <string name="GhostModeStatusUnverified">Status not checked</string>
+    <string name="GhostModeActivate">Enable invisibility</string>
+    <string name="GhostModeRequesting">Sending request…</string>
+    <string name="GhostModeRequestAcceptedUnverified">Request accepted by server; mode status is not confirmed by the client</string>
+    <string name="GhostModeActivationError">Could not confirm mode activation</string>
+    <string name="GhostModeLimitation">This screen controls story invisibility only. Hiding read receipts for regular messages, online status, and typing indicators is not implemented here.</string>
+    <string name="GhostModeRequestAcceptedToast">Request to hide story views accepted</string>
 </resources>
