@@ -3805,6 +3805,11 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
         if (!visibleOnScreen) {
             return;
         }
+        if (org.telegram.messenger.TelegaSettings.isGlassChatsEnabled()
+                && translationX == 0f && getMeasuredWidth() > dp(40) && getMeasuredHeight() > dp(30)) {
+            org.telegram.messenger.TelegaGlassDialogs.draw(canvas, this,
+                    dp(8), dp(4), getMeasuredWidth() - dp(8), getMeasuredHeight() - dp(4));
+        }
 
         boolean needInvalidate = false;
 
