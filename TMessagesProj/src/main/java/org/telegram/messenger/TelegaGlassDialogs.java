@@ -3,6 +3,7 @@ package org.telegram.messenger;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.Shader;
@@ -16,8 +17,7 @@ public final class TelegaGlassDialogs {
     private static final RectF rect = new RectF();
     private static int shaderWidth = -1;
     private static int shaderHeight = -1;
-    private static int shaderLeft = Integer.MIN_VALUE;
-    private static int shaderTop = Integer.MIN_VALUE;
+    private static final Matrix shaderMatrix = new Matrix();
     private static LinearGradient surfaceShader;
 
     static {
@@ -38,15 +38,16 @@ public final class TelegaGlassDialogs {
         }
         int width = right - left;
         int height = bottom - top;
-        if (width != shaderWidth || height != shaderHeight || left != shaderLeft || top != shaderTop || surfaceShader == null) {
+        if (width != shaderWidth || height != shaderHeight || surfaceShader == null) {
             shaderWidth = width;
             shaderHeight = height;
-            shaderLeft = left;
-            shaderTop = top;
-            surfaceShader = new LinearGradient(left, top, left, bottom,
+            surfaceShader = new LinearGradient(0, 0, 0, height,
                     new int[]{0x20FFFFFF, 0x0CFFFFFF, 0x12C5E7FF, 0x08FFFFFF},
                     new float[]{0f, 0.42f, 0.82f, 1f}, Shader.TileMode.CLAMP);
         }
+        // Reposition the cached shader without allocating a new gradient per recycled row.
+        shaderMatrix.setTranslate(0, top);
+        surfaceShader.setLocalMatrix(shaderMatrix);
         rect.set(left, top, right, bottom);
         float radius = Math.min(AndroidUtilities.dp(18), height * 0.28f);
         int save = canvas.save();
