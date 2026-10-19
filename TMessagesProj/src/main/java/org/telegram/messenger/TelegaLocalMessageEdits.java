@@ -95,13 +95,13 @@ public final class TelegaLocalMessageEdits {
         dialog.setOnShowListener(d -> {
             int color = org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_dialogTextBlack);
             if (dialog.getButton(org.telegram.ui.ActionBar.AlertDialog.BUTTON_POSITIVE) != null) {
-                dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setTextColor(color);
+                ((android.widget.TextView) dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)).setTextColor(color);
             }
             if (dialog.getButton(org.telegram.ui.ActionBar.AlertDialog.BUTTON_NEGATIVE) != null) {
-                dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE).setTextColor(color);
+                ((android.widget.TextView) dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)).setTextColor(color);
             }
             if (dialog.getButton(org.telegram.ui.ActionBar.AlertDialog.BUTTON_NEUTRAL) != null) {
-                dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL).setTextColor(color);
+                ((android.widget.TextView) dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL)).setTextColor(color);
             }
         });
         dialog.show();
