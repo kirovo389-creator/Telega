@@ -48,7 +48,7 @@ public final class TelegaVisualEditor {
     public static boolean isTarget(BaseFragment f,String target) {
         if(f==null||target==null)return false;
         if("profile".equals(target))return f instanceof ProfileActivity;
-        if("chat".equals(target))return f instanceof DialogsActivity||f instanceof ChatActivity;
+        if("chat".equals(target))return f instanceof ChatActivity;
         return "main".equals(target)&&f instanceof DialogsActivity;
     }
     public static void attach(BaseFragment fragment,View view) {
@@ -77,6 +77,8 @@ public final class TelegaVisualEditor {
         private final SharedPreferences preferences;
         private final Map<View,float[]> originals=new WeakHashMap<>();
         private final Map<TextView,CharSequence> originalTexts=new WeakHashMap<>();
+        private final Map<TextView,Boolean> originalLongClickable=new WeakHashMap<>();
+        private final Map<TextView,Boolean> editorLongClickInstalled=new WeakHashMap<>();
         private final Map<String,View> views=new HashMap<>();
         private final Map<String,String> draftTexts=new HashMap<>();
         private LinearLayout toolbar;
@@ -96,8 +98,17 @@ public final class TelegaVisualEditor {
             applyTransform(v,path);
             if(v instanceof TextView){
                 TextView t=(TextView)v;originalTexts.put(t,t.getText());
+                boolean wasLongClickable=t.isLongClickable();
+                originalLongClickable.put(t,wasLongClickable);
                 String saved=preferences.getString(textKey(path),null);if(saved!=null)t.setText(saved);
-                t.setOnLongClickListener(w->{select(w);return true;});t.setLongClickable(true);
+                // Do not replace built-in message menus or selectable-text long presses.
+                if(!wasLongClickable){
+                    t.setOnLongClickListener(w->{select(w);return true;});
+                    t.setLongClickable(true);
+                    editorLongClickInstalled.put(t,true);
+                }else{
+                    editorLongClickInstalled.put(t,false);
+                }
             }
             if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int i=0;i<g.getChildCount();i++)register(g.getChildAt(i),path+"."+i);}
         }
@@ -208,7 +219,11 @@ public final class TelegaVisualEditor {
         private void exit(){setTarget("");detach(false);synchronized(ACTIVE){ACTIVE.remove(fragment);}}
         void detach(boolean revert){
             if(detached)return;detached=true;if(revert)restoreOriginals();
-            for(TextView t:originalTexts.keySet())if(t!=null)t.setOnLongClickListener(null);
+            for(TextView t:originalTexts.keySet())if(t!=null){
+                if(Boolean.TRUE.equals(editorLongClickInstalled.get(t)))t.setOnLongClickListener(null);
+                Boolean old=originalLongClickable.get(t);
+                if(old!=null)t.setLongClickable(old);
+            }
             if(selected!=null)selected.setOnTouchListener(null);
             if(photo!=null){photo.setOnTouchListener(null);if(revert)root.removeView(photo);}
             if(toolbar!=null)root.removeView(toolbar);
