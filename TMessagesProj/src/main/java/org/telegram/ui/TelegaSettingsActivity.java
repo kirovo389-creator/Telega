@@ -163,7 +163,7 @@ public class TelegaSettingsActivity extends BaseFragment {
             } else if (position == profileRow) {
                 cell.setData(R.drawable.telega_ic_user, "Профиль", "Истории и настройки профиля", first, last);
             } else if (position == customRow) {
-                cell.setData(R.drawable.telega_ic_snow, "Кастомизация", "Снег и гирлянда в чатах", first, last);
+                cell.setData(R.drawable.telega_ic_snow, "Эффекты", "Снег, дождь, звёзды и стекло", first, last);
             }
         }
     }
