@@ -3197,7 +3197,20 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                         fillNextCodeParams(params, (TLRPC.auth_SentCode) response);
                     }
                 } else {
-                    if (error.text != null) {
+                    if (TextUtils.isEmpty(error.text)) {
+                        FileLog.e("Telega auth.sendCode failed without server error text, code=" + error.code);
+                        String message;
+                        if (error.code == -1000) {
+                            message = "Telegram не вернул ответ на запрос входа. Запрос был прерван до получения результата, поэтому код не был запрошен. Проверьте интернет и настройки API авторизации, затем попробуйте ещё раз.";
+                        } else {
+                            message = "Не удалось получить ответ от Telegram (код ошибки " + error.code + "). Код входа не был отправлен. Проверьте интернет-соединение и повторите попытку.";
+                        }
+                        needShowAlert(getString(R.string.RestorePasswordNoEmailTitle), message);
+                    } else if (error.text.contains("API_ID_PUBLISHED_FLOOD") || error.text.contains("API_ID_INVALID")) {
+                        FileLog.e("Telega auth.sendCode rejected API credentials: " + error.text);
+                        needShowAlert(getString(R.string.RestorePasswordNoEmailTitle),
+                                "Telegram отклонил API ID приложения (" + error.text + "). В сборке указаны демонстрационные API-данные или неправильные ключи. Для входа обычных пользователей настройте собственные TELEGA_API_ID и TELEGA_API_HASH в секретах GitHub Actions и пересоберите приложение.");
+                    } else if (error.text != null) {
                         if (error.text.contains("SESSION_PASSWORD_NEEDED")) {
                             TL_account.getPassword req2 = new TL_account.getPassword();
                             ConnectionsManager.getInstance(currentAccount).sendRequest(req2, (response1, error1) -> AndroidUtilities.runOnUIThread(() -> {

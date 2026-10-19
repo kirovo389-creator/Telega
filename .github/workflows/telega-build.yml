@@ -114,7 +114,9 @@ jobs:
           grep -Fq 'TelegaSettings.isAntiBotEnabled()' TMessagesProj/src/main/java/org/telegram/ui/Adapters/DialogsAdapter.java
           grep -Fq 'TelegaSettings.isAntiBotEnabled()' TMessagesProj/src/main/java/org/telegram/messenger/NotificationsController.java
           grep -Fq 'new TelegaAntiBotSettingsActivity()' TMessagesProj/src/main/java/org/telegram/ui/TelegaSettingsActivity.java
-          echo "Wallpaper picker, device-only message overrides, and anti-bot filter verified."
+          grep -Fq 'Telega auth.sendCode failed without server error text' TMessagesProj/src/main/java/org/telegram/ui/LoginActivity.java
+          grep -Fq 'API_ID_PUBLISHED_FLOOD' TMessagesProj/src/main/java/org/telegram/ui/LoginActivity.java
+          echo "Wallpaper picker, local message edits, anti-bot, and explicit login error handling verified."
 
       - name: Branding package version icon
         run: |
@@ -128,6 +130,51 @@ jobs:
           sed -i 's/^APP_PACKAGE=.*/APP_PACKAGE=org.telega.messenger/' gradle.properties
           python3 scripts/telega_brand.py
           grep -E 'APP_PACKAGE|APP_VERSION' gradle.properties
+
+
+      - name: Configure Telegram API credentials
+        env:
+          TELEGA_API_ID: ${{ secrets.TELEGA_API_ID || secrets.TELEGRAM_API_ID || secrets.APP_ID }}
+          TELEGA_API_HASH: ${{ secrets.TELEGA_API_HASH || secrets.TELEGRAM_API_HASH || secrets.APP_HASH }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TELEGA_API_ID}" ] && [ -z "${TELEGA_API_HASH}" ]; then
+            echo "::warning::Telegram API credentials are not configured. This APK can compile, but the upstream sample API ID is not suitable for reliable real-user login."
+            exit 0
+          fi
+          if [ -z "${TELEGA_API_ID}" ] || [ -z "${TELEGA_API_HASH}" ]; then
+            echo "::error::Both TELEGA_API_ID and TELEGA_API_HASH (or their aliases) must be configured together."
+            exit 1
+          fi
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          api_id = os.environ["TELEGA_API_ID"].strip()
+          api_hash = os.environ["TELEGA_API_HASH"].strip()
+          if not re.fullmatch(r"[0-9]+", api_id):
+              raise SystemExit("TELEGA_API_ID must contain digits only")
+          if not re.fullmatch(r"[0-9a-fA-F]{32}", api_hash):
+              raise SystemExit("TELEGA_API_HASH must be exactly 32 hexadecimal characters")
+
+          path = Path("TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java")
+          source = path.read_text(encoding="utf-8")
+          source, ids = re.subn(
+              r"public\\s+static\\s+int\\s+APP_ID\\s*=\\s*\\d+\\s*;",
+              f"public static int APP_ID = {api_id};",
+              source,
+          )
+          source, hashes = re.subn(
+              r'public\\s+static\\s+String\\s+APP_HASH\\s*=\\s*"[^"]*"\\s*;',
+              f'public static String APP_HASH = "{api_hash}";',
+              source,
+          )
+          if ids != 1 or hashes != 1:
+              raise SystemExit(f"Expected one APP_ID and one APP_HASH field; found {ids} and {hashes}")
+          path.write_text(source, encoding="utf-8")
+          print("Telegram API credentials injected from GitHub Secrets; values were not logged.")
+          PY
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
