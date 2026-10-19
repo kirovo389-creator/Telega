@@ -1,6 +1,7 @@
 package org.telegram.ui;
 
 import static org.telegram.messenger.AndroidUtilities.dp;
+import static org.telegram.messenger.LocaleController.getString;
 
 import android.content.Context;
 import android.graphics.Typeface;
@@ -31,7 +32,7 @@ public class GhostModeActivity extends BaseFragment {
     public View createView(Context context) {
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
         actionBar.setAllowOverlayTitle(true);
-        actionBar.setTitle("Призрак");
+        actionBar.setTitle(getString(R.string.GhostModeTitle));
 
         FrameLayout root = new FrameLayout(context);
         root.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
@@ -42,14 +43,14 @@ public class GhostModeActivity extends BaseFragment {
         content.setBackground(Theme.createRoundRectDrawable(dp(16), Theme.getColor(Theme.key_windowBackgroundWhite)));
 
         TextView title = new TextView(context);
-        title.setText("Невидимость в историях");
+        title.setText(getString(R.string.GhostModeStoriesTitle));
         title.setTextSize(20);
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         title.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
         content.addView(title, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
         TextView description = new TextView(context);
-        description.setText("Включает серверный режим скрытого просмотра историй. Сервер ограничивает действие по времени; реакции и ответы могут раскрыть просмотр.");
+        description.setText(getString(R.string.GhostModeStoriesDescription));
         description.setTextSize(14);
         description.setLineSpacing(dp(2), 1f);
         description.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
@@ -58,7 +59,7 @@ public class GhostModeActivity extends BaseFragment {
         content.addView(description, descriptionParams);
 
         statusView = new TextView(context);
-        statusView.setText("Статус не проверен");
+        statusView.setText(getString(R.string.GhostModeStatusUnverified));
         statusView.setTextSize(14);
         statusView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
         LinearLayout.LayoutParams statusParams = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT);
@@ -66,7 +67,7 @@ public class GhostModeActivity extends BaseFragment {
         content.addView(statusView, statusParams);
 
         activateButton = new TextView(context);
-        activateButton.setText("Включить невидимость");
+        activateButton.setText(getString(R.string.GhostModeActivate));
         activateButton.setTextSize(15);
         activateButton.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         activateButton.setTextColor(Theme.getColor(Theme.key_featuredStickers_buttonText));
@@ -79,7 +80,7 @@ public class GhostModeActivity extends BaseFragment {
         content.addView(activateButton, buttonParams);
 
         TextView limitation = new TextView(context);
-        limitation.setText("Этот экран управляет только невидимостью историй. Скрытие прочтения обычных сообщений, статуса «в сети» и индикатора набора текста здесь не реализовано.");
+        limitation.setText(getString(R.string.GhostModeLimitation));
         limitation.setTextSize(13);
         limitation.setLineSpacing(dp(2), 1f);
         limitation.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
@@ -105,7 +106,7 @@ public class GhostModeActivity extends BaseFragment {
         activateButton.setEnabled(false);
         activateButton.setAlpha(0.6f);
         if (statusView != null) {
-            statusView.setText("Выполняется запрос…");
+            statusView.setText(getString(R.string.GhostModeRequesting));
         }
 
         TL_stories.TL_stories_activateStealthMode request = new TL_stories.TL_stories_activateStealthMode();
@@ -125,14 +126,14 @@ public class GhostModeActivity extends BaseFragment {
                         TLRPC.Updates updates = (TLRPC.Updates) response;
                         MessagesController.getInstance(currentAccount).processUpdateArray(
                                 updates.updates, updates.users, updates.chats, false, updates.date);
-                        statusView.setText("Запрос принят сервером; состояние режима не подтверждено клиентом");
+                        statusView.setText(getString(R.string.GhostModeRequestAcceptedUnverified));
                         if (getParentActivity() != null) {
-                            Toast.makeText(getParentActivity(), "Запрос на невидимость историй принят", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getParentActivity(), getString(R.string.GhostModeRequestAcceptedToast), Toast.LENGTH_SHORT).show();
                         }
                     } else {
                         String message = error != null && error.text != null && !error.text.isEmpty()
                                 ? error.text
-                                : "Не удалось подтвердить активацию режима";
+                                : getString(R.string.GhostModeActivationError);
                         statusView.setText("Ошибка: " + message);
                         if (getParentActivity() != null) {
                             Toast.makeText(getParentActivity(), message, Toast.LENGTH_LONG).show();
