@@ -71,6 +71,7 @@ jobs:
           python3 scripts/patch_bugs.py
           python3 scripts/patch_proxy_autoreply.py
           python3 scripts/patch_permanent_fixes.py
+          python3 scripts/patch_telega_requested_fixes.py
 
       - name: Verify Telega integration
         run: |
@@ -103,6 +104,10 @@ jobs:
           grep -Fq 'TelegaSettings.SNOW_STARS' TMessagesProj/src/main/java/org/telegram/ui/TelegaCustomizationActivity.java
           grep -Fq 'drawStars(canvas, dt, now)' TMessagesProj/src/main/java/org/telegram/ui/Components/TelegaSnowView.java
           grep -Fq 'TelegaSettings.isGlassChatsEnabled()' TMessagesProj/src/main/java/org/telegram/ui/Cells/DialogCell.java
+          grep -Fq 'setTelegaLocalEditMessage(target' TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java
+          grep -Fq 'telegaLocalEditMode' TMessagesProj/src/main/java/org/telegram/ui/Components/ChatActivityEnterView.java
+          grep -Fq 'TelegaSettings.isArchiveHidden() && dialogsType == DIALOGS_TYPE_DEFAULT' TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java
+          grep -Fq 'suppressArchivedNotifications' TMessagesProj/src/main/java/org/telegram/messenger/NotificationsController.java
           grep -Fq 'TelegaGlassDialogs.draw(canvas, this' TMessagesProj/src/main/java/org/telegram/ui/Cells/DialogCell.java
           grep -Fq 'TelegaProfileColor' TMessagesProj/src/main/java/org/telegram/messenger/TelegaProfileColor.java
           grep -Fq 'Палитра' TMessagesProj/src/main/java/org/telegram/ui/TelegaProfileSettingsActivity.java

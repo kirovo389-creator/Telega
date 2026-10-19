@@ -43,7 +43,7 @@ public final class TelegaGlassDialogs {
             shaderWidth = width;
             shaderHeight = height;
             surfaceShader = new LinearGradient(0, 0, 0, height,
-                    new int[]{0x24FFFFFF, 0x12B7DDF2, 0x0C7395C6, 0x18FFFFFF},
+                    new int[]{0x35F7FCFF, 0x24A8D9F4, 0x146A8FB8, 0x28FFFFFF},
                     new float[]{0f, 0.34f, 0.76f, 1f}, Shader.TileMode.CLAMP);
         }
         rect.set(left, top, right, bottom);
@@ -57,32 +57,32 @@ public final class TelegaGlassDialogs {
         surface.setShader(null);
 
         // A restrained inner rim and top highlight create depth without expensive blur.
-        rim.setColor(0x35FFFFFF);
+        rim.setColor(0x55DDF5FF);
         canvas.drawRoundRect(rect, radius, radius, rim);
         innerRect.set(left + AndroidUtilities.dp(1), top + AndroidUtilities.dp(1),
                 right - AndroidUtilities.dp(1), bottom - AndroidUtilities.dp(1));
         rim.setStrokeWidth(Math.max(1f, AndroidUtilities.density * 0.45f));
-        rim.setColor(0x16FFFFFF);
+        rim.setColor(0x24A8D9F4);
         canvas.drawRoundRect(innerRect, Math.max(0, radius - AndroidUtilities.dp(1)), Math.max(0, radius - AndroidUtilities.dp(1)), rim);
         rim.setStrokeWidth(Math.max(1f, AndroidUtilities.density * 0.7f));
 
         shine.setStrokeWidth(Math.max(1f, AndroidUtilities.density));
-        shine.setColor(0x32FFFFFF);
+        shine.setColor(0x50FFFFFF);
         float shineY = top + AndroidUtilities.dp(1);
         canvas.drawLine(left + radius, shineY, right - radius, shineY, shine);
 
         // Static edge reflections give the surface depth without a distracting sweep.
         shine.setStrokeWidth(Math.max(1f, AndroidUtilities.density));
-        shine.setColor(0x18FFFFFF);
+        shine.setColor(0x24C9F0FF);
         canvas.drawLine(left + radius, top + AndroidUtilities.dp(3), right - radius, top + AndroidUtilities.dp(3), shine);
-        shine.setColor(0x0AFFFFFF);
+        shine.setColor(0x12FFFFFF);
         canvas.drawLine(left + radius, bottom - AndroidUtilities.dp(2), right - radius, bottom - AndroidUtilities.dp(2), shine);
         canvas.restoreToCount(save);
     }
 
     private static Paint backgroundPaint() {
         surface.setShader(null);
-        surface.setColor(0x08000000);
+        surface.setColor(0x100B1826);
         return surface;
     }
 }
