@@ -126,7 +126,9 @@ public class GhostModeActivity extends BaseFragment {
                         MessagesController.getInstance(currentAccount).processUpdateArray(
                                 updates.updates, updates.users, updates.chats, false, updates.date);
                         statusView.setText("Запрос принят сервером; состояние режима не подтверждено клиентом");
-                        Toast.makeText(getParentActivity(), "Запрос на невидимость историй принят", Toast.LENGTH_SHORT).show();
+                        if (getParentActivity() != null) {
+                            Toast.makeText(getParentActivity(), "Запрос на невидимость историй принят", Toast.LENGTH_SHORT).show();
+                        }
                     } else {
                         String message = error != null && error.text != null && !error.text.isEmpty()
                                 ? error.text
