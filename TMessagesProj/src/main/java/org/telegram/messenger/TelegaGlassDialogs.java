@@ -1,5 +1,6 @@
 package org.telegram.messenger;
 
+import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
@@ -18,6 +19,7 @@ public final class TelegaGlassDialogs {
     private static final RectF innerRect = new RectF();
     private static int shaderWidth = -1;
     private static int shaderHeight = -1;
+    private static boolean shaderDark;
     private static LinearGradient surfaceShader;
     private static final Matrix shaderMatrix = new Matrix();
 
@@ -39,50 +41,59 @@ public final class TelegaGlassDialogs {
         }
         int width = right - left;
         int height = bottom - top;
-        if (width != shaderWidth || height != shaderHeight || surfaceShader == null) {
+        boolean dark = (view.getResources().getConfiguration().uiMode
+                & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+        if (width != shaderWidth || height != shaderHeight || surfaceShader == null || dark != shaderDark) {
             shaderWidth = width;
             shaderHeight = height;
-            surfaceShader = new LinearGradient(0, 0, 0, height,
-                    new int[]{0x35F7FCFF, 0x24A8D9F4, 0x146A8FB8, 0x28FFFFFF},
-                    new float[]{0f, 0.34f, 0.76f, 1f}, Shader.TileMode.CLAMP);
+            shaderDark = dark;
+            int[] colors = dark
+                    ? new int[]{0x38FFFFFF, 0x244D7898, 0x18314F6A, 0x2CFFFFFF}
+                    : new int[]{0x6FFFFFFF, 0x50E8F5FF, 0x35B9D9EF, 0x7AFFFFFF};
+            surfaceShader = new LinearGradient(0, 0, 0, height, colors,
+                    new float[]{0f, 0.32f, 0.72f, 1f}, Shader.TileMode.CLAMP);
         }
         rect.set(left, top, right, bottom);
         float radius = Math.min(AndroidUtilities.dp(18), height * 0.28f);
         int save = canvas.save();
-        canvas.drawRoundRect(rect, radius, radius, backgroundPaint());
+
+        // Layered translucent tint and a fine rim create a frosted surface without
+        // per-row bitmap blur or expensive RenderEffect passes.
+        canvas.drawRoundRect(rect, radius, radius, backgroundPaint(dark));
         shaderMatrix.setTranslate(left, top);
         surfaceShader.setLocalMatrix(shaderMatrix);
         surface.setShader(surfaceShader);
+        surface.setColor(Color.WHITE);
         canvas.drawRoundRect(rect, radius, radius, surface);
         surface.setShader(null);
 
-        // A restrained inner rim and top highlight create depth without expensive blur.
-        rim.setColor(0x55DDF5FF);
+        rim.setColor(view.isPressed() ? (dark ? 0x70A8D9FF : 0xD0FFFFFF)
+                : (dark ? 0x48FFFFFF : 0xB8FFFFFF));
         canvas.drawRoundRect(rect, radius, radius, rim);
         innerRect.set(left + AndroidUtilities.dp(1), top + AndroidUtilities.dp(1),
                 right - AndroidUtilities.dp(1), bottom - AndroidUtilities.dp(1));
         rim.setStrokeWidth(Math.max(1f, AndroidUtilities.density * 0.45f));
-        rim.setColor(0x24A8D9F4);
-        canvas.drawRoundRect(innerRect, Math.max(0, radius - AndroidUtilities.dp(1)), Math.max(0, radius - AndroidUtilities.dp(1)), rim);
+        rim.setColor(dark ? 0x22FFFFFF : 0x65FFFFFF);
+        canvas.drawRoundRect(innerRect, Math.max(0, radius - AndroidUtilities.dp(1)),
+                Math.max(0, radius - AndroidUtilities.dp(1)), rim);
         rim.setStrokeWidth(Math.max(1f, AndroidUtilities.density * 0.7f));
 
         shine.setStrokeWidth(Math.max(1f, AndroidUtilities.density));
-        shine.setColor(0x50FFFFFF);
+        shine.setColor(dark ? 0x42FFFFFF : 0xD9FFFFFF);
         float shineY = top + AndroidUtilities.dp(1);
         canvas.drawLine(left + radius, shineY, right - radius, shineY, shine);
-
-        // Static edge reflections give the surface depth without a distracting sweep.
-        shine.setStrokeWidth(Math.max(1f, AndroidUtilities.density));
-        shine.setColor(0x24C9F0FF);
-        canvas.drawLine(left + radius, top + AndroidUtilities.dp(3), right - radius, top + AndroidUtilities.dp(3), shine);
-        shine.setColor(0x12FFFFFF);
-        canvas.drawLine(left + radius, bottom - AndroidUtilities.dp(2), right - radius, bottom - AndroidUtilities.dp(2), shine);
+        shine.setColor(dark ? 0x22FFFFFF : 0x70FFFFFF);
+        canvas.drawLine(left + radius, top + AndroidUtilities.dp(3),
+                right - radius, top + AndroidUtilities.dp(3), shine);
+        shine.setColor(dark ? 0x12FFFFFF : 0x35FFFFFF);
+        canvas.drawLine(left + radius, bottom - AndroidUtilities.dp(2),
+                right - radius, bottom - AndroidUtilities.dp(2), shine);
         canvas.restoreToCount(save);
     }
 
-    private static Paint backgroundPaint() {
+    private static Paint backgroundPaint(boolean dark) {
         surface.setShader(null);
-        surface.setColor(0x100B1826);
+        surface.setColor(dark ? 0xB8142231 : 0xC5F3F8FC);
         return surface;
     }
 }

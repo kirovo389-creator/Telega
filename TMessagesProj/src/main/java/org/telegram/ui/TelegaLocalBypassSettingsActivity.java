@@ -182,10 +182,18 @@ public class TelegaLocalBypassSettingsActivity extends BaseFragment {
         }
 
         connectButton.setVisibility(View.VISIBLE);
-        if (status != null) {
-            status.setText("Проверяю маршрут через 127.0.0.1:56626…");
+        final int probePort = TelegaLocalBypassProxy.getPort();
+        if (probePort <= 0) {
+            connectButton.setEnabled(true);
+            connectButton.setText("Подключить");
+            if (status != null) status.setText("Локальный прокси не запущен. Включи обход и повтори проверку.");
+            toast("Локальный прокси не запущен.", true);
+            return;
         }
-        TelegaLocalBypassProxy.checkLocalEndpoint(56626, elapsed -> {
+        if (status != null) {
+            status.setText("Проверяю маршрут через 127.0.0.1:" + probePort + "…");
+        }
+        TelegaLocalBypassProxy.checkLocalEndpoint(probePort, elapsed -> {
             if (connectButton == null || context == null) {
                 return;
             }
@@ -193,9 +201,9 @@ public class TelegaLocalBypassSettingsActivity extends BaseFragment {
             connectButton.setText("Подключить");
             if (elapsed > 0) {
                 if (status != null) {
-                    status.setText("Подключено: 127.0.0.1:56626. Маршрут Telegram отвечает (" + elapsed + " мс).");
+                    status.setText("Маршрут Telegram отвечает через 127.0.0.1:" + probePort + " (" + elapsed + " мс).");
                 }
-                toast("Прокси подключён: 127.0.0.1:56626", false);
+                toast("Проверка маршрута Telegram пройдена.", false);
             } else {
                 if (status != null) {
                     String routeError = TelegaLocalBypassProxy.getLastRouteError();

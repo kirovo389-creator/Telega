@@ -7689,6 +7689,14 @@ public class ChatActivityEnterView extends FrameLayout implements
             return;
         }
         ArrayList<TLRPC.MessageEntity> entities = MediaDataController.getInstance(currentAccount).getEntities(message, supportsSendingNewEntities());
+        if (parentFragment != null && parentFragment.isTelegaLocalEditInProgress()) {
+            org.telegram.messenger.TelegaLocalMessageEdits.saveOverride(
+                    currentAccount, editingMessageObject.getDialogId(), editingMessageObject.getId(),
+                    message[0] == null ? "" : message[0].toString());
+            parentFragment.onTelegaLocalEditSaved(editingMessageObject);
+            setEditingMessageObject(null, null, false);
+            return;
+        }
         if (!TextUtils.equals(message[0], editingMessageObject.messageText) || entities != null && !entities.isEmpty() || !editingMessageObject.messageOwner.entities.isEmpty() || editingMessageObject.messageOwner.media instanceof TLRPC.TL_messageMediaWebPage) {
             editingMessageObject.editingMessage = message[0];
             editingMessageObject.editingMessageEntities = entities;
@@ -9930,6 +9938,9 @@ public class ChatActivityEnterView extends FrameLayout implements
         if (audioToSend != null || videoToSendMessageObject != null || editingMessageObject == messageObject) {
             return;
         }
+        if (messageObject == null && parentFragment != null && parentFragment.isTelegaLocalEditInProgress()) {
+            parentFragment.cancelTelegaLocalEdit();
+        }
         createMessageEditText();
         boolean hadEditingMessage = editingMessageObject != null;
         editingMessageObject = messageObject;
@@ -10026,6 +10037,13 @@ public class ChatActivityEnterView extends FrameLayout implements
             } else {
                 currentLimit = accountInstance.getMessagesController().getMaxMessageLength();
                 editingText = editingMessageObject.messageText;
+                if (parentFragment != null && parentFragment.isTelegaLocalEditInProgress()) {
+                    String localOverride = org.telegram.messenger.TelegaLocalMessageEdits.getOverride(
+                            currentAccount, editingMessageObject.getDialogId(), editingMessageObject.getId());
+                    if (localOverride != null) {
+                        editingText = localOverride;
+                    }
+                }
             }
             if (editingText != null) {
                 final Paint.FontMetricsInt fontMetricsInt;

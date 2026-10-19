@@ -783,7 +783,9 @@ public class ConnectionsManager extends BaseController {
                 int localPort = TelegaLocalBypassProxy.ensureRunning();
                 if (localPort > 0) {
                     TelegaLocalBypassProxy.checkLocalEndpoint(localPort, requestTimeDelegate);
-                    return System.currentTimeMillis();
+                    // The health check is asynchronous. A positive return here reports success
+                    // before the local SOCKS5/WSS route has replied.
+                    return 0;
                 }
             }
         } catch (Throwable error) {

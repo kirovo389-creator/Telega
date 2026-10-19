@@ -809,6 +809,7 @@ public class ChatActivity extends BaseFragment implements
     private boolean ignoreDraft;
     private MessageObject replyingMessageObject;
     private int editingMessageObjectReqId;
+    private boolean telegaLocalEditInProgress;
     public MessageObject editingMessageObject;
     private boolean paused = true;
     private boolean pausedOnLastMessage;
@@ -33201,7 +33202,7 @@ public class ChatActivity extends BaseFragment implements
         chatActivityEnterView.setVisibility(View.VISIBLE);
         showFieldPanelForEdit(true, messageObject);
         updateBottomOverlay();
-        if (!asSuggestion) {
+        if (!asSuggestion && !telegaLocalEditInProgress) {
             checkEditTimer();
         }
         if (asSuggestion) {
@@ -33213,7 +33214,7 @@ public class ChatActivity extends BaseFragment implements
         updatePinnedMessageView(true);
         updateVisibleRows();
 
-        if (!asSuggestion && !messageObject.scheduled && !messageObject.isQuickReply() && chatMode != MODE_WELCOME_MESSAGES) {
+        if (!asSuggestion && !telegaLocalEditInProgress && !messageObject.scheduled && !messageObject.isQuickReply() && chatMode != MODE_WELCOME_MESSAGES) {
             TLRPC.TL_messages_getMessageEditData req = new TLRPC.TL_messages_getMessageEditData();
             req.peer = getMessagesController().getInputPeer(dialog_id);
             req.id = messageObject.getId();
@@ -33238,6 +33239,25 @@ public class ChatActivity extends BaseFragment implements
         } else {
             chatActivityEnterView.showEditDoneProgress(false, true);
         }
+    }
+
+    public boolean isTelegaLocalEditInProgress() {
+        return telegaLocalEditInProgress;
+    }
+
+    public void cancelTelegaLocalEdit() {
+        telegaLocalEditInProgress = false;
+    }
+
+    public void onTelegaLocalEditSaved(MessageObject messageObject) {
+        telegaLocalEditInProgress = false;
+        if (messageObject != null) {
+            messageObject.generateLayout(null);
+        }
+        if (chatListView != null && chatListView.getAdapter() != null) {
+            chatListView.getAdapter().notifyDataSetChanged();
+        }
+        updateVisibleRows();
     }
 
     public void setupStickerVibrationAndSound(ChatMessageCell cell) {
@@ -33898,18 +33918,11 @@ public class ChatActivity extends BaseFragment implements
             }
             case OPTION_TELEGA_LOCAL_EDIT: {
                 final MessageObject target = selectedObject;
-                if (target != null && target.messageOwner != null && !target.isOutOwner()) {
-                    org.telegram.messenger.TelegaLocalMessageEdits.showEditor(
-                            getParentActivity(), currentAccount, target.getDialogId(), target.getId(),
-                            org.telegram.messenger.TelegaLocalMessageEdits.hasOverride(currentAccount, target.getDialogId(), target.getId())
-                                    ? org.telegram.messenger.TelegaLocalMessageEdits.getOverride(currentAccount, target.getDialogId(), target.getId())
-                                    : target.messageOwner.message, () -> {
-                                target.generateLayout(null);
-                                if (chatListView != null && chatListView.getAdapter() != null) {
-                                    chatListView.getAdapter().notifyDataSetChanged();
-                                }
-                                updateVisibleRows();
-                            });
+                if (target != null && target.messageOwner != null && !target.isOutOwner()
+                        && target.type == MessageObject.TYPE_TEXT && target.getId() > 0) {
+                    // Open the standard Telegram edit composer; saving is intercepted locally.
+                    telegaLocalEditInProgress = true;
+                    startEditingMessageObject(target, false);
                 }
                 selectedObject = null;
                 selectedObjectGroup = null;
@@ -46558,7 +46571,7 @@ public class ChatActivity extends BaseFragment implements
                 && chatMode == MODE_DEFAULT
                 && selectedObjectGroup == null
                 && !TextUtils.isEmpty(message.messageOwner.message)) {
-            items.add("Изменить (только у меня)");
+            items.add("Изменить для себя");
             options.add(OPTION_TELEGA_LOCAL_EDIT);
             icons.add(R.drawable.msg_edit);
         }

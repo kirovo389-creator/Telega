@@ -225,6 +225,16 @@ public final class TelegaSettings {
         if (p != null) {
             p.edit().putBoolean("glass_chats_enabled", enabled).apply();
         }
+        AndroidUtilities.runOnUIThread(() -> {
+            for (int account = 0; account < UserConfig.MAX_ACCOUNT_COUNT; account++) {
+                try {
+                    NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.dialogsNeedReload);
+                    NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.updateInterfaces, 0);
+                } catch (Throwable error) {
+                    FileLog.e(error);
+                }
+            }
+        });
     }
 
     // ----------------------------------------------------------- Video wallpaper
