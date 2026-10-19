@@ -1,7 +1,7 @@
 package org.telegram.ui;
 
 import static org.telegram.messenger.AndroidUtilities.dp;
-import static org.telegram.messenger.LocaleController.getString;
+import org.telegram.messenger.LocaleController;
 
 import android.content.Context;
 import android.graphics.Typeface;
@@ -134,7 +134,7 @@ public class GhostModeActivity extends BaseFragment {
                         String message = error != null && error.text != null && !error.text.isEmpty()
                                 ? error.text
                                 : getString(R.string.GhostModeActivationError);
-                        statusView.setText("Ошибка: " + message);
+                        statusView.setText(LocaleController.getString(R.string.GhostModeErrorPrefix) + message);
                         if (getParentActivity() != null) {
                             Toast.makeText(getParentActivity(), message, Toast.LENGTH_LONG).show();
                         }
