@@ -1074,6 +1074,18 @@ public class NotificationsController extends BaseController implements Notificat
     }
 
     public void processNewMessages(ArrayList<MessageObject> messageObjects, boolean isLast, boolean isFcm, CountDownLatch countDownLatch) {
+        if (org.telegram.messenger.TelegaSettings.isArchiveHidden() && messageObjects != null && !messageObjects.isEmpty()) {
+            for (int i = messageObjects.size() - 1; i >= 0; i--) {
+                MessageObject messageObject = messageObjects.get(i);
+                if (messageObject == null) {
+                    continue;
+                }
+                TLRPC.Dialog archivedDialog = getMessagesController().dialogs_dict.get(messageObject.getDialogId());
+                if (archivedDialog != null && archivedDialog.folder_id == 1) {
+                    messageObjects.remove(i);
+                }
+            }
+        }
         if (org.telegram.messenger.TelegaSettings.isAntiBotEnabled() && messageObjects != null && !messageObjects.isEmpty()) {
             for (int i = messageObjects.size() - 1; i >= 0; i--) {
                 MessageObject messageObject = messageObjects.get(i);
