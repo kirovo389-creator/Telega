@@ -119,7 +119,6 @@ public class StoriesUtilities {
     };
 
     public static void drawAvatarWithStory(long dialogId, Canvas canvas, ImageReceiver avatarImage, boolean hasStories, AvatarStoryParams params) {
-        if (TelegaSettings.isStoriesDisabled()) return;
         StoriesController storiesController = MessagesController.getInstance(UserConfig.selectedAccount).getStoriesController();
         boolean animated = params.animate;
         if (params.dialogId != dialogId) {
@@ -191,6 +190,18 @@ public class StoriesUtilities {
             params.inc = false;
         }
         params.showProgress = showProgress;
+
+        // Hiding stories must not skip this helper entirely: it is also responsible for
+        // drawing the avatar image. Render the plain avatar without rings or progress.
+        if (TelegaSettings.isStoriesDisabled()) {
+            params.currentState = STATE_EMPTY;
+            params.prevState = STATE_EMPTY;
+            params.unreadState = STATE_EMPTY;
+            params.prevUnreadState = STATE_EMPTY;
+            params.progressToSate = 1f;
+            params.showProgress = false;
+            params.progressToSegments = 0f;
+        }
         if (params.currentState == STATE_EMPTY && params.progressToSate == 1f) {
             avatarImage.setImageCoords(params.originalAvatarRect);
             canvas.save();
