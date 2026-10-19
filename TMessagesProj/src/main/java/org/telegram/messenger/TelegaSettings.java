@@ -67,6 +67,29 @@ public final class TelegaSettings {
         }
     }
 
+    /** Hides every dialog in the Archive folder and suppresses its notifications. */
+    public static boolean isHideArchiveEnabled() {
+        SharedPreferences p = prefs();
+        return p != null && p.getBoolean("hide_archive_completely", false);
+    }
+
+    public static void setHideArchiveEnabled(boolean enabled) {
+        SharedPreferences p = prefs();
+        if (p != null) {
+            p.edit().putBoolean("hide_archive_completely", enabled).apply();
+        }
+        AndroidUtilities.runOnUIThread(() -> {
+            for (int account = 0; account < UserConfig.MAX_ACCOUNT_COUNT; account++) {
+                try {
+                    NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.dialogsNeedReload);
+                    NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.updateInterfaces, 0);
+                } catch (Throwable error) {
+                    FileLog.e(error);
+                }
+            }
+        });
+    }
+
     /** Hides bot dialogs from chat lists and suppresses their notifications. */
     public static boolean isAntiBotEnabled() {
         SharedPreferences p = prefs();
