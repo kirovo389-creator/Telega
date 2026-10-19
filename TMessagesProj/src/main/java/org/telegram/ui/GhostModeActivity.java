@@ -37,7 +37,7 @@ public class GhostModeActivity extends BaseFragment {
     public View createView(Context context) {
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
         actionBar.setAllowOverlayTitle(true);
-        actionBar.setTitle(getString(R.string.GhostModeTitle));
+        actionBar.setTitle(LocaleController.getString(R.string.GhostModeTitle));
 
         FrameLayout root = new FrameLayout(context);
         root.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
@@ -68,7 +68,7 @@ public class GhostModeActivity extends BaseFragment {
         hero.addView(illustration, LayoutHelper.createLinear(dp(124), dp(124), Gravity.CENTER_HORIZONTAL));
 
         TextView title = new TextView(context);
-        title.setText(getString(R.string.GhostModeStoriesTitle));
+        title.setText(LocaleController.getString(R.string.GhostModeStoriesTitle));
         title.setTextSize(22);
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         title.setGravity(Gravity.CENTER);
@@ -79,7 +79,7 @@ public class GhostModeActivity extends BaseFragment {
         hero.addView(title, titleParams);
 
         TextView description = new TextView(context);
-        description.setText(getString(R.string.GhostModeStoriesDescription));
+        description.setText(LocaleController.getString(R.string.GhostModeStoriesDescription));
         description.setTextSize(14);
         description.setLineSpacing(dp(3), 1.0f);
         description.setGravity(Gravity.CENTER);
@@ -115,14 +115,14 @@ public class GhostModeActivity extends BaseFragment {
         statusCard.addView(statusTextContainer, statusTextParams);
 
         TextView statusLabel = new TextView(context);
-        statusLabel.setText(getString(R.string.GhostModeTitle));
+        statusLabel.setText(LocaleController.getString(R.string.GhostModeTitle));
         statusLabel.setTextSize(12);
         statusLabel.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
         statusTextContainer.addView(statusLabel, LayoutHelper.createLinear(
                 LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
         statusView = new TextView(context);
-        statusView.setText(getString(R.string.GhostModeStatusUnverified));
+        statusView.setText(LocaleController.getString(R.string.GhostModeStatusUnverified));
         statusView.setTextSize(14);
         statusView.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         statusView.setLineSpacing(dp(2), 1f);
@@ -133,7 +133,7 @@ public class GhostModeActivity extends BaseFragment {
         statusTextContainer.addView(statusView, statusTextViewParams);
 
         activateButton = new TextView(context);
-        activateButton.setText(getString(R.string.GhostModeActivate));
+        activateButton.setText(LocaleController.getString(R.string.GhostModeActivate));
         activateButton.setTextSize(15);
         activateButton.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         activateButton.setTextColor(Theme.getColor(Theme.key_featuredStickers_buttonText));
@@ -171,7 +171,7 @@ public class GhostModeActivity extends BaseFragment {
         limitationCard.addView(infoMark, LayoutHelper.createLinear(dp(28), dp(28)));
 
         TextView limitation = new TextView(context);
-        limitation.setText(getString(R.string.GhostModeLimitation));
+        limitation.setText(LocaleController.getString(R.string.GhostModeLimitation));
         limitation.setTextSize(13);
         limitation.setLineSpacing(dp(3), 1f);
         limitation.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
@@ -196,7 +196,7 @@ public class GhostModeActivity extends BaseFragment {
         activateButton.setEnabled(false);
         activateButton.setAlpha(0.6f);
         if (statusView != null) {
-            statusView.setText(getString(R.string.GhostModeRequesting));
+            statusView.setText(LocaleController.getString(R.string.GhostModeRequesting));
         }
         if (statusDot != null) {
             statusDot.setTextColor(Theme.getColor(Theme.key_featuredStickers_addButton));
@@ -219,17 +219,17 @@ public class GhostModeActivity extends BaseFragment {
                         TLRPC.Updates updates = (TLRPC.Updates) response;
                         MessagesController.getInstance(currentAccount).processUpdateArray(
                                 updates.updates, updates.users, updates.chats, false, updates.date);
-                        statusView.setText(getString(R.string.GhostModeRequestAcceptedUnverified));
+                        statusView.setText(LocaleController.getString(R.string.GhostModeRequestAcceptedUnverified));
                         if (statusDot != null) {
                             statusDot.setTextColor(Theme.getColor(Theme.key_featuredStickers_addButton));
                         }
                         if (getParentActivity() != null) {
-                            Toast.makeText(getParentActivity(), getString(R.string.GhostModeRequestAcceptedToast), Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getParentActivity(), LocaleController.getString(R.string.GhostModeRequestAcceptedToast), Toast.LENGTH_SHORT).show();
                         }
                     } else {
                         String message = error != null && error.text != null && !error.text.isEmpty()
                                 ? error.text
-                                : getString(R.string.GhostModeActivationError);
+                                : LocaleController.getString(R.string.GhostModeActivationError);
                         statusView.setText(LocaleController.getString(R.string.GhostModeErrorPrefix) + message);
                         if (statusDot != null) {
                             statusDot.setTextColor(0xffe05252);
