@@ -33254,18 +33254,72 @@ public class ChatActivity extends BaseFragment implements
 
     public void onTelegaLocalEditSaved(MessageObject messageObject) {
         telegaLocalEditInProgress = false;
-        if (messageObject != null) {
-            // Force the visible ChatMessageCell to recalculate its text layout,
-            // bubble width and measured height immediately after a local-only edit.
-            // Without this, the existing cell can keep its previous bubble bounds
-            // until the chat is recreated, leaving longer replacement text outside.
-            messageObject.forceUpdate = true;
-            messageObject.generateLayout(null);
+        if (messageObject == null || messageObject.messageOwner == null) {
+            return;
         }
-        if (chatListView != null && chatListView.getAdapter() != null) {
-            chatListView.getAdapter().notifyDataSetChanged();
+
+        final long editedDialogId = messageObject.getDialogId();
+        final int editedMessageId = messageObject.getId();
+
+        // Resolve the instance held by the chat's backing list. The edit composer
+        // can hold a different MessageObject instance from the visible RecyclerView cell.
+        MessageObject listMessageObject = messageObject;
+        if (messages != null) {
+            for (int i = 0; i < messages.size(); i++) {
+                MessageObject candidate = messages.get(i);
+                if (candidate != null && candidate.getId() == editedMessageId
+                        && candidate.getDialogId() == editedDialogId) {
+                    listMessageObject = candidate;
+                    break;
+                }
+            }
         }
-        updateVisibleRows();
+
+        // checkLayout() is the canonical cache invalidation path: it rebuilds the
+        // layout using the local override while leaving the server-owned message text intact.
+        listMessageObject.resetLayout();
+        listMessageObject.checkLayout();
+        if (messageObject != listMessageObject) {
+            messageObject.resetLayout();
+            messageObject.checkLayout();
+        }
+
+        boolean refreshedVisibleCell = false;
+        if (chatListView != null) {
+            for (int i = 0; i < chatListView.getChildCount(); i++) {
+                View child = chatListView.getChildAt(i);
+                if (!(child instanceof ChatMessageCell)) {
+                    continue;
+                }
+                ChatMessageCell cell = (ChatMessageCell) child;
+                MessageObject cellMessage = cell.getMessageObject();
+                if (cellMessage == null || cellMessage.getId() != editedMessageId
+                        || cellMessage.getDialogId() != editedDialogId) {
+                    continue;
+                }
+
+                // Refresh the actual bound instance, not only the edit-composer instance.
+                if (cellMessage != listMessageObject && cellMessage != messageObject) {
+                    cellMessage.resetLayout();
+                    cellMessage.checkLayout();
+                }
+                cellMessage.forceUpdate = true;
+                cell.setMessageObject(cellMessage, cell.getCurrentMessagesGroup(),
+                        cell.isPinnedBottom(), cell.isPinnedTop(),
+                        cell.isFirstInChat(), cell.isLastInChatList());
+                cell.requestLayout();
+                refreshedVisibleCell = true;
+            }
+        }
+
+        // For an off-screen row, notify only that row. A full-list refresh causes
+        // unrelated cells to rebind and can introduce avoidable layout/scroll jumps.
+        if (!refreshedVisibleCell && chatAdapter != null && messages != null) {
+            int messageIndex = messages.indexOf(listMessageObject);
+            if (messageIndex >= 0) {
+                chatAdapter.updateRowAtPosition(chatAdapter.messagesStartRow + messageIndex);
+            }
+        }
     }
 
     public void setupStickerVibrationAndSound(ChatMessageCell cell) {
