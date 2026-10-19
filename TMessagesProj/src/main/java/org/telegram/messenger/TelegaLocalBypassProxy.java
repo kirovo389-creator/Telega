@@ -81,6 +81,7 @@ public final class TelegaLocalBypassProxy {
     private static final int MAX_MESSAGE_BYTES = 16 * 1024 * 1024;
     private static final int WS_HEADER_LIMIT = 32 * 1024;
     private static final int MAX_ENDPOINT_ATTEMPTS = 24;
+    private static final int PARALLEL_ENDPOINT_ATTEMPTS = 4;
 
     private static volatile ServerSocket listener;
     private static volatile ExecutorService workers;
@@ -639,47 +640,105 @@ public final class TelegaLocalBypassProxy {
         String key = route.dcId + ":" + route.media;
         List<Endpoint> candidates = candidateEndpoints(route);
         Endpoint cached = lastSuccessfulEndpoints.get(key);
-        if (cached != null) {
-            candidates.add(0, cached);
+        if (cached == null) {
+            String cachedHost = readLastSuccessfulEndpoint(key);
+            if (cachedHost != null) for (Endpoint endpoint : candidates) {
+                if (cachedHost.equals(endpoint.tlsHost)) { cached = endpoint; break; }
+            }
         }
+        if (cached != null) candidates.add(0, cached);
         Map<String, Endpoint> unique = new LinkedHashMap<>();
-        for (Endpoint endpoint : candidates) {
-            if (!unique.containsKey(endpoint.tlsHost)) {
-                unique.put(endpoint.tlsHost, endpoint);
-            }
-        }
+        for (Endpoint endpoint : candidates) if (!unique.containsKey(endpoint.tlsHost)) unique.put(endpoint.tlsHost, endpoint);
+        List<Endpoint> endpoints = new ArrayList<>(unique.values());
+        if (endpoints.size() > MAX_ENDPOINT_ATTEMPTS) endpoints = new ArrayList<>(endpoints.subList(0, MAX_ENDPOINT_ATTEMPTS));
 
+        final java.util.concurrent.atomic.AtomicReference<EndpointAttempt> winner = new java.util.concurrent.atomic.AtomicReference<>();
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(
+                Math.min(PARALLEL_ENDPOINT_ATTEMPTS, Math.max(1, endpoints.size())), task -> {
+                    Thread thread = new Thread(task, "TelegaWssProbe");
+                    thread.setDaemon(true);
+                    return thread;
+                });
+        java.util.concurrent.CompletionService<EndpointAttempt> completion =
+                new java.util.concurrent.ExecutorCompletionService<>(pool);
+        List<java.util.concurrent.Future<EndpointAttempt>> futures = new ArrayList<>();
         Throwable last = null;
-        int attempts = 0;
-        for (Endpoint endpoint : unique.values()) {
-            if (attempts >= MAX_ENDPOINT_ATTEMPTS) {
-                break;
+        int next = 0, inFlight = 0;
+        try {
+            while (next < endpoints.size() && inFlight < PARALLEL_ENDPOINT_ATTEMPTS) {
+                futures.add(submitEndpoint(completion, endpoints.get(next++), winner));
+                inFlight++;
             }
-            if (attempts > 0) {
+            while (inFlight > 0 && winner.get() == null) {
+                java.util.concurrent.Future<EndpointAttempt> future = completion.take();
+                inFlight--;
                 try {
-                    Thread.sleep(Math.min(500, 100L * attempts));
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new IOException("Подключение прервано", e);
+                    EndpointAttempt result = future.get();
+                    if (result != null && result.error != null) {
+                        last = result.error;
+                        lastRouteError = result.endpoint.tlsHost + ": " + safeMessage(result.error);
+                        if (lastRouteError.length() > 180) lastRouteError = lastRouteError.substring(0, 180);
+                    }
+                } catch (Throwable error) {
+                    last = error;
+                }
+                if (winner.get() != null) break;
+                if (next < endpoints.size()) {
+                    futures.add(submitEndpoint(completion, endpoints.get(next++), winner));
+                    inFlight++;
                 }
             }
-            attempts++;
+        } catch (InterruptedException error) {
+            Thread.currentThread().interrupt();
+            last = error;
+        } finally {
+            for (java.util.concurrent.Future<EndpointAttempt> future : futures) future.cancel(true);
+            pool.shutdownNow();
+        }
+        EndpointAttempt selected = winner.get();
+        if (selected != null) {
+            lastSuccessfulEndpoints.put(key, selected.endpoint);
+            persistLastSuccessfulEndpoint(key, selected.endpoint.tlsHost);
+            lastRouteError = null;
+            return selected.connection;
+        }
+        throw new IOException("Нет доступного Telegram WSS-маршрута"
+                + (last == null ? "" : ": " + safeMessage(last)), last);
+    }
+
+    private static java.util.concurrent.Future<EndpointAttempt> submitEndpoint(
+            java.util.concurrent.CompletionService<EndpointAttempt> completion,
+            Endpoint endpoint,
+            java.util.concurrent.atomic.AtomicReference<EndpointAttempt> winner) {
+        return completion.submit(() -> {
             try {
                 WsConnection connection = WsConnection.connect(endpoint.connectHost, endpoint.tlsHost, "/apiws");
-                lastSuccessfulEndpoints.put(key, endpoint);
-                lastRouteError = null;
-                return connection;
+                EndpointAttempt result = new EndpointAttempt(endpoint, connection, null);
+                if (winner.compareAndSet(null, result)) return result;
+                closeQuietly(connection);
+                return new EndpointAttempt(endpoint, null, new IOException("Another WSS route connected faster"));
             } catch (Throwable error) {
-                last = error;
-                lastRouteError = endpoint.tlsHost + ": " + safeMessage(error);
-                if (lastRouteError.length() > 180) {
-                    lastRouteError = lastRouteError.substring(0, 180);
-                }
                 Log.w(TAG, "Telegram WSS endpoint failed: " + endpoint.tlsHost
                         + " (" + error.getClass().getSimpleName() + ": " + safeMessage(error) + ")");
+                return new EndpointAttempt(endpoint, null, error);
             }
-        }
-        throw new IOException("Нет доступного Telegram WSS-маршрута", last);
+        });
+    }
+
+    private static String readLastSuccessfulEndpoint(String key) {
+        try {
+            if (ApplicationLoader.applicationContext == null) return null;
+            return ApplicationLoader.applicationContext.getSharedPreferences("telega_settings", Activity.MODE_PRIVATE)
+                    .getString("local_bypass_endpoint_" + key.replace(':', '_'), null);
+        } catch (Throwable error) { return null; }
+    }
+
+    private static void persistLastSuccessfulEndpoint(String key, String host) {
+        try {
+            if (ApplicationLoader.applicationContext == null) return;
+            ApplicationLoader.applicationContext.getSharedPreferences("telega_settings", Activity.MODE_PRIVATE)
+                    .edit().putString("local_bypass_endpoint_" + key.replace(':', '_'), host).apply();
+        } catch (Throwable error) { Log.w(TAG, "Unable to cache successful WSS endpoint", error); }
     }
 
     private static List<Endpoint> candidateEndpoints(Route route) {
@@ -824,6 +883,15 @@ public final class TelegaLocalBypassProxy {
         Endpoint(String connectHost, String tlsHost) {
             this.connectHost = connectHost;
             this.tlsHost = tlsHost;
+        }
+    }
+
+    private static final class EndpointAttempt {
+        final Endpoint endpoint;
+        final WsConnection connection;
+        final Throwable error;
+        EndpointAttempt(Endpoint endpoint, WsConnection connection, Throwable error) {
+            this.endpoint = endpoint; this.connection = connection; this.error = error;
         }
     }
 
