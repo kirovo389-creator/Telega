@@ -33255,6 +33255,11 @@ public class ChatActivity extends BaseFragment implements
     public void onTelegaLocalEditSaved(MessageObject messageObject) {
         telegaLocalEditInProgress = false;
         if (messageObject != null) {
+            // Force the visible ChatMessageCell to recalculate its text layout,
+            // bubble width and measured height immediately after a local-only edit.
+            // Without this, the existing cell can keep its previous bubble bounds
+            // until the chat is recreated, leaving longer replacement text outside.
+            messageObject.forceUpdate = true;
             messageObject.generateLayout(null);
         }
         if (chatListView != null && chatListView.getAdapter() != null) {
