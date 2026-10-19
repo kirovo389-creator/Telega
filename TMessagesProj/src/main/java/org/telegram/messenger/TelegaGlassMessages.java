@@ -23,7 +23,7 @@ import java.util.WeakHashMap;
  * invalidates visible message cells instead of each bubble running its own timer.
  */
 public final class TelegaGlassMessages {
-    private static final long FRAME_INTERVAL_MS = 64L;
+    private static final long FRAME_INTERVAL_MS = 112L;
     private static final Object LOCK = new Object();
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final WeakHashMap<View, Layer> LAYERS = new WeakHashMap<>();
