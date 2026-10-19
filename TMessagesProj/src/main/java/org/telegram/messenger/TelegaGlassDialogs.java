@@ -16,6 +16,7 @@ public final class TelegaGlassDialogs {
     private static final Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final Paint shine = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final RectF rect = new RectF();
+    private static final RectF innerRect = new RectF();
     private static int shaderWidth = -1;
     private static int shaderHeight = -1;
     private static LinearGradient surfaceShader;
@@ -59,11 +60,11 @@ public final class TelegaGlassDialogs {
         // A restrained inner rim and top highlight create depth without expensive blur.
         rim.setColor(0x48FFFFFF);
         canvas.drawRoundRect(rect, radius, radius, rim);
-        RectF inner = new RectF(left + AndroidUtilities.dp(1), top + AndroidUtilities.dp(1),
+        innerRect.set(left + AndroidUtilities.dp(1), top + AndroidUtilities.dp(1),
                 right - AndroidUtilities.dp(1), bottom - AndroidUtilities.dp(1));
         rim.setStrokeWidth(Math.max(1f, AndroidUtilities.density * 0.45f));
         rim.setColor(0x16FFFFFF);
-        canvas.drawRoundRect(inner, Math.max(0, radius - AndroidUtilities.dp(1)), Math.max(0, radius - AndroidUtilities.dp(1)), rim);
+        canvas.drawRoundRect(innerRect, Math.max(0, radius - AndroidUtilities.dp(1)), Math.max(0, radius - AndroidUtilities.dp(1)), rim);
         rim.setStrokeWidth(Math.max(1f, AndroidUtilities.density * 0.7f));
 
         shine.setStrokeWidth(Math.max(1f, AndroidUtilities.density));
