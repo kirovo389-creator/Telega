@@ -130,7 +130,7 @@ public class TelegaMessagesSettingsActivity extends BaseFragment {
                         "Удалённые сообщения остаются в чате с пометкой «Удалено».\n\n" +
                         "Изменённые: сверху — прошлый текст, снизу — текущий. " +
                         "При 2+ правках история сворачивается и раскрывается вверх по нажатию.\n\n" +
-                        "«Изменять сообщения» сохраняет текст входящего сообщения только на этом устройстве. Оригинал в Telegram не отправляется и не меняется.");
+                        "«Изменение сообщений» позволяет заменить отображаемый текст входящего сообщения только у вас. Исходное сообщение у собеседника не меняется.");
                 return;
             }
             TextCheckCell cell = (TextCheckCell) holder.itemView;
@@ -141,7 +141,7 @@ public class TelegaMessagesSettingsActivity extends BaseFragment {
                 cell.setTextAndCheck("Изменённые сообщения", TelegaSettings.isShowEditedMessages(), false);
                 cell.setColorfullIcon(0xFF52798B, R.drawable.telega_ic_edit);
             } else if (position == localEditRow) {
-                cell.setTextAndCheck("Изменять сообщения (только у меня)", TelegaSettings.isLocalEditMessagesEnabled(), false);
+                cell.setTextAndCheck("Изменение сообщений", TelegaSettings.isLocalEditMessagesEnabled(), false);
                 cell.setColorfullIcon(0xFF367CC0, R.drawable.telega_ic_edit);
             }
         }
