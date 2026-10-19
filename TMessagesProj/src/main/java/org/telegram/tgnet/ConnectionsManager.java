@@ -401,7 +401,9 @@ public class ConnectionsManager extends BaseController {
         if (object == null) return false;
         String name = object.getClass().getSimpleName();
         return "TL_messages_readHistory".equals(name)
+                || "TL_channels_readHistory".equals(name)
                 || "TL_messages_readMessageContents".equals(name)
+                || "TL_channels_readMessageContents".equals(name)
                 || "TL_messages_readDiscussion".equals(name)
                 || "TL_messages_readEncryptedHistory".equals(name);
     }
