@@ -309,12 +309,12 @@ def patch_local_edit_label():
         raise RuntimeError("ERROR: ChatActivity.java not found; local edit label cannot be fixed")
     text = path.read_text(encoding="utf-8")
     old = 'items.add("Изменить (только у меня)");'
-    new = 'items.add("Изменить");'
+    new = 'items.add("Изменить для себя");'
     if old in text:
         text = text.replace(old, new, 1)
         path.write_text(text, encoding="utf-8")
         print("Removed local-only suffix from message action")
-    elif new in text:
+    elif new in text or 'items.add("Изменить");' in text:
         print("Local edit action label already normalized")
     else:
         raise RuntimeError("ERROR: expected Telega local-edit menu label was not found")
