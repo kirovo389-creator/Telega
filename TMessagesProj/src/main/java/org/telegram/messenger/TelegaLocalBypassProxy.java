@@ -815,21 +815,28 @@ public final class TelegaLocalBypassProxy {
                 Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding");
                 cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"),
                         new IvParameterSpec(iv));
-                byte[] plain = cipher.update(init);
-                if (plain == null || plain.length < INIT_SIZE) return null;
+
+                // In MTProto obfuscated2, bytes 0..55 are the clear key/IV seed.
+                // Encryption starts at byte 56. Decrypt only that 8-byte header here;
+                // consuming all 64 bytes would advance CTR by 56 extra bytes and corrupt
+                // every subsequent MTProto packet even though the SOCKS/WSS probe passes.
+                byte[] encryptedHeader = Arrays.copyOfRange(init, 56, INIT_SIZE);
+                byte[] plainHeader = cipher.update(encryptedHeader);
+                if (plainHeader == null || plainHeader.length != INIT_SIZE - 56) return null;
+
                 int transport = 0;
-                if (plain[56] == (byte) 0xef && plain[57] == (byte) 0xef
-                        && plain[58] == (byte) 0xef && plain[59] == (byte) 0xef) {
+                if (plainHeader[0] == (byte) 0xef && plainHeader[1] == (byte) 0xef
+                        && plainHeader[2] == (byte) 0xef && plainHeader[3] == (byte) 0xef) {
                     transport = ABRIDGED;
-                } else if (plain[56] == (byte) 0xee && plain[57] == (byte) 0xee
-                        && plain[58] == (byte) 0xee && plain[59] == (byte) 0xee) {
+                } else if (plainHeader[0] == (byte) 0xee && plainHeader[1] == (byte) 0xee
+                        && plainHeader[2] == (byte) 0xee && plainHeader[3] == (byte) 0xee) {
                     transport = INTERMEDIATE;
-                } else if (plain[56] == (byte) 0xdd && plain[57] == (byte) 0xdd
-                        && plain[58] == (byte) 0xdd && plain[59] == (byte) 0xdd) {
+                } else if (plainHeader[0] == (byte) 0xdd && plainHeader[1] == (byte) 0xdd
+                        && plainHeader[2] == (byte) 0xdd && plainHeader[3] == (byte) 0xdd) {
                     transport = PADDED_INTERMEDIATE;
                 }
                 if (transport == 0) return null;
-                int dc = Math.abs((int) ByteBuffer.wrap(plain, 60, 2)
+                int dc = Math.abs((int) ByteBuffer.wrap(plainHeader, 4, 2)
                         .order(ByteOrder.LITTLE_ENDIAN).getShort());
                 if (!((dc >= 1 && dc <= 5) || dc == 203)) return null;
                 return new MtProtoInit(cipher, transport);
