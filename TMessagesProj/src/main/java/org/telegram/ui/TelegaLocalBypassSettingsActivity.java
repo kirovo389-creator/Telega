@@ -183,7 +183,10 @@ public class TelegaLocalBypassSettingsActivity extends BaseFragment {
                 toast("Прокси подключён: 127.0.0.1:56626", false);
             } else {
                 if (status != null) {
-                    status.setText("Локальный SOCKS5 запущен на 127.0.0.1:56626, но маршрут Telegram не ответил. Проверь сеть и повтори подключение.");
+                    String routeError = TelegaLocalBypassProxy.getLastRouteError();
+                    status.setText("Локальный SOCKS5 запущен на 127.0.0.1:56626, но маршрут Telegram не ответил."
+                            + (routeError == null || routeError.isEmpty() ? " Проверь сеть и повтори подключение."
+                            : "\nПричина: " + routeError));
                 }
                 toast("Порт запущен, но маршрут Telegram не ответил.", true);
             }
