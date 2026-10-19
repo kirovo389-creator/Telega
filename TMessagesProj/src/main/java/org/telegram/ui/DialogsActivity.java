@@ -13956,8 +13956,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         builder.setPositiveButton("Установить", (dialog, which) -> installDialogsWallpaper(path));
         builder.setNegativeButton("Отмена", (dialog, which) ->
                 org.telegram.messenger.TelegaDialogWallpaper.deleteManagedFile(activity, path));
-        builder.setCancelable(false);
-        showDialog(builder.create());
+        org.telegram.ui.ActionBar.AlertDialog previewDialog = builder.create();
+        previewDialog.setCancelable(false);
+        showDialog(previewDialog);
     }
 
     private void installDialogsWallpaper(String path) {
