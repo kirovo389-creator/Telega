@@ -28,12 +28,12 @@ permissions:
   contents: write
 
 concurrency:
-  group: telega-sync-build
+  group: telega-sync-build-v2
   cancel-in-progress: true
 
 jobs:
   sync-build-release:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
       - name: Checkout
