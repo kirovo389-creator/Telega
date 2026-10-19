@@ -257,7 +257,7 @@ public class GhostModeActivity extends BaseFragment {
 
         GhostIllustrationView(Context context) {
             super(context);
-            setContentDescription("Ghost mode illustration");
+            setContentDescription(getContext().getString(R.string.GhostModeIllustrationDescription));
         }
 
         @Override
