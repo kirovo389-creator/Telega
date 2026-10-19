@@ -33252,6 +33252,15 @@ public class ChatActivity extends BaseFragment implements
         telegaLocalEditInProgress = false;
     }
 
+    private void resetTelegaLocalEditLayout(MessageObject messageObject, ArrayList<MessageObject> refreshedObjects) {
+        if (messageObject == null || refreshedObjects.contains(messageObject)) {
+            return;
+        }
+        messageObject.resetLayout();
+        messageObject.checkLayout();
+        refreshedObjects.add(messageObject);
+    }
+
     public void onTelegaLocalEditSaved(MessageObject messageObject) {
         telegaLocalEditInProgress = false;
         if (messageObject == null || messageObject.messageOwner == null) {
@@ -33260,28 +33269,32 @@ public class ChatActivity extends BaseFragment implements
 
         final long editedDialogId = messageObject.getDialogId();
         final int editedMessageId = messageObject.getId();
+        final ArrayList<MessageObject> refreshedObjects = new ArrayList<>();
 
-        // Resolve the instance held by the chat's backing list. The edit composer
-        // can hold a different MessageObject instance from the visible RecyclerView cell.
-        MessageObject listMessageObject = messageObject;
+        // The editor, backing list, adapter snapshot/filter and visible cell can
+        // hold distinct instances. Rebuild each matching instance from the same
+        // persisted local override; never mutate the server-owned message text.
+        resetTelegaLocalEditLayout(messageObject, refreshedObjects);
         if (messages != null) {
             for (int i = 0; i < messages.size(); i++) {
                 MessageObject candidate = messages.get(i);
                 if (candidate != null && candidate.getId() == editedMessageId
                         && candidate.getDialogId() == editedDialogId) {
-                    listMessageObject = candidate;
-                    break;
+                    resetTelegaLocalEditLayout(candidate, refreshedObjects);
                 }
             }
         }
 
-        // checkLayout() is the canonical cache invalidation path: it rebuilds the
-        // layout using the local override while leaving the server-owned message text intact.
-        listMessageObject.resetLayout();
-        listMessageObject.checkLayout();
-        if (messageObject != listMessageObject) {
-            messageObject.resetLayout();
-            messageObject.checkLayout();
+        final ArrayList<MessageObject> adapterMessages = chatAdapter != null
+                ? chatAdapter.getMessages() : messages;
+        if (adapterMessages != null) {
+            for (int i = 0; i < adapterMessages.size(); i++) {
+                MessageObject candidate = adapterMessages.get(i);
+                if (candidate != null && candidate.getId() == editedMessageId
+                        && candidate.getDialogId() == editedDialogId) {
+                    resetTelegaLocalEditLayout(candidate, refreshedObjects);
+                }
+            }
         }
 
         boolean refreshedVisibleCell = false;
@@ -33298,11 +33311,7 @@ public class ChatActivity extends BaseFragment implements
                     continue;
                 }
 
-                // Refresh the actual bound instance, not only the edit-composer instance.
-                if (cellMessage != listMessageObject && cellMessage != messageObject) {
-                    cellMessage.resetLayout();
-                    cellMessage.checkLayout();
-                }
+                resetTelegaLocalEditLayout(cellMessage, refreshedObjects);
                 cellMessage.forceUpdate = true;
                 cell.setMessageObject(cellMessage, cell.getCurrentMessagesGroup(),
                         cell.isPinnedBottom(), cell.isPinnedTop(),
@@ -33312,12 +33321,27 @@ public class ChatActivity extends BaseFragment implements
             }
         }
 
-        // For an off-screen row, notify only that row. A full-list refresh causes
-        // unrelated cells to rebind and can introduce avoidable layout/scroll jumps.
-        if (!refreshedVisibleCell && chatAdapter != null && messages != null) {
-            int messageIndex = messages.indexOf(listMessageObject);
-            if (messageIndex >= 0) {
-                chatAdapter.updateRowAtPosition(chatAdapter.messagesStartRow + messageIndex);
+        // messagesStartRow is the start of the adapter's message segment, not
+        // necessarily the index in ChatActivity.this.messages. Use the exact list
+        // currently represented by the adapter (normal, filtered or frozen).
+        if (!refreshedVisibleCell && chatAdapter != null && adapterMessages != null) {
+            int adapterMessageIndex = -1;
+            for (int i = 0; i < adapterMessages.size(); i++) {
+                MessageObject candidate = adapterMessages.get(i);
+                if (candidate != null && candidate.getId() == editedMessageId
+                        && candidate.getDialogId() == editedDialogId) {
+                    adapterMessageIndex = i;
+                    break;
+                }
+            }
+            if (adapterMessageIndex >= 0) {
+                int adapterPosition = chatAdapter.messagesStartRow + adapterMessageIndex;
+                if (chatAdapter.isFrozen || chatAdapter.isFiltered) {
+                    // updateRowAtPosition intentionally returns early for these modes.
+                    chatAdapter.notifyItemChanged(adapterPosition);
+                } else {
+                    chatAdapter.updateRowAtPosition(adapterPosition);
+                }
             }
         }
     }
