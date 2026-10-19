@@ -177,7 +177,7 @@ public class TelegaLocalBypassSettingsActivity extends BaseFragment {
             if (status != null) {
                 status.setText(TelegaLocalBypassProxy.getStatusText());
             }
-            toast("Не удалось запустить прокси на 127.0.0.1:56626.", true);
+            toast("Не удалось запустить локальный прокси.", true);
             return;
         }
 
@@ -207,7 +207,7 @@ public class TelegaLocalBypassSettingsActivity extends BaseFragment {
             } else {
                 if (status != null) {
                     String routeError = TelegaLocalBypassProxy.getLastRouteError();
-                    status.setText("Локальный SOCKS5 запущен на 127.0.0.1:56626, но маршрут Telegram не ответил."
+                    status.setText("Локальный SOCKS5 запущен, но маршрут Telegram не ответил."
                             + (routeError == null || routeError.isEmpty() ? " Проверь сеть и повтори подключение."
                             : "\nПричина: " + routeError));
                 }

@@ -33931,6 +33931,8 @@ public class ChatActivity extends BaseFragment implements
             }
             case OPTION_SUGGESTION_EDIT_MESSAGE:
             case OPTION_EDIT: {
+                // A normal server edit must never inherit the local-only edit mode.
+                telegaLocalEditInProgress = false;
                 if (selectedObjectToEditCaption != null) {
                     startEditingMessageObject(selectedObjectToEditCaption, option == OPTION_SUGGESTION_EDIT_MESSAGE);
                 } else {
