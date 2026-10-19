@@ -5373,6 +5373,13 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         avatarImage.setPivotX(0);
         avatarImage.setPivotY(0);
         avatarContainer.addView(avatarImage, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+        // Share the selected chat weather/star effect with the profile hero background.
+        org.telegram.ui.Components.TelegaSnowView profileEffectsView =
+                new org.telegram.ui.Components.TelegaSnowView(context);
+        profileEffectsView.setClickable(false);
+        profileEffectsView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        avatarContainer.addView(profileEffectsView, avatarContainer.indexOfChild(avatarImage) + 1,
+                LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
         avatarImage.setOnClickListener(v -> {
             if (avatarBig != null) {
                 return;
