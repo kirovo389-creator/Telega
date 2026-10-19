@@ -12,6 +12,7 @@ public final class TelegaSettings {
     public static final int SNOW_MINECRAFT = 1;
     public static final int SNOW_REAL = 2;
     public static final int SNOW_RAIN = 3;
+    public static final int SNOW_STARS = 4;
 
     private static int snowModeCache = -1;
     private static int garlandCache = -1;
@@ -137,6 +138,20 @@ public final class TelegaSettings {
             p.edit().putBoolean("glass_messages_animation", enabled).apply();
         }
         TelegaGlassMessages.refreshAnimationState();
+    }
+
+    // ---------------------------------------------------------- Glass chat list
+
+    public static boolean isGlassChatsEnabled() {
+        SharedPreferences p = prefs();
+        return p != null && p.getBoolean("glass_chats_enabled", false);
+    }
+
+    public static void setGlassChatsEnabled(boolean enabled) {
+        SharedPreferences p = prefs();
+        if (p != null) {
+            p.edit().putBoolean("glass_chats_enabled", enabled).apply();
+        }
     }
 
     // ----------------------------------------------------------- Video wallpaper
