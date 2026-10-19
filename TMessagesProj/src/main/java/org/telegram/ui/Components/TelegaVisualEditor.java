@@ -17,6 +17,10 @@ import android.widget.TextView;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.MessageObject;
+import org.telegram.messenger.NotificationCenter;
+import org.telegram.messenger.TelegaLocalMessageEdits;
+import org.telegram.messenger.TelegaSettings;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
@@ -149,15 +153,67 @@ public final class TelegaVisualEditor {
             if(selected!=null)selected.setOnTouchListener(null);selected=view;selectedPath=null;
             for(Map.Entry<String,View> e:views.entrySet())if(e.getValue()==view){selectedPath=e.getKey();break;}
             if(selectedPath==null)return;view.setOnTouchListener(transformTouch());
-            if(editButton!=null)editButton.setVisibility(view instanceof TextView?View.VISIBLE:View.GONE);
+            if(editButton!=null)editButton.setVisibility(
+                    view instanceof TextView || findMessageObject(view) != null ? View.VISIBLE : View.GONE);
             if(label!=null){String s=view instanceof TextView?String.valueOf(((TextView)view).getText()):view.getClass().getSimpleName();if(s.length()>15)s=s.substring(0,15)+"…";label.setText(s);}
         }
         private void editText(){
-            if(!(selected instanceof TextView)||selectedPath==null||fragment.getParentActivity()==null)return;
-            EditText input=new EditText(fragment.getParentActivity());input.setText(((TextView)selected).getText());input.setSelection(input.length());
+            if (selected == null || fragment.getParentActivity() == null) return;
+            MessageObject message = findMessageObject(selected);
+            if (message != null && message.messageOwner != null && message.getId() > 0) {
+                // This existing Telega feature changes only the local message layout, not the sent message.
+                TelegaSettings.setLocalEditMessagesEnabled(true);
+                TelegaLocalMessageEdits.showEditor(root.getContext(), message.currentAccount,
+                        message.getDialogId(), message.getId(), message.messageOwner.message, () -> {
+                            message.resetLayout();
+                            root.requestLayout();
+                            root.invalidate();
+                            NotificationCenter.getInstance(message.currentAccount).postNotificationName(
+                                    NotificationCenter.updateInterfaces, 0);
+                            if (label != null) label.setText("Изменение сообщения сохранено локально");
+                        });
+                return;
+            }
+            if (!(selected instanceof TextView) || selectedPath == null) return;
+            EditText input = new EditText(fragment.getParentActivity());
+            input.setText(((TextView) selected).getText());
+            input.setSelection(input.length());
             new AlertDialog.Builder(fragment.getParentActivity()).setTitle("Изменить текст").setView(input)
-                .setPositiveButton("Применить",(d,w)->{String s=input.getText()==null?"":input.getText().toString();((TextView)selected).setText(s);draftTexts.put(selectedPath,s);label.setText("Текст изменён");})
-                .setNegativeButton("Отмена",null).show();
+                    .setPositiveButton("Применить", (d, w) -> {
+                        String s = input.getText() == null ? "" : input.getText().toString();
+                        ((TextView) selected).setText(s);
+                        draftTexts.put(selectedPath, s);
+                        label.setText("Текст изменён");
+                    })
+                    .setNegativeButton("Отмена", null).show();
+        }
+
+        private MessageObject findMessageObject(View view) {
+            if (view == null) return null;
+            Class<?> type = view.getClass();
+            while (type != null && type != Object.class) {
+                for (java.lang.reflect.Field field : type.getDeclaredFields()) {
+                    if (!MessageObject.class.isAssignableFrom(field.getType())) continue;
+                    try {
+                        field.setAccessible(true);
+                        Object value = field.get(view);
+                        if (value instanceof MessageObject) return (MessageObject) value;
+                    } catch (Throwable ignored) {
+                    }
+                }
+                for (java.lang.reflect.Method method : type.getDeclaredMethods()) {
+                    if (method.getParameterTypes().length != 0
+                            || !MessageObject.class.isAssignableFrom(method.getReturnType())) continue;
+                    try {
+                        method.setAccessible(true);
+                        Object value = method.invoke(view);
+                        if (value instanceof MessageObject) return (MessageObject) value;
+                    } catch (Throwable ignored) {
+                    }
+                }
+                type = type.getSuperclass();
+            }
+            return null;
         }
         private View.OnTouchListener transformTouch(){
             return new View.OnTouchListener(){
