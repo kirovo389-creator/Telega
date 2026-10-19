@@ -11545,4 +11545,5 @@
     <string name="GhostModeActivationError">Could not confirm mode activation</string>
     <string name="GhostModeLimitation">This screen controls story invisibility only. Hiding read receipts for regular messages, online status, and typing indicators is not implemented here.</string>
     <string name="GhostModeRequestAcceptedToast">Request to hide story views accepted</string>
+    <string name="GhostModeErrorPrefix">Error: </string>
 </resources>
