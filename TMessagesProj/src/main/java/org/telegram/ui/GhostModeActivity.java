@@ -6,7 +6,6 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.view.Gravity;
 import android.view.View;
@@ -125,7 +124,7 @@ public class GhostModeActivity extends BaseFragment {
         statusView = new TextView(context);
         statusView.setText(getString(R.string.GhostModeStatusUnverified));
         statusView.setTextSize(14);
-        statusView.setTypeface(Typeface.DEFAULT, Typeface.MEDIUM);
+        statusView.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         statusView.setLineSpacing(dp(2), 1f);
         statusView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
         LinearLayout.LayoutParams statusTextViewParams = LayoutHelper.createLinear(
@@ -255,7 +254,6 @@ public class GhostModeActivity extends BaseFragment {
     private static class GhostIllustrationView extends View {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Path ghostPath = new Path();
-        private final RectF bounds = new RectF();
 
         GhostIllustrationView(Context context) {
             super(context);
