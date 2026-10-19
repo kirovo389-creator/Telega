@@ -351,6 +351,8 @@ public class MessageObject {
     public int emojiOnlyCount, animatedEmojiCount;
     public int totalAnimatedEmojiCount;
     private boolean layoutCreated;
+    private String telegaLocalEditLayoutText;
+    private boolean telegaLocalEditLayoutTextInitialized;
     private int generatedWithMinSize;
     private float generatedWithDensity;
     private float generatedWithFontSize;
@@ -6824,6 +6826,17 @@ public class MessageObject {
     }
 
     public boolean checkLayout() {
+        // Each MessageObject owns its own layout cache, while local edits are stored
+        // by dialog/message id. Detect override changes here so stale instances also
+        // rebuild when they re-enter the list after being off-screen or absent.
+        String telegaLocalEditText = type == TYPE_TEXT
+                ? TelegaLocalMessageEdits.getTextForLayout(this) : null;
+        if (telegaLocalEditLayoutTextInitialized
+                && (telegaLocalEditLayoutText == null
+                ? telegaLocalEditText != null
+                : !telegaLocalEditLayoutText.equals(telegaLocalEditText))) {
+            layoutCreated = false;
+        }
         if (type != TYPE_TEXT && type != TYPE_EMOJIS && type != TYPE_ARTICLE || messageOwner.peer_id == null || messageText == null || messageText.length() == 0 && !isBotPendingDraft) {
             return false;
         }
@@ -6860,6 +6873,8 @@ public class MessageObject {
                 caption = null;
                 generateCaption();
             }
+            telegaLocalEditLayoutText = telegaLocalEditText;
+            telegaLocalEditLayoutTextInitialized = true;
             return true;
         }
         return false;
