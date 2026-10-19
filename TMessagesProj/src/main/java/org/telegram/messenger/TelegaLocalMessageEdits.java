@@ -78,6 +78,10 @@ public final class TelegaLocalMessageEdits {
         int padding = AndroidUtilities.dp(14);
         input.setPadding(padding, padding, padding, padding);
         input.setSelection(input.length());
+        input.setTextColor(org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_dialogTextBlack));
+        input.setHintTextColor(org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_dialogTextHint));
+        input.setHint("Сообщение");
+        input.setBackgroundColor(android.graphics.Color.TRANSPARENT);
 
         final org.telegram.ui.ActionBar.AlertDialog dialog = new org.telegram.ui.ActionBar.AlertDialog.Builder(context)
                 .setTitle("Изменить сообщение")
@@ -87,7 +91,7 @@ public final class TelegaLocalMessageEdits {
                     clearOverride(account, dialogId, messageId);
                     if (onChanged != null) onChanged.run();
                 })
-                .setPositiveButton("Сохранить", (d, which) -> {
+                .setPositiveButton("Готово", (d, which) -> {
                     saveOverride(account, dialogId, messageId, input.getText().toString());
                     if (onChanged != null) onChanged.run();
                 })
