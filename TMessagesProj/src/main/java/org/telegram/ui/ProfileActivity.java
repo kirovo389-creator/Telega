@@ -5343,6 +5343,15 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 || (chatId == 0 && !isTopic && userId == getUserConfig().clientUserId));
         avatarContainer.addView(avatarFrameView, 0,
                 LayoutHelper.createFrame(130, 130, Gravity.TOP | Gravity.LEFT, -15, -15, 0, 0));
+        // Draw the selected chat weather/star effect over the rectangular profile backdrop,
+        // but underneath the avatar and profile controls.
+        org.telegram.ui.Components.TelegaSnowView profileEffectsView =
+                new org.telegram.ui.Components.TelegaSnowView(context);
+        profileEffectsView.setClickable(false);
+        profileEffectsView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        profileEffectsView.setClipBounds(new Rect(0, 0, AndroidUtilities.displaySize.x, dp(300)));
+        avatarContainer2.addView(profileEffectsView, 0,
+                LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
         avatarGooey.addView(avatarContainer, LayoutHelper.createFrame(100, 100, Gravity.TOP | Gravity.LEFT));
         avatarContainer2.addView(avatarGooey, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 //        avatarContainer2.addView(avatarContainer, LayoutHelper.createFrame(100, 100, Gravity.TOP | Gravity.LEFT, 64, 0, 0, 0));
@@ -5373,13 +5382,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         avatarImage.setPivotX(0);
         avatarImage.setPivotY(0);
         avatarContainer.addView(avatarImage, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-        // Share the selected chat weather/star effect with the profile hero background.
-        org.telegram.ui.Components.TelegaSnowView profileEffectsView =
-                new org.telegram.ui.Components.TelegaSnowView(context);
-        profileEffectsView.setClickable(false);
-        profileEffectsView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        avatarContainer.addView(profileEffectsView, avatarContainer.indexOfChild(avatarImage) + 1,
-                LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+
         avatarImage.setOnClickListener(v -> {
             if (avatarBig != null) {
                 return;
