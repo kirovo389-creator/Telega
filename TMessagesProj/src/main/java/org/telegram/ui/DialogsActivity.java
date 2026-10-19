@@ -10998,6 +10998,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
     private ArrayList<TLRPC.Dialog> botShareDialogs;
 
+    // Telega archive policy: TelegaSettings.isArchiveHidden() && dialogsType == DIALOGS_TYPE_DEFAULT
+    // is covered by the shared post-filter below, including non-default pickers and the archive folder itself.
     @NonNull
     public ArrayList<TLRPC.Dialog> getDialogsArray(int currentAccount, int dialogsType, int folderId, boolean frozen) {
         if (org.telegram.messenger.TelegaSettings.isArchiveHidden() && folderId == 1) {
