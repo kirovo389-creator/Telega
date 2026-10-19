@@ -181,7 +181,10 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         public void updateStatus() {
             int colorKey;
             if (SharedConfig.currentProxy == currentInfo && useProxySettings) {
-                if (currentConnectionState == ConnectionsManager.ConnectionStateConnected || currentConnectionState == ConnectionsManager.ConnectionStateUpdating) {
+                boolean localProxyRunning = org.telegram.messenger.TelegaLocalBypassProxy.isEnabled()
+                        && org.telegram.messenger.TelegaLocalBypassProxy.isLocalEndpoint(
+                                currentInfo.settings.getAddress(), currentInfo.settings.getPort());
+                if (localProxyRunning || currentConnectionState == ConnectionsManager.ConnectionStateConnected || currentConnectionState == ConnectionsManager.ConnectionStateUpdating) {
                     colorKey = Theme.key_windowBackgroundWhiteBlueText6;
                     if (currentInfo.ping != 0) {
                         valueTextView.setText(getString(R.string.Connected) + ", " + LocaleController.formatString("Ping", R.string.Ping, currentInfo.ping));
