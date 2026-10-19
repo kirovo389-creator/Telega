@@ -18,6 +18,7 @@ public final class TelegaSettings {
     private static int garlandCache = -1;
     private static int glassMessagesCache = -1;
     private static int glassAnimationCache = -1;
+    private static int localEditMessagesCache = -1;
     private static int avatarFrameCache = -1;
 
     private TelegaSettings() {
@@ -56,11 +57,15 @@ public final class TelegaSettings {
 
     /** Enables visual-only overrides for incoming text messages on this device. */
     public static boolean isLocalEditMessagesEnabled() {
-        SharedPreferences p = prefs();
-        return p != null && p.getBoolean("local_edit_messages_enabled", false);
+        if (localEditMessagesCache < 0) {
+            SharedPreferences p = prefs();
+            localEditMessagesCache = p != null && p.getBoolean("local_edit_messages_enabled", false) ? 1 : 0;
+        }
+        return localEditMessagesCache == 1;
     }
 
     public static void setLocalEditMessagesEnabled(boolean enabled) {
+        localEditMessagesCache = enabled ? 1 : 0;
         SharedPreferences p = prefs();
         if (p != null) {
             p.edit().putBoolean("local_edit_messages_enabled", enabled).apply();
