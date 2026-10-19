@@ -3,15 +3,11 @@ package org.telegram.ui;
 import static org.telegram.messenger.AndroidUtilities.dp;
 
 import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.Typeface;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -35,69 +31,48 @@ public class GhostModeActivity extends BaseFragment {
 
     @Override
     public View createView(Context context) {
-        actionBar.setBackButtonImage(R.drawable.ic_ab_back);
-        actionBar.setAllowOverlayTitle(true);
-        actionBar.setTitle(LocaleController.getString(R.string.GhostModeTitle));
+        if (actionBar != null) {
+            actionBar.setBackButtonImage(R.drawable.ic_ab_back);
+            actionBar.setAllowOverlayTitle(true);
+            actionBar.setTitle(LocaleController.getString(R.string.GhostModeTitle));
+        }
 
         FrameLayout root = new FrameLayout(context);
         root.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
 
-        ScrollView scrollView = new ScrollView(context);
-        scrollView.setFillViewport(true);
-        scrollView.setClipToPadding(false);
-        scrollView.setVerticalScrollBarEnabled(false);
-
         LinearLayout content = new LinearLayout(context);
         content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(dp(16), dp(18), dp(16), dp(28));
-        scrollView.addView(content, new ScrollView.LayoutParams(
-                ScrollView.LayoutParams.MATCH_PARENT, ScrollView.LayoutParams.WRAP_CONTENT));
-
-        // Hero card: a clear visual entry point without relying on external assets.
-        LinearLayout hero = new LinearLayout(context);
-        hero.setOrientation(LinearLayout.VERTICAL);
-        hero.setGravity(Gravity.CENTER_HORIZONTAL);
-        hero.setPadding(dp(22), dp(24), dp(22), dp(24));
-        hero.setBackground(Theme.createRoundRectDrawable(dp(24), Theme.getColor(Theme.key_windowBackgroundWhite)));
-        content.addView(hero, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-
-        FrameLayout illustration = new FrameLayout(context);
-        illustration.setBackground(Theme.createRoundRectDrawable(dp(30), Theme.getColor(Theme.key_windowBackgroundGray)));
-        GhostIllustrationView ghost = new GhostIllustrationView(context);
-        illustration.addView(ghost, new FrameLayout.LayoutParams(dp(92), dp(92), Gravity.CENTER));
-        hero.addView(illustration, LayoutHelper.createLinear(dp(124), dp(124), Gravity.CENTER_HORIZONTAL));
+        content.setPadding(dp(20), dp(24), dp(20), dp(24));
+        content.setBackground(Theme.createRoundRectDrawable(dp(16),
+                Theme.getColor(Theme.key_windowBackgroundWhite)));
 
         TextView title = new TextView(context);
         title.setText(LocaleController.getString(R.string.GhostModeStoriesTitle));
-        title.setTextSize(22);
+        title.setTextSize(20);
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        title.setGravity(Gravity.CENTER);
         title.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-        LinearLayout.LayoutParams titleParams = LayoutHelper.createLinear(
-                LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT);
-        titleParams.topMargin = dp(20);
-        hero.addView(title, titleParams);
+        content.addView(title, LayoutHelper.createLinear(
+                LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
         TextView description = new TextView(context);
         description.setText(LocaleController.getString(R.string.GhostModeStoriesDescription));
         description.setTextSize(14);
-        description.setLineSpacing(dp(3), 1.0f);
-        description.setGravity(Gravity.CENTER);
+        description.setLineSpacing(dp(2), 1f);
         description.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
         LinearLayout.LayoutParams descriptionParams = LayoutHelper.createLinear(
                 LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT);
         descriptionParams.topMargin = dp(10);
-        hero.addView(description, descriptionParams);
+        content.addView(description, descriptionParams);
 
-        // Status is separated from the primary action and remains readable in every state.
         LinearLayout statusCard = new LinearLayout(context);
         statusCard.setOrientation(LinearLayout.HORIZONTAL);
         statusCard.setGravity(Gravity.CENTER_VERTICAL);
-        statusCard.setPadding(dp(16), dp(15), dp(16), dp(15));
-        statusCard.setBackground(Theme.createRoundRectDrawable(dp(16), Theme.getColor(Theme.key_windowBackgroundWhite)));
+        statusCard.setPadding(dp(12), dp(12), dp(12), dp(12));
+        statusCard.setBackground(Theme.createRoundRectDrawable(dp(12),
+                Theme.getColor(Theme.key_windowBackgroundGray)));
         LinearLayout.LayoutParams statusCardParams = LayoutHelper.createLinear(
                 LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT);
-        statusCardParams.topMargin = dp(12);
+        statusCardParams.topMargin = dp(18);
         content.addView(statusCard, statusCardParams);
 
         statusDot = new TextView(context);
@@ -107,30 +82,14 @@ public class GhostModeActivity extends BaseFragment {
         statusDot.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
         statusCard.addView(statusDot, LayoutHelper.createLinear(dp(20), LayoutHelper.WRAP_CONTENT));
 
-        LinearLayout statusTextContainer = new LinearLayout(context);
-        statusTextContainer.setOrientation(LinearLayout.VERTICAL);
-        LinearLayout.LayoutParams statusTextParams = LayoutHelper.createLinear(
-                0, LayoutHelper.WRAP_CONTENT, 1f);
-        statusTextParams.leftMargin = dp(10);
-        statusCard.addView(statusTextContainer, statusTextParams);
-
-        TextView statusLabel = new TextView(context);
-        statusLabel.setText(LocaleController.getString(R.string.GhostModeTitle));
-        statusLabel.setTextSize(12);
-        statusLabel.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
-        statusTextContainer.addView(statusLabel, LayoutHelper.createLinear(
-                LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-
         statusView = new TextView(context);
         statusView.setText(LocaleController.getString(R.string.GhostModeStatusUnverified));
         statusView.setTextSize(14);
-        statusView.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        statusView.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         statusView.setLineSpacing(dp(2), 1f);
         statusView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-        LinearLayout.LayoutParams statusTextViewParams = LayoutHelper.createLinear(
-                LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT);
-        statusTextViewParams.topMargin = dp(3);
-        statusTextContainer.addView(statusView, statusTextViewParams);
+        statusCard.addView(statusView, LayoutHelper.createLinear(
+                0, LayoutHelper.WRAP_CONTENT, 1f));
 
         activateButton = new TextView(context);
         activateButton.setText(LocaleController.getString(R.string.GhostModeActivate));
@@ -138,51 +97,31 @@ public class GhostModeActivity extends BaseFragment {
         activateButton.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         activateButton.setTextColor(Theme.getColor(Theme.key_featuredStickers_buttonText));
         activateButton.setGravity(Gravity.CENTER);
-        activateButton.setMinHeight(dp(52));
-        activateButton.setPadding(dp(20), dp(14), dp(20), dp(14));
-        activateButton.setBackground(Theme.createRoundRectDrawable(dp(16),
+        activateButton.setMinHeight(dp(48));
+        activateButton.setPadding(dp(16), dp(13), dp(16), dp(13));
+        activateButton.setBackground(Theme.createRoundRectDrawable(dp(12),
                 Theme.getColor(Theme.key_featuredStickers_addButton)));
         activateButton.setOnClickListener(this::activateStealthMode);
         LinearLayout.LayoutParams buttonParams = LayoutHelper.createLinear(
                 LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT);
-        buttonParams.topMargin = dp(14);
+        buttonParams.topMargin = dp(16);
         content.addView(activateButton, buttonParams);
-
-        // A quieter information card keeps limitations visible without competing with the action.
-        LinearLayout limitationCard = new LinearLayout(context);
-        limitationCard.setOrientation(LinearLayout.HORIZONTAL);
-        limitationCard.setGravity(Gravity.TOP);
-        limitationCard.setPadding(dp(16), dp(16), dp(16), dp(16));
-        limitationCard.setBackground(Theme.createRoundRectDrawable(dp(16),
-                Theme.getColor(Theme.key_windowBackgroundWhite)));
-        LinearLayout.LayoutParams limitationCardParams = LayoutHelper.createLinear(
-                LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT);
-        limitationCardParams.topMargin = dp(12);
-        content.addView(limitationCard, limitationCardParams);
-
-        TextView infoMark = new TextView(context);
-        infoMark.setText("i");
-        infoMark.setTextSize(15);
-        infoMark.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        infoMark.setGravity(Gravity.CENTER);
-        infoMark.setTextColor(Theme.getColor(Theme.key_featuredStickers_addButton));
-        infoMark.setBackground(Theme.createRoundRectDrawable(dp(12),
-                Theme.getColor(Theme.key_windowBackgroundGray)));
-        limitationCard.addView(infoMark, LayoutHelper.createLinear(dp(28), dp(28)));
 
         TextView limitation = new TextView(context);
         limitation.setText(LocaleController.getString(R.string.GhostModeLimitation));
         limitation.setTextSize(13);
-        limitation.setLineSpacing(dp(3), 1f);
+        limitation.setLineSpacing(dp(2), 1f);
         limitation.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
         LinearLayout.LayoutParams limitationParams = LayoutHelper.createLinear(
-                0, LayoutHelper.WRAP_CONTENT, 1f);
-        limitationParams.leftMargin = dp(12);
-        limitationCard.addView(limitation, limitationParams);
+                LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT);
+        limitationParams.topMargin = dp(16);
+        content.addView(limitation, limitationParams);
 
-        FrameLayout.LayoutParams scrollParams = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
-        root.addView(scrollView, scrollParams);
+        FrameLayout.LayoutParams contentParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+        contentParams.setMargins(dp(16), dp(16), dp(16), dp(16));
+        root.addView(content, contentParams);
 
         fragmentView = root;
         return fragmentView;
@@ -250,50 +189,4 @@ public class GhostModeActivity extends BaseFragment {
         super.onFragmentDestroy();
     }
 
-    /** Small vector-style ghost illustration, drawn in code to avoid adding a bitmap asset. */
-    private static class GhostIllustrationView extends View {
-        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Path ghostPath = new Path();
-
-        GhostIllustrationView(Context context) {
-            super(context);
-            setContentDescription(getContext().getString(R.string.GhostModeIllustrationDescription));
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas);
-            float cx = getWidth() / 2f;
-            float cy = getHeight() / 2f;
-            float unit = dp(1);
-            float radius = 43 * unit;
-
-            paint.setStyle(Paint.Style.FILL);
-            paint.setColor(Theme.getColor(Theme.key_featuredStickers_addButton));
-            canvas.drawCircle(cx, cy, radius, paint);
-
-            float scale = unit;
-            canvas.save();
-            canvas.translate(cx - 24 * scale, cy - 27 * scale);
-            ghostPath.reset();
-            ghostPath.moveTo(24 * scale, 2 * scale);
-            ghostPath.cubicTo(11 * scale, 2 * scale, 4 * scale, 12 * scale, 4 * scale, 24 * scale);
-            ghostPath.lineTo(4 * scale, 47 * scale);
-            ghostPath.cubicTo(8 * scale, 47 * scale, 9 * scale, 41 * scale, 14 * scale, 44 * scale);
-            ghostPath.cubicTo(18 * scale, 47 * scale, 20 * scale, 49 * scale, 24 * scale, 45 * scale);
-            ghostPath.cubicTo(28 * scale, 49 * scale, 31 * scale, 47 * scale, 35 * scale, 44 * scale);
-            ghostPath.cubicTo(39 * scale, 41 * scale, 41 * scale, 47 * scale, 44 * scale, 47 * scale);
-            ghostPath.lineTo(44 * scale, 24 * scale);
-            ghostPath.cubicTo(44 * scale, 12 * scale, 37 * scale, 2 * scale, 24 * scale, 2 * scale);
-            ghostPath.close();
-            paint.setColor(Theme.getColor(Theme.key_featuredStickers_buttonText));
-            canvas.drawPath(ghostPath, paint);
-
-            paint.setColor(Theme.getColor(Theme.key_featuredStickers_addButton));
-            float eyeRadius = 2.2f * scale;
-            canvas.drawCircle(18 * scale, 24 * scale, eyeRadius, paint);
-            canvas.drawCircle(30 * scale, 24 * scale, eyeRadius, paint);
-            canvas.restore();
-        }
-    }
 }
