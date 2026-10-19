@@ -7,7 +7,6 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.Shader;
-import android.os.SystemClock;
 import android.view.View;
 
 /** Lightweight frosted-glass surfaces for closed conversations in the dialog list. */
@@ -44,7 +43,7 @@ public final class TelegaGlassDialogs {
             shaderWidth = width;
             shaderHeight = height;
             surfaceShader = new LinearGradient(0, 0, 0, height,
-                    new int[]{0x36FFFFFF, 0x18D9EEFF, 0x0D8AADEB, 0x24FFFFFF},
+                    new int[]{0x24FFFFFF, 0x12B7DDF2, 0x0C7395C6, 0x18FFFFFF},
                     new float[]{0f, 0.34f, 0.76f, 1f}, Shader.TileMode.CLAMP);
         }
         rect.set(left, top, right, bottom);
@@ -58,7 +57,7 @@ public final class TelegaGlassDialogs {
         surface.setShader(null);
 
         // A restrained inner rim and top highlight create depth without expensive blur.
-        rim.setColor(0x48FFFFFF);
+        rim.setColor(0x35FFFFFF);
         canvas.drawRoundRect(rect, radius, radius, rim);
         innerRect.set(left + AndroidUtilities.dp(1), top + AndroidUtilities.dp(1),
                 right - AndroidUtilities.dp(1), bottom - AndroidUtilities.dp(1));
@@ -72,13 +71,12 @@ public final class TelegaGlassDialogs {
         float shineY = top + AndroidUtilities.dp(1);
         canvas.drawLine(left + radius, shineY, right - radius, shineY, shine);
 
-        // A single low-opacity reflection; no per-row timer or animator is allocated.
-        float phase = (SystemClock.uptimeMillis() % 9000L) / 9000f;
-        float x = left + width * phase;
-        shine.setStrokeWidth(Math.max(1f, AndroidUtilities.density * 4f));
-        shine.setColor(0x0CFFFFFF);
-        canvas.drawLine(Math.max(left + radius, x), top + radius,
-                Math.min(right - radius, x + width * 0.10f), bottom - radius, shine);
+        // Static edge reflections give the surface depth without a distracting sweep.
+        shine.setStrokeWidth(Math.max(1f, AndroidUtilities.density));
+        shine.setColor(0x18FFFFFF);
+        canvas.drawLine(left + radius, top + AndroidUtilities.dp(3), right - radius, top + AndroidUtilities.dp(3), shine);
+        shine.setColor(0x0AFFFFFF);
+        canvas.drawLine(left + radius, bottom - AndroidUtilities.dp(2), right - radius, bottom - AndroidUtilities.dp(2), shine);
         canvas.restoreToCount(save);
     }
 

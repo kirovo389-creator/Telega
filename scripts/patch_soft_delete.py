@@ -300,9 +300,29 @@ def patch_settings_activity():
     path.write_text(text, encoding="utf-8")
 
 
+
+
+def patch_local_edit_label():
+    """Keep the local edit action visually consistent with Telegram's normal Edit action."""
+    path = Path("TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java")
+    if not path.exists():
+        raise RuntimeError("ERROR: ChatActivity.java not found; local edit label cannot be fixed")
+    text = path.read_text(encoding="utf-8")
+    old = 'items.add("Изменить (только у меня)");'
+    new = 'items.add("Изменить");'
+    if old in text:
+        text = text.replace(old, new, 1)
+        path.write_text(text, encoding="utf-8")
+        print("Removed local-only suffix from message action")
+    elif new in text:
+        print("Local edit action label already normalized")
+    else:
+        raise RuntimeError("ERROR: expected Telega local-edit menu label was not found")
+
 if __name__ == "__main__":
     patch_chat_message_cell()
     patch_chat_activity()
+    patch_local_edit_label()
     patch_messages_controller()
     patch_settings_activity()
     print("All Telega patches done")

@@ -1625,8 +1625,19 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
             }
         }
 
-        if (org.telegram.messenger.TelegaSettings.isArchiveHidden() && folderId == 1) {
-            array = new ArrayList<>();
+        if (org.telegram.messenger.TelegaSettings.isArchiveHidden()) {
+            array = new ArrayList<>(array);
+            if (folderId == 1) {
+                array.clear();
+            } else if (folderId == 0) {
+                long archiveDialogId = org.telegram.messenger.DialogObject.makeFolderDialogId(1);
+                for (int i = array.size() - 1; i >= 0; i--) {
+                    TLRPC.Dialog dialog = array.get(i);
+                    if (dialog != null && dialog.id == archiveDialogId) {
+                        array.remove(i);
+                    }
+                }
+            }
         }
 
         if (org.telegram.messenger.TelegaSettings.isAntiBotEnabled()) {
