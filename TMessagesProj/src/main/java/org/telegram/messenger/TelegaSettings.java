@@ -333,6 +333,28 @@ public final class TelegaSettings {
         }
     }
 
+    // -------------------------------------------------------------- Ghost Mode
+
+    public static boolean isGhostModeEnabled() {
+        SharedPreferences p = prefs();
+        return p != null && p.getBoolean("ghost_mode_enabled", false);
+    }
+
+    public static void setGhostModeEnabled(boolean enabled) {
+        SharedPreferences p = prefs();
+        if (p != null) p.edit().putBoolean("ghost_mode_enabled", enabled).apply();
+    }
+
+    public static String getGhostPrivacyBackup() {
+        SharedPreferences p = prefs();
+        return p == null ? "" : p.getString("ghost_privacy_backup", "");
+    }
+
+    public static void setGhostPrivacyBackup(String backup) {
+        SharedPreferences p = prefs();
+        if (p != null) p.edit().putString("ghost_privacy_backup", backup == null ? "" : backup).apply();
+    }
+
     // ---------------------------------------------------------------- AI agent
 
     public static String getAiBaseUrl() {
