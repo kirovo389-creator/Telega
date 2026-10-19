@@ -205,11 +205,13 @@ public final class TelegaVisualEditor {
             for(Map.Entry<TextView,CharSequence> e:originalTexts.entrySet())if(e.getKey()!=null)e.getKey().setText(e.getValue());
             for(Map.Entry<View,float[]> e:originals.entrySet()){View v=e.getKey();float[] a=e.getValue();if(v!=null){v.setTranslationX(a[0]);v.setTranslationY(a[1]);v.setScaleX(a[2]);v.setScaleY(a[3]);v.setRotation(a[4]);}}
         }
-        private void exit(){setTarget("");detach(true);synchronized(ACTIVE){ACTIVE.remove(fragment);}}
+        private void exit(){setTarget("");detach(false);synchronized(ACTIVE){ACTIVE.remove(fragment);}}
         void detach(boolean revert){
             if(detached)return;detached=true;if(revert)restoreOriginals();
             for(TextView t:originalTexts.keySet())if(t!=null)t.setOnLongClickListener(null);
-            if(selected!=null)selected.setOnTouchListener(null);if(photo!=null){photo.setOnTouchListener(null);root.removeView(photo);}if(toolbar!=null)root.removeView(toolbar);
+            if(selected!=null)selected.setOnTouchListener(null);
+            if(photo!=null){photo.setOnTouchListener(null);if(revert)root.removeView(photo);}
+            if(toolbar!=null)root.removeView(toolbar);
         }
     }
 }
