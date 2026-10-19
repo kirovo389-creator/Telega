@@ -161,12 +161,12 @@ jobs:
           path = Path("TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java")
           source = path.read_text(encoding="utf-8")
           source, ids = re.subn(
-              r"public\\s+static\\s+int\\s+APP_ID\\s*=\\s*\\d+\\s*;",
+              r"public\s+static\s+int\s+APP_ID\s*=\s*\d+\s*;",
               f"public static int APP_ID = {api_id};",
               source,
           )
           source, hashes = re.subn(
-              r'public\\s+static\\s+String\\s+APP_HASH\\s*=\\s*"[^"]*"\\s*;',
+              r'public\s+static\s+String\s+APP_HASH\s*=\s*"[^"]*"\s*;',
               f'public static String APP_HASH = "{api_hash}";',
               source,
           )

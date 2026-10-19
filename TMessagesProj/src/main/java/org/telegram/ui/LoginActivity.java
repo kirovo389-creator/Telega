@@ -3182,7 +3182,11 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             int reqId = ConnectionsManager.getInstance(currentAccount).sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
                 nextPressed = false;
                 if (error == null) {
-                    if (response instanceof TLRPC.TL_auth_sentCodeSuccess) {
+                    if (response == null) {
+                        FileLog.e("Telega auth.sendCode completed without response or error");
+                        needShowAlert(getString(R.string.RestorePasswordNoEmailTitle),
+                                "Сервер не вернул результат авторизации. Код не отправлен. Проверьте подключение и настройки API приложения, затем попробуйте ещё раз.");
+                    } else if (response instanceof TLRPC.TL_auth_sentCodeSuccess) {
                         final TLRPC.auth_Authorization auth = ((TLRPC.TL_auth_sentCodeSuccess) response).authorization;
                         if (auth instanceof TLRPC.TL_auth_authorizationSignUpRequired) {
                             final TLRPC.TL_auth_authorizationSignUpRequired authorization = (TLRPC.TL_auth_authorizationSignUpRequired) auth;
@@ -3193,8 +3197,12 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                         } else {
                             onAuthSuccess((TLRPC.TL_auth_authorization) auth);
                         }
-                    } else {
+                    } else if (response instanceof TLRPC.auth_SentCode) {
                         fillNextCodeParams(params, (TLRPC.auth_SentCode) response);
+                    } else {
+                        FileLog.e("Telega auth.sendCode returned unexpected response: " + response.getClass().getName());
+                        needShowAlert(getString(R.string.RestorePasswordNoEmailTitle),
+                                "Telegram вернул неподдерживаемый ответ авторизации. Код не отправлен. Обновите Telega и попробуйте снова.");
                     }
                 } else {
                     if (TextUtils.isEmpty(error.text)) {
