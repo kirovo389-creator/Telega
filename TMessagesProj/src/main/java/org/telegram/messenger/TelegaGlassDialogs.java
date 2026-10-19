@@ -13,6 +13,8 @@ import android.view.View;
 /** Lightweight frosted-glass surfaces for closed conversations in the dialog list. */
 public final class TelegaGlassDialogs {
     private static final Paint surface = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private static final Paint shadow = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private static final RectF shadowRect = new RectF();
     private static final Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final Paint shine = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final RectF rect = new RectF();
@@ -25,6 +27,7 @@ public final class TelegaGlassDialogs {
 
     static {
         surface.setStyle(Paint.Style.FILL);
+        shadow.setStyle(Paint.Style.FILL);
         rim.setStyle(Paint.Style.STROKE);
         rim.setStrokeWidth(Math.max(1f, AndroidUtilities.density * 0.7f));
         shine.setStyle(Paint.Style.STROKE);
@@ -48,8 +51,8 @@ public final class TelegaGlassDialogs {
             shaderHeight = height;
             shaderDark = dark;
             int[] colors = dark
-                    ? new int[]{0x38FFFFFF, 0x244D7898, 0x18314F6A, 0x2CFFFFFF}
-                    : new int[]{0x6FFFFFFF, 0x50E8F5FF, 0x35B9D9EF, 0x7AFFFFFF};
+                    ? new int[]{0x2AFFFFFF, 0x1E4D7898, 0x14314F6A, 0x22FFFFFF}
+                    : new int[]{0x45FFFFFF, 0x30E8F5FF, 0x22B9D9EF, 0x52FFFFFF};
             surfaceShader = new LinearGradient(0, 0, 0, height, colors,
                     new float[]{0f, 0.32f, 0.72f, 1f}, Shader.TileMode.CLAMP);
         }
@@ -57,8 +60,11 @@ public final class TelegaGlassDialogs {
         float radius = Math.min(AndroidUtilities.dp(18), height * 0.28f);
         int save = canvas.save();
 
-        // Layered translucent tint and a fine rim create a frosted surface without
-        // per-row bitmap blur or expensive RenderEffect passes.
+        // Low-cost depth layer, translucent tint and a fine rim create a frosted surface
+        // without per-row bitmap blur or expensive RenderEffect passes.
+        shadowRect.set(left, top + AndroidUtilities.dp(2), right, bottom + AndroidUtilities.dp(3));
+        shadow.setColor(dark ? 0x30000000 : 0x180D3B56);
+        canvas.drawRoundRect(shadowRect, radius, radius, shadow);
         canvas.drawRoundRect(rect, radius, radius, backgroundPaint(dark));
         shaderMatrix.setTranslate(left, top);
         surfaceShader.setLocalMatrix(shaderMatrix);
@@ -67,25 +73,25 @@ public final class TelegaGlassDialogs {
         canvas.drawRoundRect(rect, radius, radius, surface);
         surface.setShader(null);
 
-        rim.setColor(view.isPressed() ? (dark ? 0x70A8D9FF : 0xD0FFFFFF)
-                : (dark ? 0x48FFFFFF : 0xB8FFFFFF));
+        rim.setColor(view.isPressed() ? (dark ? 0x70A8D9FF : 0xB8FFFFFF)
+                : (dark ? 0x3CFFFFFF : 0x90FFFFFF));
         canvas.drawRoundRect(rect, radius, radius, rim);
         innerRect.set(left + AndroidUtilities.dp(1), top + AndroidUtilities.dp(1),
                 right - AndroidUtilities.dp(1), bottom - AndroidUtilities.dp(1));
         rim.setStrokeWidth(Math.max(1f, AndroidUtilities.density * 0.45f));
-        rim.setColor(dark ? 0x22FFFFFF : 0x65FFFFFF);
+        rim.setColor(dark ? 0x1CFFFFFF : 0x48FFFFFF);
         canvas.drawRoundRect(innerRect, Math.max(0, radius - AndroidUtilities.dp(1)),
                 Math.max(0, radius - AndroidUtilities.dp(1)), rim);
         rim.setStrokeWidth(Math.max(1f, AndroidUtilities.density * 0.7f));
 
         shine.setStrokeWidth(Math.max(1f, AndroidUtilities.density));
-        shine.setColor(dark ? 0x42FFFFFF : 0xD9FFFFFF);
+        shine.setColor(dark ? 0x35FFFFFF : 0xB8FFFFFF);
         float shineY = top + AndroidUtilities.dp(1);
         canvas.drawLine(left + radius, shineY, right - radius, shineY, shine);
-        shine.setColor(dark ? 0x22FFFFFF : 0x70FFFFFF);
+        shine.setColor(dark ? 0x1BFFFFFF : 0x55FFFFFF);
         canvas.drawLine(left + radius, top + AndroidUtilities.dp(3),
                 right - radius, top + AndroidUtilities.dp(3), shine);
-        shine.setColor(dark ? 0x12FFFFFF : 0x35FFFFFF);
+        shine.setColor(dark ? 0x10FFFFFF : 0x28FFFFFF);
         canvas.drawLine(left + radius, bottom - AndroidUtilities.dp(2),
                 right - radius, bottom - AndroidUtilities.dp(2), shine);
         canvas.restoreToCount(save);
@@ -93,7 +99,7 @@ public final class TelegaGlassDialogs {
 
     private static Paint backgroundPaint(boolean dark) {
         surface.setShader(null);
-        surface.setColor(dark ? 0xB8142231 : 0xC5F3F8FC);
+        surface.setColor(dark ? 0x7F142231 : 0x91F3F8FC);
         return surface;
     }
 }
