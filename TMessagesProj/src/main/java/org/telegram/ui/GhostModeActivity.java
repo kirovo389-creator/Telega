@@ -119,13 +119,17 @@ public class GhostModeActivity extends BaseFragment {
                                 updates.updates, updates.users, updates.chats, false, updates.date);
                         statusView.setText("Запрос принят сервером");
                         activateButton.setText("Активировать повторно");
-                        Toast.makeText(getParentActivity(), "Невидимость историй включена", Toast.LENGTH_SHORT).show();
+                        if (getParentActivity() != null) {
+                            Toast.makeText(getParentActivity(), "Невидимость историй включена", Toast.LENGTH_SHORT).show();
+                        }
                     } else {
                         String message = error != null && error.text != null
                                 ? error.text
                                 : "Не удалось включить режим. Возможно, действует ограничение по времени.";
                         statusView.setText(message);
-                        Toast.makeText(getParentActivity(), message, Toast.LENGTH_LONG).show();
+                        if (getParentActivity() != null) {
+                            Toast.makeText(getParentActivity(), message, Toast.LENGTH_LONG).show();
+                        }
                     }
                 }));
     }
