@@ -25,6 +25,7 @@ public class TelegaMessagesSettingsActivity extends BaseFragment {
 
     private int deletedRow;
     private int editedRow;
+    private int localEditRow;
     private int infoRow;
     private int rowCount;
 
@@ -34,6 +35,7 @@ public class TelegaMessagesSettingsActivity extends BaseFragment {
         rowCount = 0;
         deletedRow = rowCount++;
         editedRow = rowCount++;
+        localEditRow = rowCount++;
         infoRow = rowCount++;
         return true;
     }
@@ -73,6 +75,10 @@ public class TelegaMessagesSettingsActivity extends BaseFragment {
             } else if (position == editedRow) {
                 boolean n = !TelegaSettings.isShowEditedMessages();
                 TelegaSettings.setShowEditedMessages(n);
+                if (view instanceof TextCheckCell) ((TextCheckCell) view).setChecked(n);
+            } else if (position == localEditRow) {
+                boolean n = !TelegaSettings.isLocalEditMessagesEnabled();
+                TelegaSettings.setLocalEditMessagesEnabled(n);
                 if (view instanceof TextCheckCell) ((TextCheckCell) view).setChecked(n);
             }
         });
@@ -123,7 +129,8 @@ public class TelegaMessagesSettingsActivity extends BaseFragment {
                 ((TextView) holder.itemView).setText(
                         "Удалённые сообщения остаются в чате с пометкой «Удалено».\n\n" +
                         "Изменённые: сверху — прошлый текст, снизу — текущий. " +
-                        "При 2+ правках история сворачивается и раскрывается вверх по нажатию.");
+                        "При 2+ правках история сворачивается и раскрывается вверх по нажатию.\n\n" +
+                        "«Изменять сообщения» сохраняет текст входящего сообщения только на этом устройстве. Оригинал в Telegram не отправляется и не меняется.");
                 return;
             }
             TextCheckCell cell = (TextCheckCell) holder.itemView;
@@ -133,6 +140,9 @@ public class TelegaMessagesSettingsActivity extends BaseFragment {
             } else if (position == editedRow) {
                 cell.setTextAndCheck("Изменённые сообщения", TelegaSettings.isShowEditedMessages(), false);
                 cell.setColorfullIcon(0xFF52798B, R.drawable.telega_ic_edit);
+            } else if (position == localEditRow) {
+                cell.setTextAndCheck("Изменять сообщения (только у меня)", TelegaSettings.isLocalEditMessagesEnabled(), false);
+                cell.setColorfullIcon(0xFF367CC0, R.drawable.telega_ic_edit);
             }
         }
     }

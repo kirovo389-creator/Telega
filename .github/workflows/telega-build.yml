@@ -106,7 +106,13 @@ jobs:
           grep -Fq 'Палитра' TMessagesProj/src/main/java/org/telegram/ui/TelegaProfileSettingsActivity.java
           grep -Fq 'TelegaProfileColor' TMessagesProj/src/main/java/org/telegram/ui/Components/AvatarDrawable.java
           grep -Fq 'DEFAULT_PORT = 56626' TMessagesProj/src/main/java/org/telegram/messenger/TelegaLocalBypassProxy.java
-          echo "Proxy SharedConfig, auto-reply flush, and profile color verified."
+          grep -Fq 'WallpapersListActivity(WallpapersListActivity.TYPE_ALL)' TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java
+          grep -Fq 'OPTION_TELEGA_LOCAL_EDIT' TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java
+          grep -Fq 'TelegaLocalMessageEdits.getTextForLayout(this)' scripts/patch_edit_text.py
+          grep -Fq 'TelegaSettings.isAntiBotEnabled()' TMessagesProj/src/main/java/org/telegram/ui/Adapters/DialogsAdapter.java
+          grep -Fq 'TelegaSettings.isAntiBotEnabled()' TMessagesProj/src/main/java/org/telegram/messenger/NotificationsController.java
+          grep -Fq 'new TelegaAntiBotSettingsActivity()' TMessagesProj/src/main/java/org/telegram/ui/TelegaSettingsActivity.java
+          echo "Wallpaper picker, device-only message overrides, and anti-bot filter verified."
 
       - name: Branding package version icon
         run: |

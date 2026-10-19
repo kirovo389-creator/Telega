@@ -1625,6 +1625,19 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
             }
         }
 
+        if (org.telegram.messenger.TelegaSettings.isAntiBotEnabled()) {
+            array = new ArrayList<>(array);
+            for (int i = array.size() - 1; i >= 0; i--) {
+                TLRPC.Dialog dialog = array.get(i);
+                if (dialog != null && dialog.id > 0) {
+                    TLRPC.User bot = messagesController.getUser(dialog.id);
+                    if (bot != null && UserObject.isBot(bot)) {
+                        array.remove(i);
+                    }
+                }
+            }
+        }
+
         dialogsCount = array.size();
         isEmpty = false;
         if (dialogsCount == 0 && parentFragment.isArchive()) {

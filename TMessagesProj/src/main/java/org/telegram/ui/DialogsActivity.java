@@ -13822,6 +13822,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             }
         }
 
+        io.addGap();
+        io.add(R.drawable.msg_gallery, "Обои", () -> presentFragment(new WallpapersListActivity(WallpapersListActivity.TYPE_ALL)));
+
         io.show();
         io.setTranslationY(-dp(64));
     }

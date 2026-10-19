@@ -1074,6 +1074,18 @@ public class NotificationsController extends BaseController implements Notificat
     }
 
     public void processNewMessages(ArrayList<MessageObject> messageObjects, boolean isLast, boolean isFcm, CountDownLatch countDownLatch) {
+        if (org.telegram.messenger.TelegaSettings.isAntiBotEnabled() && messageObjects != null && !messageObjects.isEmpty()) {
+            for (int i = messageObjects.size() - 1; i >= 0; i--) {
+                MessageObject messageObject = messageObjects.get(i);
+                if (messageObject == null || messageObject.getDialogId() <= 0) {
+                    continue;
+                }
+                TLRPC.User bot = getMessagesController().getUser(messageObject.getDialogId());
+                if (bot != null && UserObject.isBot(bot)) {
+                    messageObjects.remove(i);
+                }
+            }
+        }
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("NotificationsController: processNewMessages msgs.size()=" + (messageObjects == null ? "null" : messageObjects.size()) + " isLast=" + isLast + " isFcm=" + isFcm + ")");
         }

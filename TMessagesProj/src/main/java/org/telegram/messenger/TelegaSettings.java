@@ -54,6 +54,42 @@ public final class TelegaSettings {
         }
     }
 
+    /** Enables visual-only overrides for incoming text messages on this device. */
+    public static boolean isLocalEditMessagesEnabled() {
+        SharedPreferences p = prefs();
+        return p != null && p.getBoolean("local_edit_messages_enabled", false);
+    }
+
+    public static void setLocalEditMessagesEnabled(boolean enabled) {
+        SharedPreferences p = prefs();
+        if (p != null) {
+            p.edit().putBoolean("local_edit_messages_enabled", enabled).apply();
+        }
+    }
+
+    /** Hides bot dialogs from chat lists and suppresses their notifications. */
+    public static boolean isAntiBotEnabled() {
+        SharedPreferences p = prefs();
+        return p != null && p.getBoolean("anti_bot_enabled", false);
+    }
+
+    public static void setAntiBotEnabled(boolean enabled) {
+        SharedPreferences p = prefs();
+        if (p != null) {
+            p.edit().putBoolean("anti_bot_enabled", enabled).apply();
+        }
+        AndroidUtilities.runOnUIThread(() -> {
+            for (int account = 0; account < UserConfig.MAX_ACCOUNT_COUNT; account++) {
+                try {
+                    NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.dialogsNeedReload);
+                    NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.updateInterfaces, 0);
+                } catch (Throwable error) {
+                    FileLog.e(error);
+                }
+            }
+        });
+    }
+
     // ------------------------------------------------------------ customization
 
     /** 0 = off, 1 = Minecraft snow, 2 = real snow (tilt + shake blizzard). Cached: read on every frame. */

@@ -1262,6 +1262,7 @@ public class ChatActivity extends BaseFragment implements
     public final static int OPTION_VIEW_STATISTICS = 115;
     public final static int OPTION_WELCOME_REVERT = 116;
     public final static int OPTION_SEND_MONEY = 117;
+    public final static int OPTION_TELEGA_LOCAL_EDIT = 118;
 
     private final static int[] allowedNotificationsDuringChatListAnimations = new int[]{
             NotificationCenter.messagesRead,
@@ -33895,6 +33896,24 @@ public class ChatActivity extends BaseFragment implements
                 chatActivityEnterView.addRecentGif(document);
                 break;
             }
+            case OPTION_TELEGA_LOCAL_EDIT: {
+                final MessageObject target = selectedObject;
+                if (target != null && target.messageOwner != null && !target.isOutOwner()) {
+                    org.telegram.messenger.TelegaLocalMessageEdits.showEditor(
+                            getParentActivity(), currentAccount, target.getDialogId(), target.getId(),
+                            target.messageOwner.message, () -> {
+                                target.generateLayout(null);
+                                if (chatListView != null && chatListView.getAdapter() != null) {
+                                    chatListView.getAdapter().notifyDataSetChanged();
+                                }
+                                updateVisibleRows();
+                            });
+                }
+                selectedObject = null;
+                selectedObjectGroup = null;
+                selectedObjectToEditCaption = null;
+                break;
+            }
             case OPTION_SUGGESTION_EDIT_MESSAGE:
             case OPTION_EDIT: {
                 if (selectedObjectToEditCaption != null) {
@@ -46523,6 +46542,23 @@ public class ChatActivity extends BaseFragment implements
             items.add(getString(R.string.WelcomeMessageRevert));
             options.add(OPTION_WELCOME_REVERT);
             icons.add(R.drawable.outline_revert_24);
+        }
+
+        if (message != null
+                && org.telegram.messenger.TelegaSettings.isLocalEditMessagesEnabled()
+                && message.messageOwner != null
+                && !message.isOutOwner()
+                && !isEphemeral
+                && message.getId() > 0
+                && message.type == MessageObject.TYPE_TEXT
+                && message.messageOwner.action == null
+                && !isSecretChat()
+                && chatMode == MODE_DEFAULT
+                && selectedObjectGroup == null
+                && !TextUtils.isEmpty(message.messageOwner.message)) {
+            items.add("Изменить (только у меня)");
+            options.add(OPTION_TELEGA_LOCAL_EDIT);
+            icons.add(R.drawable.msg_edit);
         }
     }
 
