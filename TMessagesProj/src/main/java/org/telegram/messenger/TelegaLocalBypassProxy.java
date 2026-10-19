@@ -86,6 +86,7 @@ public final class TelegaLocalBypassProxy {
     private static volatile boolean running;
     private static volatile int listenPort;
     private static volatile String lastError;
+    private static volatile String lastRouteError;
     private static final Set<Socket> clients = Collections.newSetFromMap(new ConcurrentHashMap<Socket, Boolean>());
     private static final Semaphore connectionPermits = new Semaphore(MAX_CONNECTIONS);
     private static final Map<String, Endpoint> lastSuccessfulEndpoints = new ConcurrentHashMap<>();
@@ -253,6 +254,11 @@ public final class TelegaLocalBypassProxy {
             final long elapsed = result;
             AndroidUtilities.runOnUIThread(() -> callback.run(elapsed));
         }, "TelegaBypassProbe").start();
+    }
+
+    /** Most recent upstream connection failure, useful for the in-app diagnostics. */
+    public static String getLastRouteError() {
+        return lastRouteError;
     }
 
     public static boolean isLocalEndpoint(String address, int port) {
@@ -626,11 +632,16 @@ public final class TelegaLocalBypassProxy {
             try {
                 WsConnection connection = WsConnection.connect(endpoint.connectHost, endpoint.tlsHost, "/apiws");
                 lastSuccessfulEndpoints.put(key, endpoint);
+                lastRouteError = null;
                 return connection;
             } catch (Throwable error) {
                 last = error;
+                lastRouteError = endpoint.tlsHost + ": " + safeMessage(error);
+                if (lastRouteError.length() > 180) {
+                    lastRouteError = lastRouteError.substring(0, 180);
+                }
                 Log.w(TAG, "Telegram WSS endpoint failed: " + endpoint.tlsHost
-                        + " (" + error.getClass().getSimpleName() + ")");
+                        + " (" + error.getClass().getSimpleName() + ": " + safeMessage(error) + ")");
             }
         }
         throw new IOException("Нет доступного Telegram WSS-маршрута", last);
@@ -940,7 +951,11 @@ public final class TelegaLocalBypassProxy {
                 raw.connect(new InetSocketAddress(connectHost, 443), ENDPOINT_CONNECT_TIMEOUT_MS);
                 raw.setSoTimeout(ENDPOINT_HANDSHAKE_TIMEOUT_MS);
 
-                SSLSocket ssl = (SSLSocket) SSLContext.getInstance("TLS").getSocketFactory()
+                // SSLContext instances from getInstance() are not initialized automatically on all
+                // Android providers. MordaTG's working transport explicitly initializes it.
+                SSLContext sslContext = SSLContext.getInstance("TLS");
+                sslContext.init(null, null, null);
+                SSLSocket ssl = (SSLSocket) sslContext.getSocketFactory()
                         .createSocket(raw, tlsHost, 443, true);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                     SSLParameters parameters = ssl.getSSLParameters();
