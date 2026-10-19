@@ -13,6 +13,8 @@ on:
       - 'TMessagesProj/src/main/java/org/telegram/ui/Components/TelegaVideoWallpaperView.java'
       - 'TMessagesProj/src/main/java/org/telegram/ui/Components/TelegaAvatarFrameView.java'
       - 'TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java'
+      - 'TMessagesProj/src/main/java/org/telegram/ui/ProxyListActivity.java'
+      - 'TMessagesProj/src/main/java/org/telegram/ui/Cells/DialogCell.java'
       - 'TMessagesProj/src/main/java/org/telegram/ui/TelegaLocalBypassSettingsActivity.java'
       - 'TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java'
       - 'TMessagesProj/src/main/java/org/telegram/ui/WallpapersListActivity.java'
@@ -95,6 +97,10 @@ jobs:
           grep -Fq 'SharedConfig.currentProxy' TMessagesProj/src/main/java/org/telegram/messenger/TelegaLocalBypassProxy.java
           grep -Fq 'proxySettingsChanged' TMessagesProj/src/main/java/org/telegram/messenger/TelegaLocalBypassProxy.java
           grep -Fq 'isLoopbackProxyAddress' TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
+          grep -Fq 'TelegaSettings.SNOW_STARS' TMessagesProj/src/main/java/org/telegram/ui/TelegaCustomizationActivity.java
+          grep -Fq 'drawStars(canvas, dt, now)' TMessagesProj/src/main/java/org/telegram/ui/Components/TelegaSnowView.java
+          grep -Fq 'TelegaSettings.isGlassChatsEnabled()' TMessagesProj/src/main/java/org/telegram/ui/Cells/DialogCell.java
+          grep -Fq 'TelegaGlassDialogs.draw(canvas, this' TMessagesProj/src/main/java/org/telegram/ui/Cells/DialogCell.java
           grep -Fq 'TelegaProfileColor' TMessagesProj/src/main/java/org/telegram/messenger/TelegaProfileColor.java
           grep -Fq 'Палитра' TMessagesProj/src/main/java/org/telegram/ui/TelegaProfileSettingsActivity.java
           grep -Fq 'TelegaProfileColor' TMessagesProj/src/main/java/org/telegram/ui/Components/AvatarDrawable.java
