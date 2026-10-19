@@ -31,6 +31,7 @@ public class TelegaCustomizationActivity extends BaseFragment {
     private TextCheckCell minecraftSnowCell;
     private TextCheckCell realSnowCell;
     private TextCheckCell rainCell;
+    private TextCheckCell starsCell;
     private TextCheckCell garlandCell;
     private TextCheckCell glassCell;
     private TextCheckCell glassAnimationCell;
@@ -109,8 +110,17 @@ public class TelegaCustomizationActivity extends BaseFragment {
         );
         snowCard.addView(rainCell, lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0, 0, 0, 0));
 
+        starsCell = createCheckCell(
+                "Звёзды",
+                R.drawable.telega_ic_wind,
+                0xFF8D9FD8,
+                TelegaSettings.getSnowMode() == TelegaSettings.SNOW_STARS,
+                false
+        );
+        snowCard.addView(starsCell, lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0, 0, 0, 0));
+
         TextView snowInfo = text(
-                "Minecraft — блочные снежинки. Реалистичный снег реагирует на наклон телефона. Дождь состоит из косых капель разной длины и скорости; ветер также реагирует на наклон. Повторное нажатие отключает эффект.",
+                "Minecraft — блочные снежинки. Реалистичный снег реагирует на наклон телефона. Дождь состоит из косых капель разной длины и скорости. Звёзды мерцают на фоне, а раз в 5–8 секунд плавно пролетают редкие группы падающих звёзд. Повторное нажатие отключает эффект.",
                 13,
                 0.65f
         );
@@ -209,6 +219,13 @@ public class TelegaCustomizationActivity extends BaseFragment {
             TelegaSettings.setSnowMode(next);
             updateSnowChecks();
         });
+        starsCell.setOnClickListener(v -> {
+            int next = TelegaSettings.getSnowMode() == TelegaSettings.SNOW_STARS
+                    ? TelegaSettings.SNOW_OFF : TelegaSettings.SNOW_STARS;
+            TelegaSettings.setSnowMode(next);
+            updateSnowChecks();
+        });
+
         garlandCell.setOnClickListener(v -> {
             boolean enabled = !TelegaSettings.isGarlandEnabled();
             TelegaSettings.setGarlandEnabled(enabled);
@@ -254,6 +271,7 @@ public class TelegaCustomizationActivity extends BaseFragment {
         minecraftSnowCell.setChecked(mode == TelegaSettings.SNOW_MINECRAFT);
         realSnowCell.setChecked(mode == TelegaSettings.SNOW_REAL);
         rainCell.setChecked(mode == TelegaSettings.SNOW_RAIN);
+        starsCell.setChecked(mode == TelegaSettings.SNOW_STARS);
     }
 
     private LinearLayout newCard() {
