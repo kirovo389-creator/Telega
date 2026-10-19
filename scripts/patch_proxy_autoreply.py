@@ -45,8 +45,8 @@ def patch_bypass():
                 SharedConfig.loadProxyList();
                 SharedConfig.ProxyInfo info = SharedConfig.addProxy(new SharedConfig.ProxyInfo(local));
                 SharedConfig.currentProxy = info;
-                info.available = true;
-                info.ping = 1;
+                info.available = false;
+                info.ping = 0;
             } catch (Throwable error) {
                 Log.w(TAG, "Unable to update SharedConfig proxy list", error);
             }
