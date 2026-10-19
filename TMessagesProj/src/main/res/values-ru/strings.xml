@@ -263,6 +263,7 @@
     <string name="RemindTodayAt">\'Отправить сегодня в\' HH:mm</string>
     <string name="RemindDayAt">\'Отправить\' d MMM \'в\' HH:mm</string>
     <string name="RemindDayYearAt">\'Напомнить\' d MMM yyyy \'в\' HH:mm</string>
+    <string name="GhostModeIllustrationDescription">Иллюстрация режима призрака</string>
     <string name="GhostModeTitle">Призрак</string>
     <string name="GhostModeStoriesTitle">Невидимость в историях</string>
     <string name="GhostModeStoriesDescription">Включает серверный режим скрытого просмотра историй. Сервер ограничивает действие по времени; реакции и ответы могут раскрыть просмотр.</string>
