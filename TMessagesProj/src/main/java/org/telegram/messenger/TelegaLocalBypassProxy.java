@@ -87,6 +87,7 @@ public final class TelegaLocalBypassProxy {
     private static volatile int listenPort;
     private static volatile String lastError;
     private static volatile String lastRouteError;
+    private static volatile boolean routeVerified;
     private static final Set<Socket> clients = Collections.newSetFromMap(new ConcurrentHashMap<Socket, Boolean>());
     private static final Semaphore connectionPermits = new Semaphore(MAX_CONNECTIONS);
     private static final Map<String, Endpoint> lastSuccessfulEndpoints = new ConcurrentHashMap<>();
@@ -111,14 +112,22 @@ public final class TelegaLocalBypassProxy {
         if (!isEnabled()) {
             return "Выключен. Включи режим, чтобы использовать локальный обход.";
         }
-        if (isRunning()) {
-            return "Локальный SOCKS5 работает: " + LOOPBACK + ":" + listenPort;
+        if (!isRunning()) {
+            String error = lastError;
+            return error != null && !error.isEmpty()
+                    ? "Не удалось запустить локальный прокси: " + error
+                    : "Локальный прокси не запущен.";
         }
-        String error = lastError;
-        if (error != null && !error.isEmpty()) {
-            return "Не удалось запустить локальный прокси: " + error;
+        if (routeVerified) {
+            return "Маршрут Telegram через локальный прокси проверен.";
         }
-        return "Включён. Локальный прокси запускается вместе с сетевым модулем Telega.";
+        String routeError = lastRouteError;
+        return "Локальный прокси запущен, но соединение с Telegram ещё не подтверждено."
+                + (routeError == null || routeError.isEmpty() ? "" : "\nПричина: " + routeError);
+    }
+
+    public static boolean isRouteVerified() {
+        return isRunning() && routeVerified;
     }
 
     /**
@@ -211,6 +220,8 @@ public final class TelegaLocalBypassProxy {
      * conventional SOCKS proxy endpoint.
      */
     public static void checkLocalEndpoint(int port, org.telegram.tgnet.RequestTimeDelegate callback) {
+        routeVerified = false;
+        lastRouteError = null;
         if (callback == null) return;
         new Thread(() -> {
             long started = System.currentTimeMillis();
@@ -246,10 +257,20 @@ public final class TelegaLocalBypassProxy {
                 } else {
                     throw new IOException("Неизвестный тип адреса в ответе SOCKS5");
                 }
-                readExact(input, 2);
+                SSLSocket tls = (SSLSocket) SSLContext.getDefault().getSocketFactory()
+                        .createSocket(socket, "kws1.web.telegram.org", 443, true);
+                tls.setSoTimeout(CONNECT_TIMEOUT_MS);
+                SSLParameters tlsParameters = tls.getSSLParameters();
+                tlsParameters.setServerNames(Collections.singletonList(new SNIHostName("kws1.web.telegram.org")));
+                tls.setSSLParameters(tlsParameters);
+                tls.startHandshake();
                 result = Math.max(1L, System.currentTimeMillis() - started);
+                routeVerified = true;
+                lastRouteError = null;
             } catch (Throwable error) {
-                Log.w(TAG, "Local proxy connectivity check failed: " + safeMessage(error));
+                lastRouteError = safeMessage(error);
+                routeVerified = false;
+                Log.w(TAG, "Local proxy connectivity check failed: " + lastRouteError);
             }
             final long elapsed = result;
             AndroidUtilities.runOnUIThread(() -> callback.run(elapsed));
@@ -287,6 +308,8 @@ public final class TelegaLocalBypassProxy {
     }
 
     public static boolean setEnabled(boolean enabled) {
+        routeVerified = false;
+        lastRouteError = null;
         TelegaSettings.setLocalBypassEnabled(enabled);
         if (!enabled) {
             stop();
