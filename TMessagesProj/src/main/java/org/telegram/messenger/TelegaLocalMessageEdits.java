@@ -1,9 +1,6 @@
 package org.telegram.messenger;
 
 import android.content.Context;
-import android.text.InputType;
-import android.view.Gravity;
-import android.widget.EditText;
 
 /**
  * Per-device visual overrides for incoming text messages.
@@ -11,6 +8,25 @@ import android.widget.EditText;
  */
 public final class TelegaLocalMessageEdits {
     private static final String PREFS = "telega_local_message_edits";
+    private static volatile int editingAccount = -1;
+    private static volatile long editingDialogId;
+    private static volatile int editingMessageId;
+
+    public static void beginLocalEdit(int account, long dialogId, int messageId) {
+        editingAccount = account;
+        editingDialogId = dialogId;
+        editingMessageId = messageId;
+    }
+
+    public static boolean isLocalEdit(int account, long dialogId, int messageId) {
+        return editingAccount == account && editingDialogId == dialogId && editingMessageId == messageId;
+    }
+
+    public static void finishLocalEdit() {
+        editingAccount = -1;
+        editingDialogId = 0;
+        editingMessageId = 0;
+    }
 
     private TelegaLocalMessageEdits() {
     }
@@ -64,50 +80,5 @@ public final class TelegaLocalMessageEdits {
         return getOverride(message.currentAccount, message.getDialogId(), message.getId());
     }
 
-    public static void showEditor(Context context, int account, long dialogId, int messageId, String original, Runnable onChanged) {
-        if (context == null || messageId <= 0) {
-            return;
-        }
-        EditText input = new EditText(context);
-        input.setText(original == null ? "" : original);
-        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
-        input.setGravity(Gravity.TOP | Gravity.START);
-        input.setMinLines(2);
-        input.setMaxLines(10);
-        input.setTextSize(16);
-        int padding = AndroidUtilities.dp(14);
-        input.setPadding(padding, padding, padding, padding);
-        input.setSelection(input.length());
-        input.setTextColor(org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_dialogTextBlack));
-        input.setHintTextColor(org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_dialogTextHint));
-        input.setHint("Сообщение");
-        input.setBackgroundColor(android.graphics.Color.TRANSPARENT);
 
-        final org.telegram.ui.ActionBar.AlertDialog dialog = new org.telegram.ui.ActionBar.AlertDialog.Builder(context)
-                .setTitle("Изменить сообщение")
-                .setView(input)
-                .setNegativeButton("Отмена", null)
-                .setNeutralButton("Сбросить", (d, which) -> {
-                    clearOverride(account, dialogId, messageId);
-                    if (onChanged != null) onChanged.run();
-                })
-                .setPositiveButton("Готово", (d, which) -> {
-                    saveOverride(account, dialogId, messageId, input.getText().toString());
-                    if (onChanged != null) onChanged.run();
-                })
-                .create();
-        dialog.setOnShowListener(d -> {
-            int color = org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_dialogTextBlack);
-            if (dialog.getButton(org.telegram.ui.ActionBar.AlertDialog.BUTTON_POSITIVE) != null) {
-                ((android.widget.TextView) dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)).setTextColor(color);
-            }
-            if (dialog.getButton(org.telegram.ui.ActionBar.AlertDialog.BUTTON_NEGATIVE) != null) {
-                ((android.widget.TextView) dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)).setTextColor(color);
-            }
-            if (dialog.getButton(org.telegram.ui.ActionBar.AlertDialog.BUTTON_NEUTRAL) != null) {
-                ((android.widget.TextView) dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL)).setTextColor(color);
-            }
-        });
-        dialog.show();
-    }
 }

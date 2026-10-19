@@ -7688,6 +7688,20 @@ public class ChatActivityEnterView extends FrameLayout implements
             BotWebViewVibrationEffect.APP_ERROR.vibrate();
             return;
         }
+        if (editingMessageObject != null
+                && org.telegram.messenger.TelegaLocalMessageEdits.isLocalEdit(
+                        currentAccount, editingMessageObject.getDialogId(), editingMessageObject.getId())) {
+            MessageObject localTarget = editingMessageObject;
+            org.telegram.messenger.TelegaLocalMessageEdits.saveOverride(
+                    currentAccount, localTarget.getDialogId(), localTarget.getId(), message[0].toString());
+            if (parentFragment instanceof org.telegram.ui.ChatActivity) {
+                ((org.telegram.ui.ChatActivity) parentFragment).onTelegaLocalMessageEdited(localTarget);
+            } else {
+                org.telegram.messenger.TelegaLocalMessageEdits.finishLocalEdit();
+                setEditingMessageObject(null, null, false);
+            }
+            return;
+        }
         ArrayList<TLRPC.MessageEntity> entities = MediaDataController.getInstance(currentAccount).getEntities(message, supportsSendingNewEntities());
         if (!TextUtils.equals(message[0], editingMessageObject.messageText) || entities != null && !entities.isEmpty() || !editingMessageObject.messageOwner.entities.isEmpty() || editingMessageObject.messageOwner.media instanceof TLRPC.TL_messageMediaWebPage) {
             editingMessageObject.editingMessage = message[0];

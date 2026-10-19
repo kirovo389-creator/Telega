@@ -32,7 +32,7 @@ public final class TelegaGlassMessages {
     private static boolean tickScheduled;
 
     private static final int[] SURFACE_COLORS = {
-            0x20FFFFFF, 0x07FFFFFF, 0x13FFFFFF
+            0x32FFFFFF, 0x13FFFFFF, 0x23FFFFFF
     };
     private static final float[] SURFACE_POSITIONS = {0f, 0.52f, 1f};
     private static final int[] SHIMMER_COLORS = {
@@ -211,7 +211,7 @@ public final class TelegaGlassMessages {
             canvas.drawRoundRect(rect, radius, radius, surfacePaint);
             canvas.drawRoundRect(topShine, Math.max(1f, radius * 0.2f), Math.max(1f, radius * 0.2f), topShinePaint);
 
-            rimPaint.setColor(outgoing ? 0x4AFFFFFF : 0x2FFFFFFF);
+            rimPaint.setColor(outgoing ? 0x58FFFFFF : 0x42FFFFFF);
             canvas.drawRoundRect(rect, radius, radius, rimPaint);
             bottomRimPaint.setColor(outgoing ? 0x22000000 : 0x10000000);
             canvas.drawLine(rect.left + radius, rect.bottom - AndroidUtilities.dp(1),

@@ -10246,8 +10246,10 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 && SharedConfig.currentProxy != null
                 && org.telegram.messenger.TelegaLocalBypassProxy.isLocalEndpoint(
                         SharedConfig.currentProxy.settings.getAddress(), SharedConfig.currentProxy.settings.getPort());
-        final boolean connected = localProxyRunning || currentConnectionState == ConnectionsManager.ConnectionStateConnected
-                || currentConnectionState == ConnectionsManager.ConnectionStateUpdating;
+        final boolean connected = TelegaSettings.isLocalBypassEnabled()
+                ? localProxyRunning && org.telegram.messenger.TelegaLocalBypassProxy.isRouteVerified()
+                : currentConnectionState == ConnectionsManager.ConnectionStateConnected
+                    || currentConnectionState == ConnectionsManager.ConnectionStateUpdating;
         proxyMenuSubItem.setSubtext(getString(proxyEnabled ? (connected ? R.string.MenuProxyConnected : R.string.MenuProxyConnecting) : R.string.MenuProxyDisabled));
         proxyDrawable.setConnected(proxyEnabled, connected, animated);
     }
@@ -10998,6 +11000,31 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
     @NonNull
     public ArrayList<TLRPC.Dialog> getDialogsArray(int currentAccount, int dialogsType, int folderId, boolean frozen) {
+        if (org.telegram.messenger.TelegaSettings.isArchiveHidden() && folderId == 1) {
+            return new ArrayList<>();
+        }
+        ArrayList<TLRPC.Dialog> result = getDialogsArrayInternal(currentAccount, dialogsType, folderId, frozen);
+        if (!org.telegram.messenger.TelegaSettings.isArchiveHidden() || result == null || result.isEmpty()) {
+            return result;
+        }
+        ArrayList<TLRPC.Dialog> visible = new ArrayList<>(result);
+        for (int i = visible.size() - 1; i >= 0; i--) {
+            TLRPC.Dialog dialog = visible.get(i);
+            if (dialog == null) {
+                visible.remove(i);
+                continue;
+            }
+            boolean archiveFolder = dialog instanceof TLRPC.TL_dialogFolder
+                    && ((TLRPC.TL_dialogFolder) dialog).folder != null
+                    && ((TLRPC.TL_dialogFolder) dialog).folder.id == 1;
+            if (dialog.folder_id == 1 || archiveFolder) {
+                visible.remove(i);
+            }
+        }
+        return visible;
+    }
+
+    private ArrayList<TLRPC.Dialog> getDialogsArrayInternal(int currentAccount, int dialogsType, int folderId, boolean frozen) {
         if (frozen && frozenDialogsList != null) {
             return frozenDialogsList;
         }

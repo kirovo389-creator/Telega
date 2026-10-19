@@ -43,7 +43,7 @@ public final class TelegaGlassDialogs {
             shaderWidth = width;
             shaderHeight = height;
             surfaceShader = new LinearGradient(0, 0, 0, height,
-                    new int[]{0x24FFFFFF, 0x12B7DDF2, 0x0C7395C6, 0x18FFFFFF},
+                    new int[]{0x35FFFFFF, 0x20B7DDF2, 0x167395C6, 0x2AFFFFFF},
                     new float[]{0f, 0.34f, 0.76f, 1f}, Shader.TileMode.CLAMP);
         }
         rect.set(left, top, right, bottom);
@@ -57,17 +57,17 @@ public final class TelegaGlassDialogs {
         surface.setShader(null);
 
         // A restrained inner rim and top highlight create depth without expensive blur.
-        rim.setColor(0x35FFFFFF);
+        rim.setColor(0x52FFFFFF);
         canvas.drawRoundRect(rect, radius, radius, rim);
         innerRect.set(left + AndroidUtilities.dp(1), top + AndroidUtilities.dp(1),
                 right - AndroidUtilities.dp(1), bottom - AndroidUtilities.dp(1));
         rim.setStrokeWidth(Math.max(1f, AndroidUtilities.density * 0.45f));
-        rim.setColor(0x16FFFFFF);
+        rim.setColor(0x24FFFFFF);
         canvas.drawRoundRect(innerRect, Math.max(0, radius - AndroidUtilities.dp(1)), Math.max(0, radius - AndroidUtilities.dp(1)), rim);
         rim.setStrokeWidth(Math.max(1f, AndroidUtilities.density * 0.7f));
 
         shine.setStrokeWidth(Math.max(1f, AndroidUtilities.density));
-        shine.setColor(0x32FFFFFF);
+        shine.setColor(0x48FFFFFF);
         float shineY = top + AndroidUtilities.dp(1);
         canvas.drawLine(left + radius, shineY, right - radius, shineY, shine);
 
@@ -82,7 +82,7 @@ public final class TelegaGlassDialogs {
 
     private static Paint backgroundPaint() {
         surface.setShader(null);
-        surface.setColor(0x08000000);
+        surface.setColor(0x12000000);
         return surface;
     }
 }
