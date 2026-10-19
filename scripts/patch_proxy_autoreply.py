@@ -177,17 +177,26 @@ def patch_auto_reply():
         t = t.replace(old_bg, new_bg, 1)
         print("patched background listener")
 
-    if "flushPendingReplies" not in t:
+    if "private static void flushPendingReplies" not in t:
         helper = '''
     private static void flushPendingReplies(int account) {
-        if (!canAutoReplyNow()) return;
+        if (!canAutoReplyNow()) {
+            return;
+        }
         SharedPreferences p = prefs();
-        if (p == null) return;
+        if (p == null) {
+            return;
+        }
+        String prefix = CONVERSATION_PREFIX + account + "_";
         for (String key : p.getAll().keySet()) {
-            if (!key.startsWith(CONVERSATION_PREFIX + account + "_")) continue;
+            if (!key.startsWith(prefix)) {
+                continue;
+            }
             try {
-                long dialogId = Long.parseLong(key.substring((CONVERSATION_PREFIX + account + "_").length()));
-                if (dialogId <= 0) continue;
+                long dialogId = Long.parseLong(key.substring(prefix.length()));
+                if (dialogId <= 0) {
+                    continue;
+                }
                 if (TelegaSettings.isOfflineAutoReplyEnabled()) {
                     startOfflineReplyWorker(account, dialogId);
                 } else if (isConfigured()) {
@@ -199,10 +208,21 @@ def patch_auto_reply():
     }
 
 '''
-        marker = "    private static void startReplyWorker"
-        if marker in t:
-            t = t.replace(marker, helper + marker, 1)
-            print("added flushPendingReplies")
+        inserted = False
+        for marker in (
+            "    private static void startReplyWorker(final int account, final long dialogId) {",
+            "    private static void startReplyWorker(int account, long dialogId) {",
+            "    private static void startReplyWorker",
+        ):
+            if marker in t:
+                t = t.replace(marker, helper + marker, 1)
+                print("added flushPendingReplies")
+                inserted = True
+                break
+        if not inserted:
+            print("WARN could not insert flushPendingReplies")
+    else:
+        print("flushPendingReplies already present")
 
     path.write_text(t, encoding="utf-8")
     print("auto reply done")
@@ -224,7 +244,6 @@ def patch_avatar_color():
         } catch (Throwable ignore) {
         }
 '''
-    # After default id-based color assignment in the main setInfo overload
     old = '''                color = getThemedColor(Theme.keys_avatar_background[getColorIndex(id)]);
                 color2 = getThemedColor(Theme.keys_avatar_background2[getColorIndex(id)]);
             }
