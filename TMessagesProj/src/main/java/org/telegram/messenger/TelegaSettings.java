@@ -59,7 +59,10 @@ public final class TelegaSettings {
     public static boolean isLocalEditMessagesEnabled() {
         if (localEditMessagesCache < 0) {
             SharedPreferences p = prefs();
-            localEditMessagesCache = p != null && p.getBoolean("local_edit_messages_enabled", false) ? 1 : 0;
+            if (p == null) {
+                return false;
+            }
+            localEditMessagesCache = p.getBoolean("local_edit_messages_enabled", false) ? 1 : 0;
         }
         return localEditMessagesCache == 1;
     }
