@@ -30,8 +30,7 @@ public final class TelegaLocalMessageEdits {
     }
 
     public static boolean hasOverride(int account, long dialogId, int messageId) {
-        android.content.SharedPreferences p = preferences(account);
-        return p != null && messageId > 0 && p.contains(key(dialogId, messageId));
+        return getOverride(account, dialogId, messageId) != null;
     }
 
     private static String cacheKey(int account, long dialogId, int messageId) {

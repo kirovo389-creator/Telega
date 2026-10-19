@@ -168,6 +168,7 @@ public final class TelegaSettings {
         if (p != null) {
             p.edit().putInt("snow_mode", mode).apply();
         }
+        org.telegram.ui.Components.TelegaSnowView.refreshAll();
     }
 
     /** Garland on the top edge of every message bubble. Cached: read on every draw. */
@@ -270,6 +271,7 @@ public final class TelegaSettings {
         if (p != null) {
             p.edit().putString("chat_video_wallpaper_uri", uri == null ? "" : uri).apply();
         }
+        org.telegram.ui.Components.TelegaVideoWallpaperView.refreshAll();
     }
 
     // ------------------------------------------------------------- Avatar frame

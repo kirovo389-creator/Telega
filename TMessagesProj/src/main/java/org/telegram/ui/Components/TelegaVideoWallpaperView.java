@@ -1,6 +1,7 @@
 package org.telegram.ui.Components;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.SurfaceTexture;
 import android.media.MediaPlayer;
@@ -43,6 +44,7 @@ public final class TelegaVideoWallpaperView extends FrameLayout implements Textu
         setFocusable(false);
         setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         setAlpha(1f);
+        setBackgroundColor(Color.BLACK);
 
         textureView = new TextureView(context);
         textureView.setOpaque(true);

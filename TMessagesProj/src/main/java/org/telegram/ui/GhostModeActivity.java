@@ -12,6 +12,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.R;
@@ -144,7 +145,8 @@ public class GhostModeActivity extends BaseFragment {
         TL_stories.TL_stories_activateStealthMode request = new TL_stories.TL_stories_activateStealthMode();
         request.past = true;
         request.future = true;
-        ConnectionsManager.getInstance(currentAccount).sendRequest(request, (response, error) ->
+        try {
+            ConnectionsManager.getInstance(currentAccount).sendRequest(request, (response, error) ->
                 AndroidUtilities.runOnUIThread(() -> {
                     // A response may arrive after the fragment has been destroyed.
                     if (fragmentView == null || activateButton == null || statusView == null) {
@@ -178,6 +180,20 @@ public class GhostModeActivity extends BaseFragment {
                         }
                     }
                 }));
+        } catch (Throwable error) {
+            requestInFlight = false;
+            if (activateButton != null) {
+                activateButton.setEnabled(true);
+                activateButton.setAlpha(1f);
+            }
+            if (statusView != null) {
+                statusView.setText(LocaleController.getString(R.string.GhostModeActivationError));
+            }
+            if (statusDot != null) {
+                statusDot.setTextColor(0xffe05252);
+            }
+            FileLog.e(error);
+        }
     }
 
     @Override

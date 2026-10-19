@@ -50,6 +50,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -88,6 +89,7 @@ public final class TelegaLocalBypassProxy {
     private static volatile String lastError;
     private static volatile String lastRouteError;
     private static volatile boolean routeVerified;
+    private static final AtomicLong routeCheckGeneration = new AtomicLong();
     private static final Set<Socket> clients = Collections.newSetFromMap(new ConcurrentHashMap<Socket, Boolean>());
     private static final Semaphore connectionPermits = new Semaphore(MAX_CONNECTIONS);
     private static final Map<String, Endpoint> lastSuccessfulEndpoints = new ConcurrentHashMap<>();
@@ -193,6 +195,7 @@ public final class TelegaLocalBypassProxy {
 
     public static void stop() {
         synchronized (LOCK) {
+            routeCheckGeneration.incrementAndGet();
             running = false;
             ServerSocket server = listener;
             listener = null;
@@ -220,6 +223,7 @@ public final class TelegaLocalBypassProxy {
      * conventional SOCKS proxy endpoint.
      */
     public static void checkLocalEndpoint(int port, org.telegram.tgnet.RequestTimeDelegate callback) {
+        final long checkGeneration = routeCheckGeneration.incrementAndGet();
         routeVerified = false;
         lastRouteError = null;
         if (callback == null) return;
@@ -264,15 +268,23 @@ public final class TelegaLocalBypassProxy {
                 // init and falsely reports a healthy WSS route as broken. The proxy sends
                 // SOCKS5 success only after connectUpstream() completes the WSS handshake.
                 result = Math.max(1L, System.currentTimeMillis() - started);
-                routeVerified = true;
-                lastRouteError = null;
+                if (checkGeneration == routeCheckGeneration.get() && isRunning() && listenPort == port) {
+                    routeVerified = true;
+                    lastRouteError = null;
+                }
             } catch (Throwable error) {
-                lastRouteError = safeMessage(error);
-                routeVerified = false;
-                Log.w(TAG, "Local proxy connectivity check failed: " + lastRouteError);
+                if (checkGeneration == routeCheckGeneration.get() && isRunning() && listenPort == port) {
+                    lastRouteError = safeMessage(error);
+                    routeVerified = false;
+                    Log.w(TAG, "Local proxy connectivity check failed: " + lastRouteError);
+                }
             }
             final long elapsed = result;
-            AndroidUtilities.runOnUIThread(() -> callback.run(elapsed));
+            AndroidUtilities.runOnUIThread(() -> {
+                if (checkGeneration == routeCheckGeneration.get() && isRunning() && listenPort == port) {
+                    callback.run(elapsed);
+                }
+            });
         }, "TelegaBypassProbe").start();
     }
 
@@ -307,6 +319,7 @@ public final class TelegaLocalBypassProxy {
     }
 
     public static boolean setEnabled(boolean enabled) {
+        routeCheckGeneration.incrementAndGet();
         routeVerified = false;
         lastRouteError = null;
         TelegaSettings.setLocalBypassEnabled(enabled);

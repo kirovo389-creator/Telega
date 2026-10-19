@@ -9023,6 +9023,9 @@ public class ChatActivity extends BaseFragment implements
 
         onBottomItemsVisibilityChanged();
         ViewCompat.setOnApplyWindowInsetsListener(fragmentView, this::onApplyWindowInsets);
+        if (chatMode == 0 && !inPreviewMode) {
+            org.telegram.messenger.TelegaChatEffects.attach(fragmentView);
+        }
         Timer.finish(t);
 
         return fragmentView;

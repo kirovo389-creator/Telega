@@ -22,6 +22,8 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.TelegaSettings;
 import org.telegram.ui.ActionBar.Theme;
 
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.Random;
 
 /**
@@ -35,6 +37,7 @@ import java.util.Random;
  */
 public class TelegaSnowView extends View implements SensorEventListener {
 
+    private static final ArrayList<WeakReference<TelegaSnowView>> INSTANCES = new ArrayList<>();
     private static final int MAX_FLAKES = 420;
     private static final float TWO_PI = (float) (Math.PI * 2);
     private static final String[] PIXEL_SNOW_SMALL = {"010", "111", "010"};
@@ -65,7 +68,6 @@ public class TelegaSnowView extends View implements SensorEventListener {
     private final float[] gravity = new float[3];
     private boolean gravityReady;
     private boolean sensorOn;
-    private boolean checkPosted;
     private Bitmap flake;
     private long nextMeteorAt;
     private int activeMeteors;
@@ -76,13 +78,6 @@ public class TelegaSnowView extends View implements SensorEventListener {
     private final float[] meteorAge = new float[40];
     private final float[] meteorDuration = new float[40];
 
-    private final Runnable checkRunnable = new Runnable() {
-        @Override
-        public void run() {
-            checkPosted = false;
-            invalidate();
-        }
-    };
 
     public TelegaSnowView(Context context) {
         super(context);
@@ -94,6 +89,23 @@ public class TelegaSnowView extends View implements SensorEventListener {
         rainPaint.setStrokeCap(Paint.Cap.ROUND);
         rainGlowPaint.setStyle(Paint.Style.STROKE);
         rainGlowPaint.setStrokeCap(Paint.Cap.ROUND);
+    }
+
+    public static void refreshAll() {
+        ArrayList<TelegaSnowView> views = new ArrayList<>();
+        synchronized (INSTANCES) {
+            for (int i = INSTANCES.size() - 1; i >= 0; i--) {
+                TelegaSnowView view = INSTANCES.get(i).get();
+                if (view == null) {
+                    INSTANCES.remove(i);
+                } else {
+                    views.add(view);
+                }
+            }
+        }
+        for (TelegaSnowView view : views) {
+            view.postInvalidate();
+        }
     }
 
     @Override
@@ -110,6 +122,18 @@ public class TelegaSnowView extends View implements SensorEventListener {
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
+        synchronized (INSTANCES) {
+            boolean found = false;
+            for (WeakReference<TelegaSnowView> reference : INSTANCES) {
+                if (reference.get() == this) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                INSTANCES.add(new WeakReference<>(this));
+            }
+        }
         mode = -1;
         lastTime = 0;
         invalidate();
@@ -118,9 +142,15 @@ public class TelegaSnowView extends View implements SensorEventListener {
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
+        synchronized (INSTANCES) {
+            for (int i = INSTANCES.size() - 1; i >= 0; i--) {
+                TelegaSnowView view = INSTANCES.get(i).get();
+                if (view == null || view == this) {
+                    INSTANCES.remove(i);
+                }
+            }
+        }
         unregisterSensor();
-        removeCallbacks(checkRunnable);
-        checkPosted = false;
         mode = -1;
     }
 
@@ -214,10 +244,6 @@ public class TelegaSnowView extends View implements SensorEventListener {
             }
         }
         if (mode == TelegaSettings.SNOW_OFF || getWidth() <= 0 || getHeight() <= 0) {
-            if (!checkPosted) {
-                checkPosted = true;
-                postDelayed(checkRunnable, 600);
-            }
             return;
         }
 
