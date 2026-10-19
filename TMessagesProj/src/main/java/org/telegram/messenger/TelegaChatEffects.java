@@ -36,6 +36,15 @@ public final class TelegaChatEffects {
             int insertIndex = snowView != null ? group.indexOfChild(snowView) : findInsertIndex(group);
             group.addView(videoWallpaper, insertIndex,
                     new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            final TelegaVideoWallpaperView videoLayer = videoWallpaper;
+            group.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+                @Override
+                public void onLayoutChange(View parent, int left, int top, int right, int bottom,
+                                           int oldLeft, int oldTop, int oldRight, int oldBottom) {
+                    sizeOverlayToParent(videoLayer, right - left, bottom - top);
+                }
+            });
+            sizeOverlayToParent(videoLayer, group.getWidth(), group.getHeight());
         } else {
             videoWallpaper.reloadFromSettings();
         }
@@ -57,6 +66,17 @@ public final class TelegaChatEffects {
                 }
             }
         });
+    }
+
+    private static void sizeOverlayToParent(View child, int width, int height) {
+        if (child == null || width <= 0 || height <= 0
+                || child.getWidth() == width && child.getHeight() == height
+                && child.getLeft() == 0 && child.getTop() == 0) {
+            return;
+        }
+        child.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY));
+        child.layout(0, 0, width, height);
     }
 
     private static int findInsertIndex(ViewGroup group) {
