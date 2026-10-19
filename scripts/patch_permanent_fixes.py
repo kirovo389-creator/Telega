@@ -59,8 +59,9 @@ def patch_bypass():
         else:
             print("WARN persistLocalProxy")
 
-    if "proxySettingsChanged" not in t or "stop();\n        TelegaSettings.setLocalBypassEnabled(true);" not in t:
-        old = '''        int port = ensureRunning();
+    # Full replace when still on the original setEnabled body.
+    if "proxySettingsChanged" not in t:
+        old_full = '''        int port = ensureRunning();
         if (port <= 0) {
             TelegaSettings.setLocalBypassEnabled(false);
             restoreConfiguredProxy();
@@ -86,7 +87,7 @@ def patch_bypass():
             return false;
         }
     }'''
-        new = '''        stop();
+        new_full = '''        stop();
         TelegaSettings.setLocalBypassEnabled(true);
         int port = start();
         if (port <= 0) {
@@ -127,12 +128,76 @@ def patch_bypass():
             return false;
         }
     }'''
-        if old in t:
-            t = t.replace(old, new, 1)
+        if old_full in t:
+            t = t.replace(old_full, new_full, 1)
             changed = True
-            print("setEnabled strengthened")
+            print("setEnabled strengthened (full)")
         else:
-            print("WARN setEnabled")
+            # Partial path: patch_proxy_autoreply already rewrote setEnabled without notifications.
+            inject_old = '''                    cm.setAppPaused(false, false);
+                } catch (Throwable error) {
+                    Log.w(TAG, "Unable to refresh network after enabling local bypass", error);
+                }
+            }
+            return true;'''
+            inject_new = '''                    cm.setAppPaused(false, false);
+                } catch (Throwable error) {
+                    Log.w(TAG, "Unable to refresh network after enabling local bypass", error);
+                }
+            }
+            try {
+                NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.proxySettingsChanged);
+                if (SharedConfig.currentProxy != null) {
+                    SharedConfig.currentProxy.available = true;
+                    SharedConfig.currentProxy.checking = false;
+                    SharedConfig.currentProxy.ping = 1;
+                    NotificationCenter.getGlobalInstance().postNotificationName(
+                            NotificationCenter.proxyCheckDone, SharedConfig.currentProxy);
+                }
+            } catch (Throwable ignore) {
+            }
+            return true;'''
+            if inject_old in t:
+                t = t.replace(inject_old, inject_new, 1)
+                changed = True
+                print("setEnabled notifications injected")
+            else:
+                # Last resort: insert before the success return of setEnabled after setProxySettings
+                inject_old2 = '''            ConnectionsManager.setProxySettings(true, createLocalSettings(port));
+            for (int account = 0; account < UserConfig.MAX_ACCOUNT_COUNT; account++) {
+                try {
+                    ConnectionsManager.getInstance(account).checkConnection();
+                } catch (Throwable error) {
+                    Log.w(TAG, "Unable to refresh network after enabling local bypass", error);
+                }
+            }
+            return true;'''
+                inject_new2 = '''            ConnectionsManager.setProxySettings(true, createLocalSettings(port));
+            for (int account = 0; account < UserConfig.MAX_ACCOUNT_COUNT; account++) {
+                try {
+                    ConnectionsManager.getInstance(account).checkConnection();
+                } catch (Throwable error) {
+                    Log.w(TAG, "Unable to refresh network after enabling local bypass", error);
+                }
+            }
+            try {
+                NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.proxySettingsChanged);
+                if (SharedConfig.currentProxy != null) {
+                    SharedConfig.currentProxy.available = true;
+                    SharedConfig.currentProxy.checking = false;
+                    SharedConfig.currentProxy.ping = 1;
+                    NotificationCenter.getGlobalInstance().postNotificationName(
+                            NotificationCenter.proxyCheckDone, SharedConfig.currentProxy);
+                }
+            } catch (Throwable ignore) {
+            }
+            return true;'''
+                if inject_old2 in t:
+                    t = t.replace(inject_old2, inject_new2, 1)
+                    changed = True
+                    print("setEnabled notifications injected (v2)")
+                else:
+                    print("WARN setEnabled notifications")
 
     if changed:
         path.write_text(t, encoding="utf-8")
