@@ -51,8 +51,8 @@ public final class TelegaGlassDialogs {
             shaderHeight = height;
             shaderDark = dark;
             int[] colors = dark
-                    ? new int[]{0x2AFFFFFF, 0x1E4D7898, 0x14314F6A, 0x22FFFFFF}
-                    : new int[]{0x45FFFFFF, 0x30E8F5FF, 0x22B9D9EF, 0x52FFFFFF};
+                    ? new int[]{0x30FFFFFF, 0x214D7898, 0x16314F6A, 0x28FFFFFF}
+                    : new int[]{0x4BFFFFFF, 0x35DFF2FC, 0x26B4D9EA, 0x5BFFFFFF};
             surfaceShader = new LinearGradient(0, 0, 0, height, colors,
                     new float[]{0f, 0.32f, 0.72f, 1f}, Shader.TileMode.CLAMP);
         }
@@ -74,12 +74,12 @@ public final class TelegaGlassDialogs {
         surface.setShader(null);
 
         rim.setColor(view.isPressed() ? (dark ? 0x70A8D9FF : 0xB8FFFFFF)
-                : (dark ? 0x3CFFFFFF : 0x90FFFFFF));
+                : (dark ? 0x42FFFFFF : 0x98FFFFFF));
         canvas.drawRoundRect(rect, radius, radius, rim);
         innerRect.set(left + AndroidUtilities.dp(1), top + AndroidUtilities.dp(1),
                 right - AndroidUtilities.dp(1), bottom - AndroidUtilities.dp(1));
         rim.setStrokeWidth(Math.max(1f, AndroidUtilities.density * 0.45f));
-        rim.setColor(dark ? 0x1CFFFFFF : 0x48FFFFFF);
+        rim.setColor(dark ? 0x20FFFFFF : 0x50FFFFFF);
         canvas.drawRoundRect(innerRect, Math.max(0, radius - AndroidUtilities.dp(1)),
                 Math.max(0, radius - AndroidUtilities.dp(1)), rim);
         rim.setStrokeWidth(Math.max(1f, AndroidUtilities.density * 0.7f));
