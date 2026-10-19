@@ -140,7 +140,7 @@ public class TelegaLocalBypassSettingsActivity extends BaseFragment {
             toast("Не удалось запустить локальный прокси. Обычные настройки сохранены.", true);
         } else if (enabled) {
             if (status != null) {
-                status.setText("Проверяю реальный маршрут Telegram через локальный прокси…");
+                status.setText("Проверяю WSS-маршрут и сессию Telegram…");
             }
             TelegaLocalBypassProxy.checkLocalEndpoint(TelegaLocalBypassProxy.getPort(), elapsed -> {
                 if (!TelegaSettings.isLocalBypassEnabled()) return;
@@ -160,8 +160,7 @@ public class TelegaLocalBypassSettingsActivity extends BaseFragment {
                     return;
                 }
                 if (status == null || context == null) return;
-                status.setText("Маршрут Telegram отвечает через 127.0.0.1:"
-                        + TelegaLocalBypassProxy.getPort() + " (" + elapsed + " мс).");
+                confirmNativeSession(TelegaLocalBypassProxy.getPort(), elapsed, 0);
             });
             toast("Обход включён; проверяю соединение с Telegram", false);
         } else {
@@ -176,7 +175,8 @@ public class TelegaLocalBypassSettingsActivity extends BaseFragment {
         }
         connectButton.setEnabled(false);
         connectButton.setText("Подключение…");
-        boolean connected = TelegaLocalBypassProxy.setEnabled(true);
+        boolean connected = TelegaSettings.isLocalBypassEnabled() && TelegaLocalBypassProxy.isRunning();
+        if (!connected) connected = TelegaLocalBypassProxy.setEnabled(true);
         if (toggle != null) {
             toggle.setChecked(connected);
         }
@@ -201,7 +201,7 @@ public class TelegaLocalBypassSettingsActivity extends BaseFragment {
             return;
         }
         if (status != null) {
-            status.setText("Проверяю маршрут через 127.0.0.1:" + probePort + "…");
+            status.setText("Проверяю WSS-маршрут и сессию Telegram…");
         }
         TelegaLocalBypassProxy.checkLocalEndpoint(probePort, elapsed -> {
             if (!TelegaSettings.isLocalBypassEnabled()) return;
@@ -222,13 +222,37 @@ public class TelegaLocalBypassSettingsActivity extends BaseFragment {
                 return;
             }
             if (connectButton == null || context == null) return;
+            confirmNativeSession(probePort, elapsed, 0);
+        });
+    }
+
+    private void confirmNativeSession(int port, long handshakeMillis, int attempt) {
+        if (!TelegaSettings.isLocalBypassEnabled() || !TelegaLocalBypassProxy.isRunning()) return;
+        int state = org.telegram.tgnet.ConnectionsManager.getInstance(currentAccount).getConnectionState();
+        if (state == org.telegram.tgnet.ConnectionsManager.ConnectionStateConnected
+                || state == org.telegram.tgnet.ConnectionsManager.ConnectionStateUpdating) {
+            if (connectButton != null) {
+                connectButton.setText("Подключено");
+                connectButton.setEnabled(false);
+            }
+            if (status != null) status.setText("Сессия Telegram подключена через 127.0.0.1:" + port
+                    + ". WSS-рукопожатие: " + handshakeMillis + " мс (это не ping Telegram).");
+            return;
+        }
+        if (attempt < 20) {
+            AndroidUtilities.runOnUIThread(() -> confirmNativeSession(port, handshakeMillis, attempt + 1), 500);
+            return;
+        }
+        String failure = "WSS-маршрут ответил, но сессия Telegram не подключилась. Обход выключен, чтобы не показывать ложный статус.";
+        TelegaLocalBypassProxy.setEnabled(false);
+        if (toggle != null) toggle.setChecked(false);
+        if (connectButton != null) {
+            connectButton.setVisibility(View.VISIBLE);
             connectButton.setEnabled(true);
             connectButton.setText("Подключить");
-            if (status != null) {
-                status.setText("Маршрут Telegram отвечает через 127.0.0.1:" + probePort + " (" + elapsed + " мс).");
-            }
-            toast("Проверка маршрута Telegram пройдена.", false);
-        });
+        }
+        if (status != null) status.setText(failure);
+        if (context != null) toast(failure, true);
     }
 
     @Override
