@@ -11537,14 +11537,17 @@
     <string name="CreateManagedBotUsernameCheckFailed">Couldn\'t check this username. Please try again.</string>
     <string name="GhostModeIllustrationDescription">Ghost mode illustration</string>
     <string name="GhostModeTitle">Ghost mode</string>
-    <string name="GhostModeStoriesTitle">Invisible story viewing</string>
-    <string name="GhostModeStoriesDescription">Enables Telegram’s server-side stealth mode for story views. The server limits how long it remains active; reactions and replies may reveal that you viewed a story.</string>
+    <string name="GhostModeStoriesTitle">Ghost mode</string>
+    <string name="GhostModeStoriesDescription">Hides last-seen time for everyone and stops this Telega installation from sending regular message read acknowledgements. Telegram may still show online activity in some circumstances, and other devices are not controlled.</string>
     <string name="GhostModeStatusUnverified">Status not checked</string>
-    <string name="GhostModeActivate">Enable invisibility</string>
-    <string name="GhostModeRequesting">Sending request…</string>
+    <string name="GhostModeActivate">Enable ghost mode</string>
+    <string name="GhostModeDeactivate">Disable ghost mode</string>
+    <string name="GhostModeEnabled">Ghost mode enabled: last-seen privacy and local read-acknowledgement suppression are active.</string>
+    <string name="GhostModeDisabled">Ghost mode disabled and previous last-seen privacy restored.</string>
+    <string name="GhostModeRequesting">Applying privacy settings…</string>
     <string name="GhostModeRequestAcceptedUnverified">Request accepted by server; mode status is not confirmed by the client</string>
     <string name="GhostModeActivationError">Could not confirm mode activation</string>
-    <string name="GhostModeLimitation">This screen controls story invisibility only. Hiding read receipts for regular messages, online status, and typing indicators is not implemented here.</string>
+    <string name="GhostModeLimitation">Read acknowledgements are suppressed only in this Telega installation. Telegram can still show you as online briefly when you interact, and other logged-in devices may send read acknowledgements. No client can guarantee total invisibility against server-side rules.</string>
     <string name="GhostModeRequestAcceptedToast">Request to hide story views accepted</string>
     <string name="GhostModeErrorPrefix">Error: </string>
 </resources>
