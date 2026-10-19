@@ -257,13 +257,12 @@ public final class TelegaLocalBypassProxy {
                 } else {
                     throw new IOException("Неизвестный тип адреса в ответе SOCKS5");
                 }
-                SSLSocket tls = (SSLSocket) SSLContext.getDefault().getSocketFactory()
-                        .createSocket(socket, "kws1.web.telegram.org", 443, true);
-                tls.setSoTimeout(CONNECT_TIMEOUT_MS);
-                SSLParameters tlsParameters = tls.getSSLParameters();
-                tlsParameters.setServerNames(Collections.singletonList(new SNIHostName("kws1.web.telegram.org")));
-                tls.setSSLParameters(tlsParameters);
-                tls.startHandshake();
+                readExact(input, 2); // Consume the SOCKS5 bound port before closing the probe socket.
+
+                // This endpoint transports obfuscated MTProto inside WSS; it is not a raw
+                // TCP tunnel. A TLS handshake sent here is interpreted as an invalid MTProto
+                // init and falsely reports a healthy WSS route as broken. The proxy sends
+                // SOCKS5 success only after connectUpstream() completes the WSS handshake.
                 result = Math.max(1L, System.currentTimeMillis() - started);
                 routeVerified = true;
                 lastRouteError = null;
