@@ -265,14 +265,17 @@
     <string name="RemindDayYearAt">\'Напомнить\' d MMM yyyy \'в\' HH:mm</string>
     <string name="GhostModeIllustrationDescription">Иллюстрация режима призрака</string>
     <string name="GhostModeTitle">Призрак</string>
-    <string name="GhostModeStoriesTitle">Невидимость в историях</string>
-    <string name="GhostModeStoriesDescription">Включает серверный режим скрытого просмотра историй. Сервер ограничивает действие по времени; реакции и ответы могут раскрыть просмотр.</string>
+    <string name="GhostModeStoriesTitle">Режим призрака</string>
+    <string name="GhostModeStoriesDescription">Скрывает время последней активности от всех и блокирует отправку обычных отметок о прочтении из этой установки Telega. В некоторых случаях Telegram всё ещё может показывать статус «в сети»; другие устройства не контролируются.</string>
     <string name="GhostModeStatusUnverified">Статус не проверен</string>
-    <string name="GhostModeActivate">Включить невидимость</string>
-    <string name="GhostModeRequesting">Выполняется запрос…</string>
+    <string name="GhostModeActivate">Включить режим призрака</string>
+    <string name="GhostModeDeactivate">Выключить режим призрака</string>
+    <string name="GhostModeEnabled">Режим призрака включён: время активности скрыто, отправка отметок о прочтении из этой Telega отключена.</string>
+    <string name="GhostModeDisabled">Режим призрака выключен, прежние настройки времени активности восстановлены.</string>
+    <string name="GhostModeRequesting">Применяю настройки приватности…</string>
     <string name="GhostModeRequestAcceptedUnverified">Запрос принят сервером; состояние режима не подтверждено клиентом</string>
     <string name="GhostModeActivationError">Не удалось подтвердить активацию режима</string>
-    <string name="GhostModeLimitation">Этот экран управляет только невидимостью историй. Скрытие прочтения обычных сообщений, статуса «в сети» и индикатора набора текста здесь не реализовано.</string>
+    <string name="GhostModeLimitation">Отметки о прочтении отключаются только в этой установке Telega. Telegram всё ещё может ненадолго показывать статус «в сети» при взаимодействии, а другие устройства могут отправлять отметки о прочтении. Полную невидимость серверные правила не гарантируют.</string>
     <string name="GhostModeRequestAcceptedToast">Запрос на невидимость историй принят</string>
     <string name="GhostModeErrorPrefix">Ошибка: </string>
 </resources>
