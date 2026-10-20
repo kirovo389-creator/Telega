@@ -286,6 +286,9 @@ import me.vkryl.android.animator.FactorAnimator;
 import me.vkryl.android.util.ClickHelper;
 
 public class DialogsActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate, FloatingDebugProvider, FactorAnimator.Target, MainTabsActivity.TabFragmentDelegate {
+    // Virtual tab: opens MAX's first-party web client, never a Telegram dialog.
+    private static final int TELEGA_MAX_TAB_ID = 2147483646;
+
     private static final int REQUEST_TELEGA_DIALOG_WALLPAPER = 9583;
 
     private final int ADDITIONAL_LIST_HEIGHT_DP = Build.VERSION.SDK_INT >= 31 ? 48 : 0;
@@ -3617,6 +3620,16 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
                 @Override
                 public void onPageSelected(FilterTabsView.Tab tab, boolean forward) {
+                    if (tab.id == TELEGA_MAX_TAB_ID) {
+                        // Restore the real Telegram folder indicator. MAX has its own
+                        // isolated workspace and must not become a synthetic TG dialog.
+                        int restoreTabId = viewPages[0].selectedType;
+                        if (filterTabsView.hasTab(restoreTabId)) {
+                            filterTabsView.selectTabWithId(restoreTabId, 1.0f);
+                        }
+                        presentFragment(new TelegaMaxActivity());
+                        return;
+                    }
                     if (viewPages[0].selectedType == tab.id) {
                         return;
                     }
@@ -3686,6 +3699,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
                 @Override
                 public boolean didSelectTab(FilterTabsView.TabView tabView, boolean selected) {
+                    if (tabView.getId() == TELEGA_MAX_TAB_ID) {
+                        return false;
+                    }
                     if (initialDialogsType != DIALOGS_TYPE_DEFAULT) {
                         return false;
                     }
@@ -6885,6 +6901,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                         filterTabsView.addTab(a, filter.localId, filter.name, filter.entities, filter.title_noanimate, false, filters.get(a).locked);
                     }
                 }
+                filterTabsView.addTab(TELEGA_MAX_TAB_ID, TELEGA_MAX_TAB_ID, "MAX", false, false, false);
                 if (stableId >= 0) {
                     if (selectWithStableId) {
                         if (!filterTabsView.selectTabWithStableId(stableId)) {
