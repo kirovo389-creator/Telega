@@ -31,13 +31,13 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android NDK
-        run: sdkmanager "ndk;27.2.12479018" "build-tools;36.0.0" "platforms;android-36"
+      - name: Install Android SDK components
+        run: sdkmanager "ndk;27.2.12479018" "build-tools;36.0.0" "platforms;android-36" "cmake;3.22.1"
 
       - name: Build universal debug APK
         run: |
           chmod +x ./gradlew
-          ./gradlew --no-daemon :TMessagesProj_App:assembleBundleAfatDebug
+          ./gradlew --no-daemon :TMessagesProj_App:assembleAfatDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
