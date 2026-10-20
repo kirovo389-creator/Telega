@@ -2,10 +2,9 @@ package org.telegram.ui;
 
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
-import android.graphics.Color;
 import android.net.Uri;
 import android.net.http.SslError;
-import android.os.Build;
+import android.content.Context;
 import android.view.Gravity;
 import android.view.View;
 import android.webkit.CookieManager;
@@ -27,8 +26,6 @@ import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.LayoutHelper;
-
-import android.content.Context;
 
 /**
  * MAX workspace backed by the official MAX Web client.
@@ -285,6 +282,7 @@ public class TelegaMaxActivity extends BaseFragment {
             filePathCallback.onReceiveValue(null);
             filePathCallback = null;
         }
+        CookieManager.getInstance().flush();
         if (webView != null) {
             webView.stopLoading();
             webView.setWebChromeClient(null);
