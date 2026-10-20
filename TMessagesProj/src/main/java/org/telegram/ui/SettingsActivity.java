@@ -764,17 +764,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
     }
 
     private void openMax() {
-        final Activity activity = getParentActivity();
-        if (activity == null) {
-            return;
-        }
-        final Intent intent = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://max.ru"));
-        try {
-            activity.startActivity(intent);
-        } catch (Exception e) {
-            FileLog.e(e);
-            Toast.makeText(activity, "Не удалось открыть MAX. Проверьте наличие браузера.", Toast.LENGTH_LONG).show();
-        }
+        presentSettingFragment(new MaxBotActivity());
     }
 
     private void presentSettingFragment(BaseFragment fragment) {
