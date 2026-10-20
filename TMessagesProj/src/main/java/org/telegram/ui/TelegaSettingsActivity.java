@@ -41,6 +41,7 @@ public class TelegaSettingsActivity extends BaseFragment {
     private int proxyRow;
     private int profileRow;
     private int customRow;
+    private int maxRow;
     private int footerRow;
     private int rowCount;
 
@@ -56,6 +57,7 @@ public class TelegaSettingsActivity extends BaseFragment {
         proxyRow = rowCount++;
         profileRow = rowCount++;
         customRow = rowCount++;
+        maxRow = rowCount++;
         footerRow = rowCount++;
         return true;
     }
@@ -103,6 +105,8 @@ public class TelegaSettingsActivity extends BaseFragment {
                 presentFragment(new TelegaCustomizationActivity());
             } else if (position == profileRow) {
                 presentFragment(new TelegaProfileSettingsActivity());
+            } else if (position == maxRow) {
+                presentFragment(new TelegaMaxActivity());
             }
         });
 
@@ -161,7 +165,7 @@ public class TelegaSettingsActivity extends BaseFragment {
             if (holder.getItemViewType() != 1) return;
             CategoryCell cell = (CategoryCell) holder.itemView;
             boolean first = position == messagesRow;
-            boolean last = position == customRow;
+            boolean last = position == maxRow;
             if (position == messagesRow) {
                 cell.setData(R.drawable.telega_ic_chat, "Сообщения", "Удалённые и изменённые", first, last);
             } else if (position == archiveRow) {
@@ -176,6 +180,8 @@ public class TelegaSettingsActivity extends BaseFragment {
                 cell.setData(R.drawable.telega_ic_user, "Профиль", "Истории и настройки профиля", first, last);
             } else if (position == customRow) {
                 cell.setData(R.drawable.telega_ic_snow, "Эффекты", "Снег, дождь, звёзды и стекло", first, last);
+            } else if (position == maxRow) {
+                cell.setData(R.drawable.telega_ic_chat, "MAX", "Открыть официальный MAX в Telega", first, last);
             }
         }
     }
