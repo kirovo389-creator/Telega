@@ -614,7 +614,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                                 break;
                             }
                             case "settings2": {
-                                actionBarLayout.addFragmentToStack(new SettingsActivity());
+                                actionBarLayout.addFragmentToStack(new TelegaSettingsActivity());
                                 break;
                             }
                             case "group":
@@ -3136,7 +3136,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                 BaseFragment fragment;
                 boolean closePrevious = false;
                 if (open_settings == 1) {
-                    fragment = new SettingsActivity();
+                    fragment = new TelegaSettingsActivity();
                 } else if (open_settings == 2) {
                     fragment = new ThemeActivity(ThemeActivity.THEME_TYPE_BASIC);
                 } else if (open_settings == 3) {
