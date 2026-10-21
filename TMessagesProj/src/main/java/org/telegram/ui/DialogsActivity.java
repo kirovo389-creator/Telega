@@ -7064,7 +7064,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         if (maxTabOpened) {
             maxTabOpened = false;
             // Read from the server rather than refreshing only the cached folder.
-            getMessagesController().loadDialogs(folderId, 0, 100, false);
+            getMessagesController().loadDialogs(folderId, -1, 100, false);
             if (viewPages != null) {
                 for (int i = 0; i < viewPages.length; i++) {
                     if (viewPages[i].dialogsAdapter != null) {
