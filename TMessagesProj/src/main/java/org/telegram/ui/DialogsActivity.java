@@ -3631,7 +3631,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                             filterTabsView.selectTabWithId(restoreTabId, 1.0f);
                         }
                         maxTabOpened = true;
-                        presentFragment(new TelegaMaxActivity().setOnExitCallback(this::refreshDialogsAfterMax));
+                        presentFragment(new TelegaMaxActivity().setOnExitCallback(DialogsActivity.this::refreshDialogsAfterMax));
                         return;
                     }
                     if (viewPages[0].selectedType == tab.id) {
