@@ -288,6 +288,7 @@ import me.vkryl.android.util.ClickHelper;
 public class DialogsActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate, FloatingDebugProvider, FactorAnimator.Target, MainTabsActivity.TabFragmentDelegate {
     // Virtual tab: opens MAX's first-party web client, never a Telegram dialog.
     private static final int TELEGA_MAX_TAB_ID = 2147483646;
+    private static boolean maxTabOpened;
 
     private static final int REQUEST_TELEGA_DIALOG_WALLPAPER = 9583;
 
@@ -3627,6 +3628,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                         if (filterTabsView.hasTab(restoreTabId)) {
                             filterTabsView.selectTabWithId(restoreTabId, 1.0f);
                         }
+                        maxTabOpened = true;
                         presentFragment(new TelegaMaxActivity());
                         return;
                     }
@@ -7039,6 +7041,19 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     @Override
     public void onResume() {
         super.onResume();
+        // MAX runs in a separate WebView. Refresh Telegram's dialog cache when
+        // returning from it so the list does not require switching folders.
+        if (maxTabOpened) {
+            maxTabOpened = false;
+            getMessagesController().loadDialogs(folderId, 0, 100, true);
+            if (viewPages != null) {
+                for (int i = 0; i < viewPages.length; i++) {
+                    if (viewPages[i].dialogsAdapter != null) {
+                        viewPages[i].dialogsAdapter.notifyDataSetChanged();
+                    }
+                }
+            }
+        }
         if (dialogStoriesCell != null) {
             dialogStoriesCell.onResume();
         }
