@@ -7065,6 +7065,11 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             maxTabOpened = false;
             // Read from the server rather than refreshing only the cached folder.
             getMessagesController().loadDialogs(folderId, 0, 100, false);
+            // A fragment can remain alive while the MAX WebView is on top. In that
+            // case adapter notifications alone do not rebuild the dialog rows: ask
+            // the existing dialogs observer to reload each page from the controller's
+            // current model, preserving the selected folder and scroll state.
+            NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.dialogsNeedReload);
             if (viewPages != null) {
                 for (int i = 0; i < viewPages.length; i++) {
                     if (viewPages[i].dialogsAdapter != null) {
