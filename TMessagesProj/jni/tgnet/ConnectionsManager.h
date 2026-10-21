@@ -61,6 +61,7 @@ public:
     void setDelegate(ConnectiosManagerDelegate *connectiosManagerDelegate);
     ConnectionState getConnectionState();
     void setUserId(int64_t userId);
+    bool importAuthorizationKey(int32_t datacenterId, const uint8_t *authKey, uint32_t authKeyLength);
     void setUserPremium(bool premium);
     void switchBackend(bool restart);
     void resumeNetwork(bool partial);
