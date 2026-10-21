@@ -289,6 +289,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     // Virtual tab: opens MAX's first-party web client, never a Telegram dialog.
     private static final int TELEGA_MAX_TAB_ID = 2147483646;
     private static boolean maxTabOpened;
+    // Select the All Chats folder once after each fresh app process starts.
+    private static boolean selectAllChatsOnStartup = true;
 
     private static final int REQUEST_TELEGA_DIALOG_WALLPAPER = 9583;
 
@@ -6927,7 +6929,23 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     viewPages[a].listView.setScrollingTouchSlop(RecyclerView.TOUCH_SLOP_PAGING);
                 }
                 filterTabsView.finishAddingTabs(animatedUpdateItems);
-                if (updateCurrentTab) {
+                if (selectAllChatsOnStartup) {
+                    int allChatsTabId = -1;
+                    for (int a = 0; a < filters.size(); a++) {
+                        if (filters.get(a).isDefault()) {
+                            allChatsTabId = a;
+                            break;
+                        }
+                    }
+                    if (allChatsTabId >= 0 && filterTabsView.hasTab(allChatsTabId)) {
+                        selectAllChatsOnStartup = false;
+                        filterTabsView.selectTabWithId(allChatsTabId, 1.0f);
+                        for (int a = 0; a < viewPages.length; a++) {
+                            viewPages[a].selectedType = allChatsTabId;
+                        }
+                        switchToCurrentSelectedMode(false);
+                    }
+                } else if (updateCurrentTab) {
                     switchToCurrentSelectedMode(false);
                 }
                 if (filterTabsView.isLocked(filterTabsView.getCurrentTabId())) {
@@ -7045,11 +7063,13 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         // returning from it so the list does not require switching folders.
         if (maxTabOpened) {
             maxTabOpened = false;
-            getMessagesController().loadDialogs(folderId, 0, 100, true);
+            // Read from the server rather than refreshing only the cached folder.
+            getMessagesController().loadDialogs(folderId, 0, 100, false);
             if (viewPages != null) {
                 for (int i = 0; i < viewPages.length; i++) {
                     if (viewPages[i].dialogsAdapter != null) {
                         viewPages[i].dialogsAdapter.notifyDataSetChanged();
+                        viewPages[i].updateList(true);
                     }
                 }
             }
