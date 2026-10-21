@@ -8,7 +8,6 @@ import android.content.SharedPreferences;
 import org.telegram.tgnet.SerializedData;
 import org.telegram.tgnet.TLRPC;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 public class AuthTokensHelper {
