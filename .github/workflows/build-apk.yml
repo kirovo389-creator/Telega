@@ -1,6 +1,9 @@
 name: Build Telega APK
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       ref:
@@ -10,7 +13,7 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -19,7 +22,7 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.ref || github.sha }}
           submodules: recursive
 
       - name: Prepare Telega application identity
@@ -53,10 +56,33 @@ jobs:
           chmod +x ./gradlew
           ./gradlew --no-daemon :TMessagesProj_App:assembleAfatDebug
 
-      - name: Upload APK
+      - name: Prepare APK for distribution
+        run: |
+          set -euo pipefail
+          APK_PATH="$(find TMessagesProj_App/build/outputs/apk -type f -name '*.apk' | sort | head -n 1)"
+          if [ -z "$APK_PATH" ]; then
+            echo "APK was not produced"
+            exit 1
+          fi
+          cp "$APK_PATH" Telega-universal-debug.apk
+          test -s Telega-universal-debug.apk
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Telega-debug-universal
-          path: TMessagesProj_App/build/outputs/apk/**/*.apk
+          path: Telega-universal-debug.apk
           if-no-files-found: error
           retention-days: 7
+
+      - name: Publish APK to GitHub Releases
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: telega-build-${{ github.run_number }}
+          name: Telega APK build ${{ github.run_number }}
+          body: |
+            Automated universal debug APK build.
+            Source commit: ${{ github.sha }}
+          files: Telega-universal-debug.apk
+          prerelease: true
