@@ -224,15 +224,6 @@ public class TelegaCustomizationActivity extends BaseFragment {
         avatarFrameCard.addView(avatarFrameInfo,
                 lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0, 0, 0, 0));
 
-        addSectionTitle(content, "Редактор интерфейса");
-        LinearLayout editorCard = newCard();
-        content.addView(editorCard, lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 16, 4, 16, 0));
-        TextView editorButton = text("Открыть редактор   ›", 16, 1f);
-        editorButton.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(16));
-        editorButton.setOnClickListener(v -> presentFragment(new TelegaEditorActivity()));
-        editorCard.addView(editorButton, lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0, 0, 0, 0));
-        addDescription(content, "Изменяй текст, положение, размер и наклон элементов профиля, чатов и главной страницы. Изменения хранятся локально в Telega.");
-
         minecraftSnowCell.setOnClickListener(v -> {
             int next = TelegaSettings.getSnowMode() == TelegaSettings.SNOW_MINECRAFT
                     ? TelegaSettings.SNOW_OFF : TelegaSettings.SNOW_MINECRAFT;

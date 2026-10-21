@@ -283,7 +283,6 @@ public abstract class BaseFragment {
     @CallSuper
     protected void onViewCreated(View view) {
         glassEngine.setRoot(view);
-        org.telegram.ui.Components.TelegaVisualEditor.attach(this, view);
     }
 
     protected View createView(Context context) {
@@ -508,7 +507,6 @@ public abstract class BaseFragment {
 
     @CallSuper
     public void onFragmentDestroy() {
-        org.telegram.ui.Components.TelegaVisualEditor.detach(this);
         getConnectionsManager().cancelRequestsForGuid(classGuid);
         getMessagesStorage().cancelTasksForGuid(classGuid);
         isFinished = true;
@@ -621,7 +619,6 @@ public abstract class BaseFragment {
     }
 
     public void onActivityResultFragment(int requestCode, int resultCode, Intent data) {
-        org.telegram.ui.Components.TelegaVisualEditor.onActivityResult(this, requestCode, resultCode, data);
     }
 
     public void onRequestPermissionsResultFragment(int requestCode, String[] permissions, int[] grantResults) {
