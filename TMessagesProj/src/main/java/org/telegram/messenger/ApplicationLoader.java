@@ -262,6 +262,27 @@ public class ApplicationLoader extends Application {
             }
         }
 
+        // Re-apply the local Telegram WSS transport after native account/network
+        // initialization. The preference survives process death, but the in-process
+        // SOCKS listener does not; without restoration the toggle can remain enabled
+        // while Telegram silently uses no local route.
+        if (TelegaSettings.isLocalBypassEnabled()) {
+            try {
+                int localProxyPort = TelegaLocalBypassProxy.setEnabled(true)
+                        ? TelegaLocalBypassProxy.getPort() : 0;
+                if (localProxyPort > 0) {
+                    TelegaLocalBypassProxy.checkLocalEndpoint(localProxyPort, elapsed -> {
+                        if (elapsed <= 0) {
+                            FileLog.w("Local bypass restored but upstream route is not reachable: "
+                                    + TelegaLocalBypassProxy.getLastRouteError());
+                        }
+                    });
+                }
+            } catch (Throwable error) {
+                FileLog.e("Unable to restore local Telegram bypass after startup", error);
+            }
+        }
+
         ApplicationLoader app = (ApplicationLoader) ApplicationLoader.applicationContext;
         app.initPushServices();
         if (BuildVars.LOGS_ENABLED) {
