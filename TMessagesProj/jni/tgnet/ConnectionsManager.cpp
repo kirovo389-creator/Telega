@@ -11,6 +11,7 @@
 #include <sys/eventfd.h>
 #include <unistd.h>
 #include <chrono>
+#include <future>
 #include <algorithm>
 #include <fcntl.h>
 #include <memory.h>
@@ -2011,6 +2012,55 @@ void ConnectionsManager::setUserPremium(bool premium) {
     scheduleTask([&, premium] {
         currentUserPremium = premium;
     });
+}
+
+bool ConnectionsManager::importAuthorizationKey(int32_t datacenterId, const uint8_t *authKey, uint32_t authKeyLength) {
+    if (datacenterId < 1 || datacenterId > 5 || authKey == nullptr || authKeyLength != 256) {
+        return false;
+    }
+    std::vector<uint8_t> keyCopy(authKey, authKey + authKeyLength);
+    auto completion = std::make_shared<std::promise<bool>>();
+    auto result = completion->get_future();
+    auto timedOut = std::make_shared<std::atomic<bool>>(false);
+    scheduleTask([this, datacenterId, keyCopy = std::move(keyCopy), completion, timedOut]() mutable {
+        bool imported = false;
+        try {
+            if (!timedOut->load()) {
+                initDatacenters();
+                Datacenter *target = getDatacenterWithId((uint32_t) datacenterId);
+                if (target != nullptr) {
+                    // This operation is only exposed for an inactive account. Remove
+                    // leftover native credentials before installing the selected DC key.
+                    for (auto &entry : datacenters) {
+                        entry.second->suspendConnections(true);
+                        entry.second->recreateSessions(HandshakeTypeAll);
+                        entry.second->clearAuthorization();
+                    }
+                    imported = target->importPermanentAuthKey(keyCopy.data(), (uint32_t) keyCopy.size());
+                    if (imported) {
+                        currentDatacenterId = (uint32_t) datacenterId;
+                        movingToDatacenterId = DEFAULT_DATACENTER_ID;
+                        currentUserId = 0;
+                        currentUserPremium = false;
+                        registeredForInternalPush = false;
+                        saveConfig();
+                    }
+                }
+            }
+        } catch (...) {
+            imported = false;
+        }
+        std::fill(keyCopy.begin(), keyCopy.end(), 0);
+        try {
+            completion->set_value(imported);
+        } catch (...) {
+        }
+    });
+    if (result.wait_for(std::chrono::seconds(8)) != std::future_status::ready) {
+        timedOut->store(true);
+        return false;
+    }
+    return result.get();
 }
 
 void ConnectionsManager::setUserId(int64_t userId) {
