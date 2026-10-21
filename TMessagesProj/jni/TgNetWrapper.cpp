@@ -254,6 +254,20 @@ void setUserId(JNIEnv *env, jclass c, jint instanceNum, int64_t id) {
     ConnectionsManager::getInstance(instanceNum).setUserId(id);
 }
 
+jboolean importAuthorizationKey(JNIEnv *env, jclass c, jint instanceNum, jint datacenterId, jbyteArray authKeyArray) {
+    if (authKeyArray == nullptr || env->GetArrayLength(authKeyArray) != 256) {
+        return JNI_FALSE;
+    }
+    jbyte *key = env->GetByteArrayElements(authKeyArray, nullptr);
+    if (key == nullptr) {
+        return JNI_FALSE;
+    }
+    bool imported = ConnectionsManager::getInstance(instanceNum).importAuthorizationKey(
+            (int32_t) datacenterId, reinterpret_cast<const uint8_t *>(key), (uint32_t) env->GetArrayLength(authKeyArray));
+    env->ReleaseByteArrayElements(authKeyArray, key, JNI_ABORT);
+    return imported ? JNI_TRUE : JNI_FALSE;
+}
+
 void setUserPremium(JNIEnv *env, jclass c, jint instanceNum, bool premium) {
     ConnectionsManager::getInstance(instanceNum).setUserPremium(premium);
 }
@@ -540,6 +554,7 @@ static JNINativeMethod ConnectionsManagerMethods[] = {
         {"native_setProxySettings", "(ILjava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V", (void *) setProxySettings},
         {"native_getConnectionState", "(I)I", (void *) getConnectionState},
         {"native_setUserId", "(IJ)V", (void *) setUserId},
+        {"native_importAuthorizationKey", "(II[B)Z", (void *) importAuthorizationKey},
         {"native_init", "(IIIILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IJZZZII)V", (void *) init},
         {"native_setLangCode", "(ILjava/lang/String;)V", (void *) setLangCode},
         {"native_setRegId", "(ILjava/lang/String;)V", (void *) setRegId},
