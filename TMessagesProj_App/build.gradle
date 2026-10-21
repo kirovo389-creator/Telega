@@ -73,7 +73,9 @@ android {
             debuggable true
             jniDebuggable true
             signingConfig signingConfigs.debug
-            applicationIdSuffix ".beta"
+            // Keep the same application ID as the release so debug and release are the same app.
+            // This makes debug builds replace existing Telega installs instead of installing as Telegram Beta.
+            applicationIdSuffix ""
             minifyEnabled false
             shrinkResources false
             multiDexEnabled true
