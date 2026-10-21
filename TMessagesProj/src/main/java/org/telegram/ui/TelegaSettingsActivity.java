@@ -181,7 +181,7 @@ public class TelegaSettingsActivity extends BaseFragment {
             } else if (position == customRow) {
                 cell.setData(R.drawable.telega_ic_snow, "Эффекты", "Снег, дождь, звёзды и стекло", first, last);
             } else if (position == maxRow) {
-                cell.setData(R.drawable.telega_ic_chat, "MAX", "Открыть официальный MAX в Telega", first, last);
+                cell.setData(R.drawable.telega_ic_chat, "Страница MAX", "Официальная веб-версия MAX и вход в аккаунт", first, last);
             }
         }
     }
