@@ -4,6 +4,15 @@ Telega is an unofficial Android messaging client based on the open-source Telegr
 
 Internal Java classes still use the upstream `org.telegram.*` namespace. Those names identify source classes and must not be globally renamed independently of their source packages.
 
+## Android APK builds
+
+Each update to `main` starts the GitHub Actions workflow that builds the universal debug APK. When the build succeeds, the APK is attached to a prerelease on GitHub Releases.
+
+- [Download the latest Telega APK](https://github.com/Kirovo389-creator/Telega/releases)
+- [View APK build workflow](https://github.com/Kirovo389-creator/Telega/actions/workflows/build-apk.yml)
+
+The APK is a debug build, not a production-signed release.
+
 ## Configuring Telega
 
 We welcome all developers to use our API and source code to create applications on our platform.
