@@ -1,6 +1,35 @@
 name: Build Telega APK
 
 on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'fix/**'
+    paths:
+      - '.github/workflows/build-apk.yml'
+      - '.gitmodules'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - 'gradle/**'
+      - 'gradle.properties'
+      - 'buildSrc/**'
+      - 'TMessagesProj/**'
+      - 'TMessagesProj_App/**'
+      - 'TMessagesProj_Modules/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-apk.yml'
+      - '.gitmodules'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - 'gradle/**'
+      - 'gradle.properties'
+      - 'buildSrc/**'
+      - 'TMessagesProj/**'
+      - 'TMessagesProj_App/**'
+      - 'TMessagesProj_Modules/**'
   workflow_dispatch:
     inputs:
       ref:
@@ -15,11 +44,12 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.ref || github.sha }}
           submodules: recursive
 
       - name: Set up Java
