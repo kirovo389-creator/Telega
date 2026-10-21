@@ -7,6 +7,7 @@
  */
 
 #include <cassert>
+#include <atomic>
 #include <cstdlib>
 #include <sys/eventfd.h>
 #include <unistd.h>
