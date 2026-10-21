@@ -6,6 +6,12 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/telega-build.yml'
+      - 'gradle.properties'
+      - 'TMessagesProj/google-services.json'
+      - 'TMessagesProj/config/**/AndroidManifest*.xml'
+      - 'TMessagesProj/src/main/AndroidManifest.xml'
+      - 'TMessagesProj_App/build.gradle'
+      - 'scripts/telega_brand.py'
       - 'scripts/**'
       - 'TMessagesProj/src/main/java/org/telegram/ui/Telega*.java'
       - 'TMessagesProj/src/main/java/org/telegram/messenger/Telega*.java'
@@ -138,6 +144,44 @@ jobs:
           python3 scripts/telega_brand.py
           grep -E 'APP_PACKAGE|APP_VERSION' gradle.properties
 
+
+      - name: Verify Telega package identity
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          props = {}
+          for line in Path("gradle.properties").read_text(encoding="utf-8").splitlines():
+              if "=" in line and not line.lstrip().startswith("#"):
+                  key, value = line.split("=", 1)
+                  props[key.strip()] = value.strip()
+          assert props.get("APP_PACKAGE") == "org.telega.messenger", props.get("APP_PACKAGE")
+
+          data = json.loads(Path("TMessagesProj/google-services.json").read_text(encoding="utf-8"))
+          packages = {c.get("client_info", {}).get("android_client_info", {}).get("package_name") for c in data.get("client", [])}
+          expected = {"org.telega.messenger", "org.telega.messenger.beta", "org.telega.messenger.web"}
+          missing = expected - packages
+          if missing:
+              raise SystemExit("Missing Google Services clients: " + ", ".join(sorted(missing)))
+
+          manifests = [
+              "TMessagesProj/src/main/AndroidManifest.xml",
+              "TMessagesProj/config/debug/AndroidManifest.xml",
+              "TMessagesProj/config/debug/AndroidManifest_SDK23.xml",
+              "TMessagesProj/config/release/AndroidManifest.xml",
+              "TMessagesProj/config/release/AndroidManifest_SDK23.xml",
+              "TMessagesProj/config/release/AndroidManifest_standalone.xml",
+          ]
+          for name in manifests:
+              source = Path(name).read_text(encoding="utf-8")
+              match = re.search(r"<service\b[^>]*GcmPushListenerService[^>]*>", source, re.S)
+              if match and 'android:exported="false"' not in match.group(0):
+                  raise SystemExit(f"GcmPushListenerService must be non-exported: {name}")
+          print("Telega application ID, Firebase variant IDs, and push service export flags verified.")
+          PY
 
       - name: Configure Telegram API credentials
         env:

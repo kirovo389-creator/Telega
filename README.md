@@ -1,9 +1,10 @@
-## Telegram messenger for Android
+# Telega for Android
 
-[Telegram](https://telegram.org) is a messaging app with a focus on speed and security. It’s superfast, simple and free.
-This repo contains the official source code for [Telegram App for Android](https://play.google.com/store/apps/details?id=org.telegram.messenger).
+Telega is an unofficial Android messaging client based on the open-source Telegram Android client, with Telega-specific features and branding. The installed application ID is `org.telega.messenger`.
 
-## Creating your Telegram Application
+Internal Java classes still use the upstream `org.telegram.*` namespace. Those names identify source classes and must not be globally renamed independently of their source packages.
+
+## Configuring Telega
 
 We welcome all developers to use our API and source code to create applications on our platform.
 There are several things we require from **all developers** for the moment.
@@ -28,7 +29,7 @@ You will require Android Studio 2025.1.4, Android NDK 27.2.12479018 and Android 
 
 1. Clone the Telegram source code with its submodules:
    ```bash
-   git clone --recursive --shallow-submodules https://github.com/DrKLO/Telegram.git Telegram
+   git clone --recursive --shallow-submodules https://github.com/kirovo389-creator/Telega.git Telega
    ```
    In case you forgot the `--recursive` flag, change to the `Telegram` directory and run:
    ```bash
@@ -36,7 +37,7 @@ You will require Android Studio 2025.1.4, Android NDK 27.2.12479018 and Android 
    ```
 2. Copy your release.keystore into TMessagesProj/config
 3. Fill out RELEASE_KEY_PASSWORD, RELEASE_KEY_ALIAS, RELEASE_STORE_PASSWORD in gradle.properties to access your  release.keystore
-4.  Go to https://console.firebase.google.com/, create two android apps with application IDs org.telegram.messenger and org.telegram.messenger.beta, turn on firebase messaging and download google-services.json, which should be copied to the same folder as TMessagesProj.
+4.  Go to https://console.firebase.google.com/ and register Android apps for `org.telega.messenger`, `org.telega.messenger.beta`, and `org.telega.messenger.web`, enable Firebase Messaging, and place the generated `google-services.json` in `TMessagesProj`.
 5. Open the project in the Studio (note that it should be opened, NOT imported).
 6. Fill out values in TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java – there’s a link for each of the variables showing where and which data to obtain.
 7. You are ready to compile Telegram.

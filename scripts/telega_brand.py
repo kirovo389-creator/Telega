@@ -4,6 +4,11 @@ from pathlib import Path
 import re, json, copy, subprocess, sys
 
 NEW_PKG, OLD_PKG = "org.telega.messenger", "org.telegram.messenger"
+PACKAGE_MAP = (
+    (OLD_PKG, NEW_PKG),
+    (f"{OLD_PKG}.beta", f"{NEW_PKG}.beta"),
+    (f"{OLD_PKG}.web", f"{NEW_PKG}.web"),
+)
 
 # Adaptive XML
 Path("TMessagesProj/src/main/res/mipmap-anydpi-v26").mkdir(parents=True, exist_ok=True)
@@ -125,17 +130,29 @@ for p in Path(".").rglob("google-services.json"):
         continue
     data = json.loads(p.read_text(encoding="utf-8"))
     clients = data.get("client", [])
-    existing, base = set(), None
-    for c in clients:
-        pkg = c.get("client_info", {}).get("android_client_info", {}).get("package_name")
-        if pkg:
-            existing.add(pkg)
-        if pkg == OLD_PKG:
-            base = c
-    if NEW_PKG not in existing and base is not None:
+    existing = {
+        c.get("client_info", {}).get("android_client_info", {}).get("package_name")
+        for c in clients
+    }
+    changed = False
+    for old_pkg, new_pkg in PACKAGE_MAP:
+        if new_pkg in existing:
+            continue
+        base = next(
+            (
+                c for c in clients
+                if c.get("client_info", {}).get("android_client_info", {}).get("package_name") == old_pkg
+            ),
+            None,
+        )
+        if base is None:
+            continue
         extra = copy.deepcopy(base)
-        extra["client_info"]["android_client_info"]["package_name"] = NEW_PKG
+        extra["client_info"]["android_client_info"]["package_name"] = new_pkg
         clients.append(extra)
+        existing.add(new_pkg)
+        changed = True
+    if changed:
         data["client"] = clients
         p.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
