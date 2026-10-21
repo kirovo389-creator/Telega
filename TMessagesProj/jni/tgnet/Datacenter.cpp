@@ -652,6 +652,28 @@ void Datacenter::clearAuthKey(HandshakeType type) {
     handshakes.clear();
 }
 
+void Datacenter::clearAuthorization() {
+    clearAuthKey(HandshakeTypeAll);
+    authorized = false;
+    exportingAuthorization = false;
+}
+
+bool Datacenter::importPermanentAuthKey(const uint8_t *key, uint32_t length) {
+    if (key == nullptr || length != 256) {
+        return false;
+    }
+    uint8_t digest[SHA_DIGEST_LENGTH];
+    if (SHA1(key, length, digest) == nullptr) {
+        return false;
+    }
+    clearAuthKey(HandshakeTypeAll);
+    authKeyPerm = new ByteArray(const_cast<uint8_t *>(key), length);
+    memcpy(&authKeyPermId, digest + SHA_DIGEST_LENGTH - sizeof(authKeyPermId), sizeof(authKeyPermId));
+    memset(digest, 0, sizeof(digest));
+    authorized = true;
+    return true;
+}
+
 void Datacenter::clearServerSalts(bool media) {
     std::vector<std::unique_ptr<TL_future_salt>> &salts = media ? mediaServerSalts : serverSalts;
     salts.clear();
