@@ -289,6 +289,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     // Virtual tab: opens MAX's first-party web client, never a Telegram dialog.
     private static final int TELEGA_MAX_TAB_ID = 2147483646;
     private static boolean maxTabOpened;
+    private boolean maxRefreshScheduled;
     // Select the All Chats folder once after each fresh app process starts.
     private static boolean selectAllChatsOnStartup = true;
 
@@ -7064,17 +7065,23 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
      * requests if both lifecycle paths run for the same navigation.
      */
     private void refreshDialogsAfterMax() {
-        if (!maxTabOpened) {
+        if (!maxTabOpened || maxRefreshScheduled) {
             return;
         }
-        maxTabOpened = false;
+        maxRefreshScheduled = true;
         AndroidUtilities.runOnUIThread(() -> {
+            maxRefreshScheduled = false;
+            // If navigation has not exposed this fragment yet, keep the pending flag.
+            // onResume() will retry; clearing it here loses the only refresh request.
             if (isPaused || fragmentView == null) {
                 return;
             }
-            // Request a server reconciliation once after MAX exits; adapters then
-            // render the existing controller state without resetting folder/scroll state.
+            maxTabOpened = false;
+            // Reconcile with the server and notify the existing list observer. The
+            // observer rebuilds the visible folder from the controller model without
+            // replacing the fragment or resetting its scroll position.
             getMessagesController().loadDialogs(folderId, 0, 100, false);
+            NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.dialogsNeedReload);
             if (viewPages != null) {
                 for (ViewPage page : viewPages) {
                     if (page == null) {
