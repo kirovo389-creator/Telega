@@ -3631,7 +3631,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                             filterTabsView.selectTabWithId(restoreTabId, 1.0f);
                         }
                         maxTabOpened = true;
-                        presentFragment(new TelegaMaxActivity());
+                        presentFragment(new TelegaMaxActivity().setOnExitCallback(this::refreshDialogsAfterMax));
                         return;
                     }
                     if (viewPages[0].selectedType == tab.id) {
@@ -7056,24 +7056,45 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         }
     }
 
+    /**
+     * Reconciles the visible chat pages when MAX is closed. MAX is another
+     * BaseFragment in the same Activity, so Activity onResume alone is not a
+     * reliable signal that the underlying dialogs screen became visible again.
+     * The MAX exit callback and onResume share this method to avoid duplicate
+     * requests if both lifecycle paths run for the same navigation.
+     */
+    private void refreshDialogsAfterMax() {
+        if (!maxTabOpened) {
+            return;
+        }
+        maxTabOpened = false;
+        AndroidUtilities.runOnUIThread(() -> {
+            if (isPaused || fragmentView == null) {
+                return;
+            }
+            // Request a server reconciliation once after MAX exits; adapters then
+            // render the existing controller state without resetting folder/scroll state.
+            getMessagesController().loadDialogs(folderId, 0, 100, false);
+            if (viewPages != null) {
+                for (ViewPage page : viewPages) {
+                    if (page == null) {
+                        continue;
+                    }
+                    if (page.dialogsAdapter != null) {
+                        page.dialogsAdapter.notifyDataSetChanged();
+                    }
+                    page.updateList(true);
+                }
+            }
+        }, 120);
+    }
+
     @Override
     public void onResume() {
         super.onResume();
-        // MAX runs in a separate WebView. Refresh Telegram's dialog cache when
-        // returning from it so the list does not require switching folders.
-        if (maxTabOpened) {
-            maxTabOpened = false;
-            // Read from the server rather than refreshing only the cached folder.
-            getMessagesController().loadDialogs(folderId, 0, 100, false);
-            if (viewPages != null) {
-                for (int i = 0; i < viewPages.length; i++) {
-                    if (viewPages[i].dialogsAdapter != null) {
-                        viewPages[i].dialogsAdapter.notifyDataSetChanged();
-                        viewPages[i].updateList(true);
-                    }
-                }
-            }
-        }
+        // A lifecycle resume is a fallback when Android really backgrounds Telega
+        // while MAX is open. Internal navigation normally uses the exit callback.
+        refreshDialogsAfterMax();
         if (dialogStoriesCell != null) {
             dialogStoriesCell.onResume();
         }
