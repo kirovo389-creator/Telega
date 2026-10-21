@@ -315,6 +315,12 @@ public class ConnectionsManager extends BaseController {
         return native_getCurrentAuthKeyId(currentAccount);
     }
 
+    /** Installs a 256-byte Telegram MTProto auth key for the selected data center. */
+    public boolean importAuthorizationKey(int datacenterId, byte[] authKey) {
+        return authKey != null && authKey.length == 256
+                && native_importAuthorizationKey(currentAccount, datacenterId, authKey);
+    }
+
     public int getTimeDifference() {
         return native_getTimeDifference(currentAccount);
     }
@@ -1093,6 +1099,7 @@ public class ConnectionsManager extends BaseController {
     public static native void native_applyDatacenterAddress(int currentAccount, int datacenterId, String ipAddress, int port);
     public static native int native_getConnectionState(int currentAccount);
     public static native void native_setUserId(int currentAccount, long id);
+    public static native boolean native_importAuthorizationKey(int currentAccount, int datacenterId, byte[] authKey);
     public static native void native_init(int currentAccount, int version, int layer, int apiId, String deviceModel, String systemVersion, String appVersion, String langCode, String systemLangCode, String configPath, String logPath, String regId, String cFingerprint, String installer, String packageId, int timezoneOffset, long userId, boolean userPremium, boolean enablePushConnection, boolean hasNetwork, int networkType, int performanceClass);
     public static native void native_setProxySettings(int currentAccount, String address, int port, String username, String password, String secret);
     public static native void native_setLangCode(int currentAccount, String langCode);
