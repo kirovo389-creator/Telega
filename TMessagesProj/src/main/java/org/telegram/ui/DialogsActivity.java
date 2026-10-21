@@ -6877,6 +6877,11 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         }
         final ArrayList<MessagesController.DialogFilter> filters = getMessagesController().getDialogFilters();
         if (filters.size() > 1 || filterTabsView.isEmpty() || filterTabsView.hasTab(TELEGA_MAX_TAB_ID)) {
+            // The virtual MAX tab is not a Telegram dialog filter. Never restore it
+            // as the current page when tabs are rebuilt after returning from MAX.
+            if (filterTabsView.getCurrentTabId() == TELEGA_MAX_TAB_ID) {
+                filterTabsView.resetTabId();
+            }
             if (force || filterTabsView.getVisibility() != View.VISIBLE) {
                 boolean animatedUpdateItems = animated;
                 if (filterTabsView.getVisibility() != View.VISIBLE) {

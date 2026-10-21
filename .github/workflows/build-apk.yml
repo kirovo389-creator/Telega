@@ -1,12 +1,33 @@
 name: Build Telega APK
 
 on:
+  push:
+    branches:
+      - 'fix/**'
+    paths:
+      - '.github/workflows/build-apk.yml'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - 'gradle/**'
+      - 'gradle.properties'
+      - 'TMessagesProj/**'
+      - 'TMessagesProj_App/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-apk.yml'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - 'gradle/**'
+      - 'gradle.properties'
+      - 'TMessagesProj/**'
+      - 'TMessagesProj_App/**'
   workflow_dispatch:
     inputs:
       ref:
         description: "Branch or tag to build"
         required: true
-        default: "feature/max-settings-handoff"
+        default: "main"
         type: string
 
 permissions:
@@ -19,7 +40,7 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.ref || github.sha }}
           submodules: recursive
 
       - name: Set up Java
