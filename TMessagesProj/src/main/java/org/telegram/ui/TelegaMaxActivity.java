@@ -44,6 +44,14 @@ public class TelegaMaxActivity extends BaseFragment {
     private ProgressBar progressBar;
     private TextView errorView;
     private ValueCallback<Uri[]> filePathCallback;
+    private Runnable onExitCallback;
+    private boolean exitCallbackDelivered;
+
+    /** Called after this MAX fragment is removed from the navigation stack. */
+    public TelegaMaxActivity setOnExitCallback(Runnable callback) {
+        onExitCallback = callback;
+        return this;
+    }
 
     @Override
     public boolean onFragmentCreate() {
@@ -297,5 +305,14 @@ public class TelegaMaxActivity extends BaseFragment {
         progressBar = null;
         errorView = null;
         super.onFragmentDestroy();
+        if (!exitCallbackDelivered) {
+            exitCallbackDelivered = true;
+            Runnable callback = onExitCallback;
+            onExitCallback = null;
+            if (callback != null) {
+                // Let BaseFragment finish removing MAX before refreshing the covered list.
+                AndroidUtilities.runOnUIThread(callback, 120);
+            }
+        }
     }
 }
