@@ -35,6 +35,7 @@ public class TelegaSettingsActivity extends BaseFragment {
 
     private int headerRow;
     private int messagesRow;
+    private int translatorRow;
     private int archiveRow;
     private int otherRow;
     private int antiBotRow;
@@ -51,6 +52,7 @@ public class TelegaSettingsActivity extends BaseFragment {
         rowCount = 0;
         headerRow = rowCount++;
         messagesRow = rowCount++;
+        translatorRow = rowCount++;
         archiveRow = rowCount++;
         otherRow = rowCount++;
         antiBotRow = rowCount++;
@@ -93,6 +95,8 @@ public class TelegaSettingsActivity extends BaseFragment {
         listView.setOnItemClickListener((view, position) -> {
             if (position == messagesRow) {
                 presentFragment(new TelegaMessagesSettingsActivity());
+            } else if (position == translatorRow) {
+                presentFragment(new TelegaTranslatorSettingsActivity());
             } else if (position == archiveRow) {
                 presentFragment(new TelegaArchiveSettingsActivity());
             } else if (position == otherRow) {
@@ -168,6 +172,8 @@ public class TelegaSettingsActivity extends BaseFragment {
             boolean last = position == maxRow;
             if (position == messagesRow) {
                 cell.setData(R.drawable.telega_ic_chat, "Сообщения", "Удалённые и изменённые", first, last);
+            } else if (position == translatorRow) {
+                cell.setData(R.drawable.msg_translate, "Переводчик", "Автоперевод сообщений на устройстве", first, last);
             } else if (position == archiveRow) {
                 cell.setData(R.drawable.telega_ic_chat, "Скрыть архив", "Скрыть чаты и уведомления из архива", first, last);
             } else if (position == otherRow) {
