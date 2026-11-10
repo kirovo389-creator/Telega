@@ -95,6 +95,10 @@ public class TranslateController extends BaseController {
     }
 
     public boolean isFeatureAvailable(long dialogId) {
+        if (TelegaSettings.isLocalAutoTranslateEnabled()) {
+            return !DialogObject.isEncryptedDialog(dialogId)
+                    && getUserConfig().getClientUserId() != dialogId;
+        }
         if (!isChatTranslateEnabled()) {
             return false;
         }
@@ -194,6 +198,10 @@ public class TranslateController extends BaseController {
     }
 
     public boolean isTranslateDialogHidden(long dialogId) {
+        // Telega's local translator is independent from Telegram's server-side translation flag.
+        if (TelegaSettings.isLocalAutoTranslateEnabled()) {
+            return false;
+        }
         if (hideTranslateDialogs.contains(dialogId)) {
             return true;
         }
@@ -217,6 +225,11 @@ public class TranslateController extends BaseController {
     }
 
     public boolean isTranslatingDialog(long dialogId) {
+        if (TelegaSettings.isLocalAutoTranslateEnabled()
+                && !DialogObject.isEncryptedDialog(dialogId)
+                && getUserConfig().getClientUserId() != dialogId) {
+            return true;
+        }
         return isFeatureAvailable(dialogId) && translatingDialogs.get(dialogId, isChatAutoTranslated(dialogId));
     }
 
@@ -256,6 +269,16 @@ public class TranslateController extends BaseController {
     }
 
     public String getDialogTranslateTo(long dialogId) {
+        if (TelegaSettings.isLocalAutoTranslateEnabled()) {
+            String localTarget = TelegaSettings.getTranslatorTargetLanguage();
+            if (TextUtils.isEmpty(localTarget)) {
+                localTarget = currentLanguage();
+            }
+            String normalized = TelegaLocalTranslator.normalizeLanguage(localTarget);
+            if (!TextUtils.isEmpty(normalized)) {
+                return normalized;
+            }
+        }
         String lang = translateDialogLanguage.get(dialogId);
         if (lang == null) {
             lang = TranslateAlert2.getToLanguage();
@@ -776,6 +799,37 @@ public class TranslateController extends BaseController {
         getMessagesStorage().updateMessageCustomParams(dialogId, messageObject.messageOwner);
         AndroidUtilities.runOnUIThread(() -> {
             NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.messageTranslated, messageObject, false, isTranslatingDialog(dialogId));
+        });
+    }
+
+    /**
+     * Re-evaluates messages already in memory after the Telega-wide translator setting changes.
+     * This makes enabling the feature work immediately without requiring a restart.
+     */
+    public void onLocalTranslatorSettingsChanged() {
+        AndroidUtilities.runOnUIThread(() -> {
+            boolean enabled = TelegaSettings.isLocalAutoTranslateEnabled();
+            boolean changed = false;
+            for (int dialogIndex = 0; dialogIndex < messagesController.dialogMessage.size(); dialogIndex++) {
+                ArrayList<MessageObject> dialogMessages = messagesController.dialogMessage.valueAt(dialogIndex);
+                if (dialogMessages == null) {
+                    continue;
+                }
+                for (int messageIndex = 0; messageIndex < dialogMessages.size(); messageIndex++) {
+                    MessageObject message = dialogMessages.get(messageIndex);
+                    if (message == null || message.messageOwner == null) {
+                        continue;
+                    }
+                    if (enabled) {
+                        checkTranslation(message, true);
+                    } else if (message.updateTranslation(true)) {
+                        changed = true;
+                    }
+                }
+            }
+            if (changed) {
+                NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateInterfaces, 0);
+            }
         });
     }
 
