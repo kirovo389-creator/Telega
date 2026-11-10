@@ -1095,7 +1095,7 @@ public class TranslateController extends BaseController {
                     }
                 }
 
-                if (true) {
+                if (!pendingTranslation1.messageIds.isEmpty() || isTranscription) {
                     final String toLanguage = pendingTranslation1.language;
                     for (int i = 0; i < pendingTranslation1.messageIds.size(); ++i) {
                         final int id = pendingTranslation1.messageIds.get(i);
