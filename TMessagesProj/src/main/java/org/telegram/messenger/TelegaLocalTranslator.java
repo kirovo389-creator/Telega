@@ -7,6 +7,7 @@ import com.google.mlkit.nl.translate.Translation;
 import com.google.mlkit.nl.translate.Translator;
 import com.google.mlkit.nl.translate.TranslatorOptions;
 
+import java.util.HashMap;
 import java.util.Locale;
 
 /**
@@ -14,6 +15,10 @@ import java.util.Locale;
  * Language models are downloaded by ML Kit and kept on the device.
  */
 public final class TelegaLocalTranslator {
+    // Reuse translators for frequently used language pairs instead of creating and closing one
+    // for every single message in an automatically translated chat.
+    private static final HashMap<String, Translator> TRANSLATORS = new HashMap<>();
+
     private TelegaLocalTranslator() {
     }
 
@@ -69,6 +74,22 @@ public final class TelegaLocalTranslator {
         translateKnownLanguage(text, source, target, callback);
     }
 
+    private static Translator getTranslator(String sourceCode, String targetCode) {
+        String key = sourceCode + "->" + targetCode;
+        synchronized (TRANSLATORS) {
+            Translator translator = TRANSLATORS.get(key);
+            if (translator == null) {
+                TranslatorOptions options = new TranslatorOptions.Builder()
+                        .setSourceLanguage(sourceCode)
+                        .setTargetLanguage(targetCode)
+                        .build();
+                translator = Translation.getClient(options);
+                TRANSLATORS.put(key, translator);
+            }
+            return translator;
+        }
+    }
+
     private static void translateKnownLanguage(String text, String source, String target, Utilities.Callback<String> callback) {
         if (TextUtils.equals(source, target)) {
             AndroidUtilities.runOnUIThread(() -> callback.run(text));
@@ -82,13 +103,9 @@ public final class TelegaLocalTranslator {
             return;
         }
 
-        final TranslatorOptions options = new TranslatorOptions.Builder()
-                .setSourceLanguage(sourceCode)
-                .setTargetLanguage(targetCode)
-                .build();
         final Translator translator;
         try {
-            translator = Translation.getClient(options);
+            translator = getTranslator(sourceCode, targetCode);
         } catch (Exception error) {
             FileLog.e(error);
             AndroidUtilities.runOnUIThread(() -> callback.run(null));
@@ -102,12 +119,10 @@ public final class TelegaLocalTranslator {
                             if (!task.isSuccessful() && task.getException() != null) {
                                 FileLog.e(task.getException());
                             }
-                            translator.close();
                             AndroidUtilities.runOnUIThread(() -> callback.run(result));
                         }))
                 .addOnFailureListener(error -> {
                     FileLog.e(error);
-                    translator.close();
                     AndroidUtilities.runOnUIThread(() -> callback.run(null));
                 });
     }
