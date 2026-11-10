@@ -3760,6 +3760,9 @@ public class MessageObject {
             fromUser = MessagesController.getInstance(currentAccount).getUser(messageOwner.from_id.user_id);
         }
         messageText = text;
+        if (translated && !summarized && !isOutOwner()) {
+            messageText = appendTranslationIcon(messageText);
+        }
         final ArrayList<TLRPC.MessageEntity> entities = getEntities();
         final TextPaint paint;
         if (getMedia(messageOwner) instanceof TLRPC.TL_messageMediaGame) {
@@ -3776,6 +3779,20 @@ public class MessageObject {
         checkEmojiOnly(emojiOnly);
         generateLayout(fromUser);
         setType();
+    }
+
+    private CharSequence appendTranslationIcon(CharSequence text) {
+        if (TextUtils.isEmpty(text)) {
+            return text;
+        }
+        SpannableStringBuilder builder = new SpannableStringBuilder(text);
+        builder.append("  ");
+        int iconStart = builder.length();
+        builder.append("x");
+        ColoredImageSpan icon = new ColoredImageSpan(R.drawable.msg_translate, ColoredImageSpan.ALIGN_CENTER);
+        icon.setSize(dp(14));
+        builder.setSpan(icon, iconStart, iconStart + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        return builder;
     }
 
     private boolean allowsBigEmoji() {
@@ -7687,6 +7704,9 @@ public class MessageObject {
         if (!isMediaEmpty() && !(getMedia(messageOwner) instanceof TLRPC.TL_messageMediaGame) && !TextUtils.isEmpty(text)) {
             caption = Emoji.replaceEmoji(text, Theme.chat_msgTextPaint.getFontMetricsInt(), false);
             caption = replaceAnimatedEmoji(caption, entities, Theme.chat_msgTextPaint.getFontMetricsInt(), false);
+            if (captionTranslated && !isOutOwner()) {
+                caption = appendTranslationIcon(caption);
+            }
 
             boolean hasEntities;
             if (messageOwner.send_state != MESSAGE_SEND_STATE_SENT) {
