@@ -4416,7 +4416,8 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
 
     public void sendMessage(SendMessageParams sendMessageParams) {
         // Translate replies locally to the language used by the message being replied to.
-        if (!sendMessageParams.telegaTranslationProcessed
+        if (TelegaSettings.isLocalAutoTranslateEnabled()
+                && !sendMessageParams.telegaTranslationProcessed
                 && !TextUtils.isEmpty(sendMessageParams.message)
                 && sendMessageParams.replyToMsg != null
                 && sendMessageParams.replyToMsg.messageOwner != null
