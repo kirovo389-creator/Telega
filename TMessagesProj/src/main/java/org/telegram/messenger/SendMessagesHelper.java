@@ -4415,6 +4415,33 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
     }
 
     public void sendMessage(SendMessageParams sendMessageParams) {
+        // Translate replies locally to the language used by the message being replied to.
+        if (!sendMessageParams.telegaTranslationProcessed
+                && !TextUtils.isEmpty(sendMessageParams.message)
+                && sendMessageParams.replyToMsg != null
+                && sendMessageParams.replyToMsg.messageOwner != null
+                && !TextUtils.isEmpty(sendMessageParams.replyToMsg.messageOwner.message)
+                && !sendMessageParams.replyToMsg.isOutOwner()) {
+            final String replyText = sendMessageParams.replyToMsg.messageOwner.message;
+            LanguageDetector.detectLanguage(replyText, targetLanguage -> {
+                if (TextUtils.isEmpty(targetLanguage) || "und".equals(targetLanguage)) {
+                    sendMessageParams.telegaTranslationProcessed = true;
+                    sendMessage(sendMessageParams);
+                    return;
+                }
+                TelegaLocalTranslator.translate(sendMessageParams.message, null, targetLanguage, translated -> {
+                    if (!TextUtils.isEmpty(translated)) {
+                        sendMessageParams.message = translated;
+                    }
+                    sendMessageParams.telegaTranslationProcessed = true;
+                    sendMessage(sendMessageParams);
+                });
+            }, error -> {
+                sendMessageParams.telegaTranslationProcessed = true;
+                sendMessage(sendMessageParams);
+            });
+            return;
+        }
         final SendMessageChatArguments sendMessageChatArguments = sendMessageParams.sendMessageChatArguments != null ?
                 sendMessageParams.sendMessageChatArguments : SendMessageChatArguments.EMPTY;
         String message = sendMessageParams.message;
@@ -12245,6 +12272,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
     }
 
     public static class SendMessageParams {
+        public boolean telegaTranslationProcessed;
         public String message;
         public String caption;
         public TLRPC.MessageMedia location;
