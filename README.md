@@ -54,3 +54,7 @@ You will require Android Studio 2025.1.4, Android NDK 27.2.12479018 and Android 
 ### Localization
 
 We moved all translations to https://translations.telegram.org/en/android/. Please use it.
+
+### On-device translation
+
+Telega includes optional automatic incoming-message translation and reply translation using Google ML Kit's on-device language models. Enable chat translation from the translation control in a conversation. The first translation for a language pair downloads the required model; an internet connection is needed for that download. Once installed, translation runs on the device. If a language is unsupported or a model cannot be downloaded, the original message remains unchanged.
