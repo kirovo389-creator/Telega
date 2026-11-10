@@ -1,0 +1,95 @@
+name: Build signed Telega release APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Prepare Telega application identity
+        run: |
+          set -euo pipefail
+          sed -i 's/^APP_PACKAGE=.*/APP_PACKAGE=org.telega.messenger/' gradle.properties
+          python3 scripts/telega_brand.py
+          grep -Fxq 'APP_PACKAGE=org.telega.messenger' gradle.properties
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Android SDK components
+        run: |
+          export ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null
+          "$SDKMANAGER" "ndk;27.2.12479018" "build-tools;36.0.0" "platforms;android-36" "cmake;3.22.1"
+
+      - name: Configure release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.TELEGA_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.TELEGA_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.TELEGA_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.TELEGA_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_BASE64" || { echo "Missing TELEGA_KEYSTORE_BASE64 secret"; exit 1; }
+          test -n "$STORE_PASSWORD" || { echo "Missing TELEGA_STORE_PASSWORD secret"; exit 1; }
+          test -n "$KEY_PASSWORD" || { echo "Missing TELEGA_KEY_PASSWORD secret"; exit 1; }
+          test -n "$KEY_ALIAS" || { echo "Missing TELEGA_KEY_ALIAS secret"; exit 1; }
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > TMessagesProj/config/release.keystore
+          test -s TMessagesProj/config/release.keystore
+
+      - name: Build universal release APK
+        env:
+          STORE_PASSWORD: ${{ secrets.TELEGA_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.TELEGA_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.TELEGA_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          ./gradlew --no-daemon :TMessagesProj_App:assembleAfatRelease \
+            -PRELEASE_STORE_PASSWORD="$STORE_PASSWORD" \
+            -PRELEASE_KEY_PASSWORD="$KEY_PASSWORD" \
+            -PRELEASE_KEY_ALIAS="$KEY_ALIAS"
+
+      - name: Verify and prepare signed APK
+        run: |
+          set -euo pipefail
+          APK_PATH="$(find TMessagesProj_App/build/outputs/apk -type f -path '*afat/release/*.apk' | sort | head -n 1)"
+          test -n "$APK_PATH"
+          cp "$APK_PATH" Telega-release-universal.apk
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --verbose Telega-release-universal.apk
+          test -s Telega-release-universal.apk
+
+      - name: Upload release APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Telega-release-universal
+          path: Telega-release-universal.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish signed APK to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: telega-release-${{ github.run_number }}
+          name: Telega signed release ${{ github.run_number }}
+          body: |
+            Signed universal release APK.
+            Source commit: ${{ github.sha }}
+          files: Telega-release-universal.apk
+          prerelease: false
