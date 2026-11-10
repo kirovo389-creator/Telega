@@ -1156,6 +1156,10 @@ public class TranslateController extends BaseController {
                         final Utilities.Callback4<Boolean, Integer, TLRPC.TL_textWithEntities, String> _callback = pendingTranslation1.callbacks.get(i);
                         final String _text = pendingTranslation1.messageTexts.get(i).text;
                         TelegaLocalTranslator.translate(_text, null, toLanguage, result -> {
+                            // Keep the message spinner in sync with the asynchronous on-device task.
+                            synchronized (TranslateController.this) {
+                                loadingTranslations.remove(id);
+                            }
                             if (result != null) {
                                 final TLRPC.TL_textWithEntities resultWithEntities = new TLRPC.TL_textWithEntities();
                                 resultWithEntities.text = result;
