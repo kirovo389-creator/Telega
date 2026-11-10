@@ -1161,7 +1161,9 @@ public class TranslateController extends BaseController {
                                 resultWithEntities.text = result;
                                 _callback.run(isTranscription, id, resultWithEntities, toLanguage);
                             } else {
-                                toggleTranslatingDialog(dialogId, false);
+                                if (!TelegaSettings.isLocalAutoTranslateEnabled()) {
+                                    toggleTranslatingDialog(dialogId, false);
+                                }
                                 NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.showBulletin, Bulletin.TYPE_ERROR, getString(R.string.TranslationFailedAlert2));
                             }
                         });
