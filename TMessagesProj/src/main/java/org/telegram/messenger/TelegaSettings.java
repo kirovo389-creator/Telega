@@ -31,6 +31,39 @@ public final class TelegaSettings {
         return ApplicationLoader.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
+    /** Telega's independent on-device translator. The first use downloads language models. */
+    public static boolean isLocalAutoTranslateEnabled() {
+        SharedPreferences p = prefs();
+        return p != null && p.getBoolean("local_auto_translate_enabled", false);
+    }
+
+    public static void setLocalAutoTranslateEnabled(boolean enabled) {
+        SharedPreferences p = prefs();
+        if (p != null) {
+            p.edit().putBoolean("local_auto_translate_enabled", enabled).apply();
+        }
+    }
+
+    /** Empty means use the app language. */
+    public static String getTranslatorTargetLanguage() {
+        SharedPreferences p = prefs();
+        String language = p == null ? null : p.getString("translator_target_language", null);
+        return language == null || language.trim().isEmpty() ? null : language.trim();
+    }
+
+    public static void setTranslatorTargetLanguage(String language) {
+        SharedPreferences p = prefs();
+        if (p != null) {
+            SharedPreferences.Editor editor = p.edit();
+            if (language == null || language.trim().isEmpty()) {
+                editor.remove("translator_target_language");
+            } else {
+                editor.putString("translator_target_language", language.trim());
+            }
+            editor.apply();
+        }
+    }
+
     public static boolean isShowDeletedMessages() {
         SharedPreferences p = prefs();
         return p == null || p.getBoolean("show_deleted_messages", true);
