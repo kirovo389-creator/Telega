@@ -12,7 +12,7 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
 
-/** AI translation backed by the already configured Telega AI agent. */
+/** AI translation backed by the configured Telega AI agent, with batched requests and a persistent local result cache. */
 public final class TelegaAITranslator {
     private static final String PREFS = "telega_ai_translation_cache";
     private static final int MAX_BATCH = 20;
