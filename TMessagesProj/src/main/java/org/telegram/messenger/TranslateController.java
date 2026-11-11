@@ -161,7 +161,7 @@ public class TranslateController extends BaseController {
         return (
             messageObject != null &&
             messageObject.messageOwner != null &&
-            !messageObject.isOutOwner() &&
+            (!messageObject.isOutOwner() || TelegaSettings.isLocalAutoTranslateEnabled()) &&
             !messageObject.isRestrictedMessage &&
             !messageObject.isSponsored() &&
             (
@@ -621,6 +621,19 @@ public class TranslateController extends BaseController {
             return;
         }
 
+        // Automatic translation first identifies the source language. Messages already in
+        // the target language are left untouched and never receive a translated badge.
+        if (TelegaSettings.isLocalAutoTranslateEnabled()) {
+            String sourceLanguage = messageObject.messageOwner.originalLanguage;
+            if (TextUtils.isEmpty(sourceLanguage)) {
+                checkLanguage(messageObject);
+                return;
+            }
+            if (UNKNOWN_LANGUAGE.equals(sourceLanguage)) {
+                return;
+            }
+        }
+
         if (!isTranslatingDialog(dialogId)) {
             checkLanguage(messageObject);
             return;
@@ -631,6 +644,22 @@ public class TranslateController extends BaseController {
         }
 
         final String language = getDialogTranslateTo(dialogId);
+        if (TelegaSettings.isLocalAutoTranslateEnabled()
+                && TextUtils.equals(
+                        TelegaLocalTranslator.normalizeLanguage(messageObject.messageOwner.originalLanguage),
+                        TelegaLocalTranslator.normalizeLanguage(language))) {
+            messageObject.messageOwner.translatedText = null;
+            messageObject.messageOwner.translatedVoiceTranscription = null;
+            messageObject.messageOwner.translatedPoll = null;
+            messageObject.messageOwner.translatedRichMessage = null;
+            messageObject.messageOwner.translatedToLanguage = null;
+            getMessagesStorage().updateMessageCustomParams(dialogId, messageObject.messageOwner);
+            messageObject.updateTranslation(true);
+            NotificationCenter.getInstance(currentAccount).postNotificationName(
+                    NotificationCenter.messageTranslated, messageObject, false, isTranslatingDialog(dialogId));
+            NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateInterfaces, 0);
+            return;
+        }
         MessageObject potentialReplyMessageObject;
         if (!keepReply && messageObject.type != MessageObject.TYPE_ARTICLE && (
                 (messageObject.messageOwner.voiceTranscriptionOpen && messageObject.messageOwner.voiceTranscriptionFinal ? messageObject.messageOwner.translatedVoiceTranscription : messageObject.messageOwner.translatedText) == null && messageObject.messageOwner.translatedPoll == null ||
@@ -929,7 +958,7 @@ public class TranslateController extends BaseController {
 
         final long dialogId = messageObject.getDialogId();
         final int hash = hash(messageObject);
-        if (isDialogTranslatable(dialogId)) {
+        if (isDialogTranslatable(dialogId) && !TelegaSettings.isLocalAutoTranslateEnabled()) {
             return;
         }
         if (pendingLanguageChecks.contains(hash)) {
@@ -948,10 +977,15 @@ public class TranslateController extends BaseController {
                 getMessagesStorage().updateMessageCustomParams(dialogId, messageObject.messageOwner);
                 pendingLanguageChecks.remove((Integer) hash);
                 checkDialogTranslatable(messageObject);
+                if (TelegaSettings.isLocalAutoTranslateEnabled()) {
+                    checkTranslation(messageObject, true);
+                }
             }), err -> AndroidUtilities.runOnUIThread(() -> {
                 messageObject.messageOwner.originalLanguage = UNKNOWN_LANGUAGE;
                 getMessagesStorage().updateMessageCustomParams(dialogId, messageObject.messageOwner);
                 pendingLanguageChecks.remove((Integer) hash);
+                // If language detection fails, keep the original message and do not show a
+                // misleading translation error or mark the message as translated.
             }));
         });
     }
@@ -1190,8 +1224,8 @@ public class TranslateController extends BaseController {
                             } else {
                                 if (!TelegaSettings.isLocalAutoTranslateEnabled()) {
                                     toggleTranslatingDialog(dialogId, false);
+                                    NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.showBulletin, Bulletin.TYPE_ERROR, getString(R.string.TranslationFailedAlert2));
                                 }
-                                NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.showBulletin, Bulletin.TYPE_ERROR, getString(R.string.TranslationFailedAlert2));
                             }
                         });
                     }
