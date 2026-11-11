@@ -1,4 +1,5 @@
 name: Build Telega APK
+# Default push builds the regular Telega release; Beta is opt-in only.
 
 on:
   push:
