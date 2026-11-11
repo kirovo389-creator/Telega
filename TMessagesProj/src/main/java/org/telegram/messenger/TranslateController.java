@@ -936,6 +936,11 @@ public class TranslateController extends BaseController {
         if (!TextUtils.isEmpty(messageObject.messageOwner.message)) {
             return messageObject.messageOwner.message;
         }
+        if (messageObject.messageOwner.voiceTranscriptionOpen
+                && messageObject.messageOwner.voiceTranscriptionFinal
+                && !TextUtils.isEmpty(messageObject.messageOwner.voiceTranscription)) {
+            return messageObject.messageOwner.voiceTranscription;
+        }
         if (messageObject.type == MessageObject.TYPE_ARTICLE && !TextUtils.isEmpty(messageObject.messageText)) {
             return messageObject.messageText.toString();
         }
