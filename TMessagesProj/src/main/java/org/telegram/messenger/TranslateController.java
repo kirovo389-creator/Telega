@@ -1198,16 +1198,16 @@ public class TranslateController extends BaseController {
                         TelegaAITranslator.translateBatch(batchTexts, toLanguage, results -> {
                             for (int i = 0; i < pendingTranslation1.messageIds.size(); i++) {
                                 final int id = pendingTranslation1.messageIds.get(i);
-                                final Utilities.Callback4<Boolean, Integer, TLRPC.TL_textWithEntities, String> callback = pendingTranslation1.callbacks.get(i);
+                                final Utilities.Callback4<Boolean, Integer, TLRPC.TL_textWithEntities, String> aiCallback = pendingTranslation1.callbacks.get(i);
                                 synchronized (TranslateController.this) {
                                     loadingTranslations.remove(id);
                                 }
                                 if (results != null && i < results.size() && !TextUtils.isEmpty(results.get(i))) {
                                     TLRPC.TL_textWithEntities translated = new TLRPC.TL_textWithEntities();
                                     translated.text = results.get(i);
-                                    callback.run(isTranscription, id, translated, toLanguage);
+                                    aiCallback.run(isTranscription, id, translated, toLanguage);
                                 } else {
-                                    callback.run(isTranscription, id, null, toLanguage);
+                                    aiCallback.run(isTranscription, id, null, toLanguage);
                                 }
                             }
                         });
