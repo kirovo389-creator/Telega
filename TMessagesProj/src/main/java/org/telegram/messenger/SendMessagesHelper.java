@@ -4432,8 +4432,8 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
 
     public void sendMessage(SendMessageParams sendMessageParams) {
         // Translate outgoing text to the language detected from the reply or recent incoming chat messages.
-        final boolean useAiTranslation = TelegaSettings.isAiTranslationEnabled();
         final boolean localTranslation = TelegaSettings.isLocalAutoTranslateEnabled();
+        final boolean useAiTranslation = localTranslation && TelegaSettings.isAiTranslationEnabled();
         final boolean hasForeignReply = sendMessageParams.replyToMsg != null
                 && sendMessageParams.replyToMsg.messageOwner != null
                 && !TextUtils.isEmpty(sendMessageParams.replyToMsg.messageOwner.message)
