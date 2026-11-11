@@ -4414,34 +4414,58 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         });
     }
 
+    private void translateOutgoingWithTelega(SendMessageParams params, String targetLanguage, boolean useAi) {
+        Utilities.Callback<String> done = translated -> {
+            if (!TextUtils.isEmpty(translated)) {
+                params.message = translated;
+                params.entities = null;
+            }
+            params.telegaTranslationProcessed = true;
+            sendMessage(params);
+        };
+        if (useAi) {
+            TelegaAITranslator.translate(params.message, targetLanguage, done);
+        } else {
+            TelegaLocalTranslator.translate(params.message, null, targetLanguage, done);
+        }
+    }
+
     public void sendMessage(SendMessageParams sendMessageParams) {
-        // Translate replies locally to the language used by the message being replied to.
-        if (TelegaSettings.isLocalAutoTranslateEnabled()
-                && !sendMessageParams.telegaTranslationProcessed
-                && !TextUtils.isEmpty(sendMessageParams.message)
-                && sendMessageParams.replyToMsg != null
+        // Translate outgoing text to the language detected from the reply or recent incoming chat messages.
+        final boolean useAiTranslation = TelegaSettings.isAiTranslationEnabled();
+        final boolean localTranslation = TelegaSettings.isLocalAutoTranslateEnabled();
+        final boolean hasForeignReply = sendMessageParams.replyToMsg != null
                 && sendMessageParams.replyToMsg.messageOwner != null
                 && !TextUtils.isEmpty(sendMessageParams.replyToMsg.messageOwner.message)
-                && !sendMessageParams.replyToMsg.isOutOwner()) {
-            final String replyText = sendMessageParams.replyToMsg.messageOwner.message;
-            LanguageDetector.detectLanguage(replyText, targetLanguage -> {
-                if (TextUtils.isEmpty(targetLanguage) || "und".equals(targetLanguage)) {
-                    sendMessageParams.telegaTranslationProcessed = true;
-                    sendMessage(sendMessageParams);
-                    return;
-                }
-                TelegaLocalTranslator.translate(sendMessageParams.message, null, targetLanguage, translated -> {
-                    if (!TextUtils.isEmpty(translated)) {
-                        sendMessageParams.message = translated;
+                && !sendMessageParams.replyToMsg.isOutOwner();
+        if ((useAiTranslation || localTranslation)
+                && !sendMessageParams.telegaTranslationProcessed
+                && !TextUtils.isEmpty(sendMessageParams.message)) {
+            if (hasForeignReply) {
+                final String replyText = sendMessageParams.replyToMsg.messageOwner.message;
+                LanguageDetector.detectLanguage(replyText, targetLanguage -> {
+                    if (TextUtils.isEmpty(targetLanguage) || "und".equals(targetLanguage)) {
+                        sendMessageParams.telegaTranslationProcessed = true;
+                        sendMessage(sendMessageParams);
+                        return;
                     }
+                    translateOutgoingWithTelega(sendMessageParams, targetLanguage, useAiTranslation);
+                }, error -> {
                     sendMessageParams.telegaTranslationProcessed = true;
                     sendMessage(sendMessageParams);
                 });
-            }, error -> {
-                sendMessageParams.telegaTranslationProcessed = true;
-                sendMessage(sendMessageParams);
-            });
-            return;
+                return;
+            } else if (useAiTranslation) {
+                String targetLanguage = TelegaSettings.getTranslatorTargetLanguage();
+                if (TextUtils.isEmpty(targetLanguage)) {
+                    targetLanguage = getMessagesController().getTranslateController()
+                            .getDialogDetectedLanguage(sendMessageParams.peer);
+                }
+                if (!TextUtils.isEmpty(targetLanguage) && !"und".equals(targetLanguage)) {
+                    translateOutgoingWithTelega(sendMessageParams, targetLanguage, true);
+                    return;
+                }
+            }
         }
         final SendMessageChatArguments sendMessageChatArguments = sendMessageParams.sendMessageChatArguments != null ?
                 sendMessageParams.sendMessageChatArguments : SendMessageChatArguments.EMPTY;
