@@ -64,7 +64,7 @@ public class TelegaTranslatorSettingsActivity extends BaseFragment {
         root.addView(content, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
         TextView intro = new TextView(context);
-        intro.setText("Переводите входящие сообщения прямо в Telega. Перевод выполняется на устройстве, без отправки текста в отдельный сервис.");
+        intro.setText("Переводите входящие и исходящие сообщения. Можно использовать офлайн-перевод или подключённый ИИ-агент Telega.");
         intro.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
         intro.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
         intro.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(16));
@@ -109,6 +109,45 @@ public class TelegaTranslatorSettingsActivity extends BaseFragment {
         divider.setBackgroundColor(Theme.getColor(Theme.key_divider));
         group.addView(divider, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 1));
 
+        LinearLayout aiRow = new LinearLayout(context);
+        aiRow.setGravity(Gravity.CENTER_VERTICAL);
+        aiRow.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(13), AndroidUtilities.dp(16), AndroidUtilities.dp(13));
+        group.addView(aiRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        LinearLayout aiLabels = new LinearLayout(context);
+        aiLabels.setOrientation(LinearLayout.VERTICAL);
+        aiRow.addView(aiLabels, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView aiTitle = new TextView(context);
+        aiTitle.setText("Переводить через ИИ");
+        aiTitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        aiTitle.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        aiLabels.addView(aiTitle);
+        TextView aiSubtitle = new TextView(context);
+        aiSubtitle.setText(TelegaSettings.isAiConnected()
+                ? "Используется подключённый ИИ-агент Telega. Переводы сохраняются на устройстве."
+                : "Сначала подключи ИИ-агент в Настройки Telega → Другое.");
+        aiSubtitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+        aiSubtitle.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+        aiLabels.addView(aiSubtitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 0));
+        Switch aiSwitch = new Switch(context);
+        aiSwitch.setChecked(TelegaSettings.isAiTranslationEnabled());
+        aiSwitch.setEnabled(TelegaSettings.isAiConnected() && TelegaSettings.isAiEnabled());
+        aiRow.addView(aiSwitch, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 12, 0, 0, 0));
+        aiSwitch.setOnCheckedChangeListener((button, checked) -> {
+            TelegaSettings.setAiTranslationEnabled(checked);
+            if (checked && !TelegaSettings.isAiTranslationEnabled()) {
+                aiSwitch.setChecked(false);
+                return;
+            }
+            refreshTranslators();
+        });
+        aiRow.setOnClickListener(v -> {
+            if (aiSwitch.isEnabled()) aiSwitch.setChecked(!aiSwitch.isChecked());
+        });
+
+        View languageDivider = new View(context);
+        languageDivider.setBackgroundColor(Theme.getColor(Theme.key_divider));
+        group.addView(languageDivider, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 1));
+
         LinearLayout languageRow = new LinearLayout(context);
         languageRow.setOrientation(LinearLayout.VERTICAL);
         languageRow.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(13), AndroidUtilities.dp(16), AndroidUtilities.dp(13));
@@ -126,7 +165,7 @@ public class TelegaTranslatorSettingsActivity extends BaseFragment {
         languageRow.setOnClickListener(v -> showLanguagePicker());
 
         TextView note = new TextView(context);
-        note.setText("Языковая модель загружается при первом переводе (обычно около 30 МБ). После загрузки перевод работает офлайн. Для первой загрузки нужен интернет.");
+        note.setText("Офлайн-модель загружается при первом переводе. В режиме ИИ используется подключение из раздела «Другое → ИИ агент», а готовые переводы сохраняются локально.");
         note.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
         note.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
         note.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(14), AndroidUtilities.dp(4), 0);
