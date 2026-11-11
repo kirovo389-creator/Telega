@@ -4456,10 +4456,36 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                 });
                 return;
             } else if (useAiTranslation) {
-                String targetLanguage = TelegaSettings.getTranslatorTargetLanguage();
+                String latestIncomingText = null;
+                ArrayList<MessageObject> dialogMessages = getMessagesController().dialogMessage.get(sendMessageParams.peer);
+                if (dialogMessages != null) {
+                    for (int i = dialogMessages.size() - 1; i >= 0; i--) {
+                        MessageObject candidate = dialogMessages.get(i);
+                        if (candidate != null && candidate.messageOwner != null && !candidate.isOutOwner()
+                                && !TextUtils.isEmpty(candidate.messageOwner.message)) {
+                            latestIncomingText = candidate.messageOwner.message;
+                            break;
+                        }
+                    }
+                }
+                if (!TextUtils.isEmpty(latestIncomingText)) {
+                    LanguageDetector.detectLanguage(latestIncomingText, targetLanguage -> {
+                        if (!TextUtils.isEmpty(targetLanguage) && !"und".equals(targetLanguage)) {
+                            translateOutgoingWithTelega(sendMessageParams, targetLanguage, true);
+                        } else {
+                            sendMessageParams.telegaTranslationProcessed = true;
+                            sendMessage(sendMessageParams);
+                        }
+                    }, error -> {
+                        sendMessageParams.telegaTranslationProcessed = true;
+                        sendMessage(sendMessageParams);
+                    });
+                    return;
+                }
+                String targetLanguage = getMessagesController().getTranslateController()
+                        .getDialogDetectedLanguage(sendMessageParams.peer);
                 if (TextUtils.isEmpty(targetLanguage)) {
-                    targetLanguage = getMessagesController().getTranslateController()
-                            .getDialogDetectedLanguage(sendMessageParams.peer);
+                    targetLanguage = TelegaSettings.getTranslatorTargetLanguage();
                 }
                 if (!TextUtils.isEmpty(targetLanguage) && !"und".equals(targetLanguage)) {
                     translateOutgoingWithTelega(sendMessageParams, targetLanguage, true);
