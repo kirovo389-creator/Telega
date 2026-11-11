@@ -44,6 +44,20 @@ public final class TelegaSettings {
         }
     }
 
+    /** AI translation uses the connection configured for the built-in Telega AI agent. */
+    public static boolean isAiTranslationEnabled() {
+        SharedPreferences p = prefs();
+        return p != null && p.getBoolean("ai_translation_enabled", false)
+                && isAiConnected() && isAiEnabled();
+    }
+
+    public static void setAiTranslationEnabled(boolean enabled) {
+        SharedPreferences p = prefs();
+        if (p != null) {
+            p.edit().putBoolean("ai_translation_enabled", enabled && isAiConnected() && isAiEnabled()).apply();
+        }
+    }
+
     /** Empty means use the app language. */
     public static String getTranslatorTargetLanguage() {
         SharedPreferences p = prefs();
