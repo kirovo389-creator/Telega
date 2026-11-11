@@ -103,7 +103,7 @@ public final class TelegaAITranslator {
         return new JSONArray(value.substring(first, last + 1));
     }
 
-    private static String cacheKey(String text, String language) {
+    // Cache entries are isolated by target language and exact source text, so repeats are never sent again.\n    private static String cacheKey(String text, String language) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256")
                     .digest((language + "\u0000" + text).getBytes(StandardCharsets.UTF_8));
