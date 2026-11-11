@@ -11,6 +11,14 @@ on:
         required: true
         default: "main"
         type: string
+      build_mode:
+        description: "Application build mode"
+        required: true
+        default: "telega"
+        type: choice
+        options:
+          - telega
+          - beta
 
 permissions:
   contents: write
@@ -24,6 +32,24 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
           submodules: recursive
+
+      - name: Select application build mode
+        id: mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          MODE="${{ inputs.build_mode || 'telega' }}"
+          if [ "$MODE" = "beta" ]; then
+            echo "gradle_task=assembleAfatDebug" >> "$GITHUB_OUTPUT"
+            echo "build_type=debug" >> "$GITHUB_OUTPUT"
+            echo "apk_name=Telega-Beta.apk" >> "$GITHUB_OUTPUT"
+            echo "is_beta=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "gradle_task=assembleAfatRelease" >> "$GITHUB_OUTPUT"
+            echo "build_type=release" >> "$GITHUB_OUTPUT"
+            echo "apk_name=Telega.apk" >> "$GITHUB_OUTPUT"
+            echo "is_beta=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Prepare Telega application identity
         run: |
@@ -51,27 +77,33 @@ jobs:
           yes | "$SDKMANAGER" --licenses >/dev/null
           "$SDKMANAGER" "ndk;27.2.12479018" "build-tools;36.0.0" "platforms;android-36" "cmake;3.22.1"
 
-      - name: Build universal debug APK
+      - name: Build selected APK
         run: |
           chmod +x ./gradlew
-          ./gradlew --no-daemon :TMessagesProj_App:assembleAfatDebug
+          ./gradlew --no-daemon ":TMessagesProj_App:${{ steps.mode.outputs.gradle_task }}"
 
-      - name: Prepare APK for distribution
+      - name: Verify and prepare APK for distribution
+        env:
+          BUILD_TYPE: ${{ steps.mode.outputs.build_type }}
+          APK_NAME: ${{ steps.mode.outputs.apk_name }}
         run: |
           set -euo pipefail
-          APK_PATH="$(find TMessagesProj_App/build/outputs/apk -type f -name '*.apk' | sort | head -n 1)"
+          APK_PATH="$(find TMessagesProj_App/build/outputs/apk -type f -path "*/afat/$BUILD_TYPE/*.apk" | sort | head -n 1)"
           if [ -z "$APK_PATH" ]; then
-            echo "APK was not produced"
+            echo "APK was not produced for $BUILD_TYPE"
+            find TMessagesProj_App/build/outputs/apk -type f -name '*.apk' -print
             exit 1
           fi
-          cp "$APK_PATH" Telega-universal-debug.apk
-          test -s Telega-universal-debug.apk
+          cp "$APK_PATH" "$APK_NAME"
+          test -s "$APK_NAME"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --verbose "$APK_NAME"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Telega-debug-universal
-          path: Telega-universal-debug.apk
+          name: Telega-${{ steps.mode.outputs.build_type }}-universal
+          path: ${{ steps.mode.outputs.apk_name }}
           if-no-files-found: error
           retention-days: 7
 
@@ -80,9 +112,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: telega-build-${{ github.run_number }}
-          name: Telega APK build ${{ github.run_number }}
+          name: ${{ steps.mode.outputs.is_beta == 'true' && 'Telega Beta' || 'Telega' }} build ${{ github.run_number }}
           body: |
-            Automated universal debug APK build.
+            Automated universal ${{ steps.mode.outputs.build_type }} APK build.
+            Application ID: ${{ steps.mode.outputs.is_beta == 'true' && 'org.telega.messenger.beta' || 'org.telega.messenger' }}
             Source commit: ${{ github.sha }}
-          files: Telega-universal-debug.apk
-          prerelease: true
+          files: ${{ steps.mode.outputs.apk_name }}
+          prerelease: ${{ steps.mode.outputs.is_beta }}
