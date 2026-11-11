@@ -138,7 +138,7 @@ public class TranslateController extends BaseController {
             messageObject != null &&
             messageObject.messageOwner != null &&
             messageObject.messageOwner.summary_from_language != null &&
-            !messageObject.isOutOwner() &&
+            (!messageObject.isOutOwner() || TelegaSettings.isLocalAutoTranslateEnabled()) &&
             !messageObject.isRestrictedMessage &&
             !messageObject.isSponsored() &&
             (
