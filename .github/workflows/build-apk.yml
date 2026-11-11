@@ -100,6 +100,28 @@ jobs:
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           "$APKSIGNER" verify --verbose "$APK_NAME"
 
+      - name: Validate APK package metadata and alignment
+        shell: bash
+        run: |
+          set -euo pipefail
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          ZIPALIGN="$(find "$ANDROID_HOME/build-tools" -type f -name zipalign | sort -V | tail -n 1)"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$AAPT" dump badging Telega.apk | tee apk-badging.txt
+          grep -F "package: name='org.telega.messenger'" apk-badging.txt
+          grep -F "sdkVersion:'23'" apk-badging.txt
+          "$ZIPALIGN" -c -v 4 Telega.apk
+          "$APKSIGNER" verify --verbose --print-certs Telega.apk
+
+      - name: Test installation on Android 13
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          script: adb install -r Telega.apk
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
