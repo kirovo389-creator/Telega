@@ -88,8 +88,8 @@ public final class TelegaAITranslator {
     private static JSONArray parseArray(String raw) throws Exception {
         String value = raw == null ? "" : raw.trim();
         if (value.startsWith("```")) {
-            value = value.replaceFirst("^\\`\\`\\`(?:json)?\\s*", "");
-            value = value.replaceFirst("\\s*\\`\\`\\`$", "");
+            value = value.replaceFirst("^```(?:json)?\\s*", "");
+            value = value.replaceFirst("\\s*```$", "");
         }
         int first = value.indexOf('[');
         int last = value.lastIndexOf(']');
