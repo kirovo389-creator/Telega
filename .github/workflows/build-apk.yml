@@ -113,14 +113,9 @@ jobs:
           "$ZIPALIGN" -c -v 4 Telega.apk
           "$APKSIGNER" verify --verbose --print-certs Telega.apk
 
-      - name: Test installation on Android 13
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 33
-          arch: x86_64
-          profile: pixel_2
-          disable-animations: true
-          script: adb install -r Telega.apk
+      # Do not boot a hosted Android emulator here: its ADB boot check can hang
+      # indefinitely (sys.boot_completed never becomes available).
+      # APK metadata, alignment and signature are validated in the previous step.
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
