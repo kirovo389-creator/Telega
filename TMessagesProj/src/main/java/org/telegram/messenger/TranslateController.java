@@ -1098,6 +1098,7 @@ public class TranslateController extends BaseController {
         Runnable runnable;
         ArrayList<Integer> messageIds = new ArrayList<>();
         ArrayList<TLRPC.TL_textWithEntities> messageTexts = new ArrayList<>();
+        ArrayList<String> sourceLanguages = new ArrayList<>();
         ArrayList<Utilities.Callback4<Boolean, Integer, TLRPC.TL_textWithEntities, String>> callbacks = new ArrayList<>();
         String language;
 
@@ -1173,6 +1174,7 @@ public class TranslateController extends BaseController {
             pendingTranslation.messageIds.add(message.getId());
             FileLog.d("pending translation +" + message.getId() + " message");
             pendingTranslation.messageTexts.add(source);
+            pendingTranslation.sourceLanguages.add(message.messageOwner.originalLanguage);
             pendingTranslation.callbacks.add(callback);
             pendingTranslation.language = language;
             pendingTranslation.symbolsCount += messageSymbolsCount;
@@ -1217,7 +1219,9 @@ public class TranslateController extends BaseController {
                         final int id = pendingTranslation1.messageIds.get(i);
                         final Utilities.Callback4<Boolean, Integer, TLRPC.TL_textWithEntities, String> _callback = pendingTranslation1.callbacks.get(i);
                         final String _text = pendingTranslation1.messageTexts.get(i).text;
-                        TelegaLocalTranslator.translate(_text, null, toLanguage, result -> {
+                        final String _sourceLanguage = i < pendingTranslation1.sourceLanguages.size()
+                                ? pendingTranslation1.sourceLanguages.get(i) : null;
+                        TelegaLocalTranslator.translate(_text, _sourceLanguage, toLanguage, result -> {
                             // Keep the message spinner in sync with the asynchronous on-device task.
                             synchronized (TranslateController.this) {
                                 loadingTranslations.remove(id);
@@ -1226,11 +1230,9 @@ public class TranslateController extends BaseController {
                                 final TLRPC.TL_textWithEntities resultWithEntities = new TLRPC.TL_textWithEntities();
                                 resultWithEntities.text = result;
                                 _callback.run(isTranscription, id, resultWithEntities, toLanguage);
-                            } else {
-                                if (!TelegaSettings.isLocalAutoTranslateEnabled()) {
-                                    toggleTranslatingDialog(dialogId, false);
-                                    NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.showBulletin, Bulletin.TYPE_ERROR, getString(R.string.TranslationFailedAlert2));
-                                }
+                            } else if (!TelegaSettings.isLocalAutoTranslateEnabled()) {
+                                toggleTranslatingDialog(dialogId, false);
+                                NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.showBulletin, Bulletin.TYPE_ERROR, getString(R.string.TranslationFailedAlert2));
                             }
                         });
                     }
