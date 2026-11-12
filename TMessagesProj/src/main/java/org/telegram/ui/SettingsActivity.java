@@ -853,6 +853,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             case 27:
                 presentSettingFragment(new PluginManagerActivity());
                 break;
+            case 28:
+                presentSettingFragment(new TelegaSettingsActivity());
+                break;
 
             case 11:
                 presentSettingFragment(new PremiumPreviewFragment("settings"));
