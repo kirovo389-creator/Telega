@@ -2,22 +2,52 @@ package org.telegram.messenger;
 
 import android.text.TextUtils;
 
+import com.google.android.gms.tasks.Tasks;
 import com.google.mlkit.nl.translate.TranslateLanguage;
 import com.google.mlkit.nl.translate.Translation;
 import com.google.mlkit.nl.translate.Translator;
 import com.google.mlkit.nl.translate.TranslatorOptions;
 
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Locale;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Free on-device translation used by Telega's automatic chat translation.
- * Language models are downloaded by ML Kit and kept on the device.
+ * Translation is serialized off the UI thread to avoid CPU spikes while a
+ * conversation contains many messages.
  */
 public final class TelegaLocalTranslator {
-    // Reuse translators for frequently used language pairs instead of creating and closing one
-    // for every single message in an automatically translated chat.
+    private static final Object LOCK = new Object();
+
+    // Reuse translators and remember successfully prepared models per language pair.
     private static final HashMap<String, Translator> TRANSLATORS = new HashMap<>();
+    private static final Set<String> READY_MODELS = new HashSet<>();
+
+    // A small LRU cache prevents repeated ML Kit work when cells are rebound.
+    private static final int MAX_CACHE_ENTRIES = 300;
+    private static final LinkedHashMap<String, String> RESULT_CACHE =
+            new LinkedHashMap<String, String>(128, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, String> eldest) {
+                    return size() > MAX_CACHE_ENTRIES;
+                }
+            };
+
+    // Identical requests share one in-flight translation and all receive its result.
+    private static final HashMap<String, ArrayList<Utilities.Callback<String>>> IN_FLIGHT = new HashMap<>();
+
+    // Do not run many ML Kit translations simultaneously on the device CPU.
+    private static final ExecutorService TRANSLATION_EXECUTOR = Executors.newSingleThreadExecutor(r -> {
+        Thread thread = new Thread(r, "TelegaLocalTranslate");
+        thread.setPriority(Thread.NORM_PRIORITY - 1);
+        return thread;
+    });
 
     private TelegaLocalTranslator() {
     }
@@ -31,7 +61,7 @@ public final class TelegaLocalTranslator {
         if (separator >= 0) {
             normalized = normalized.substring(0, separator);
         }
-        normalized = normalized.toLowerCase(Locale.US);
+        normalized = normalized.toLowerCase(java.util.Locale.US);
         if ("nb".equals(normalized)) {
             normalized = "no";
         } else if ("iw".equals(normalized)) {
@@ -76,7 +106,7 @@ public final class TelegaLocalTranslator {
 
     private static Translator getTranslator(String sourceCode, String targetCode) {
         String key = sourceCode + "->" + targetCode;
-        synchronized (TRANSLATORS) {
+        synchronized (LOCK) {
             Translator translator = TRANSLATORS.get(key);
             if (translator == null) {
                 TranslatorOptions options = new TranslatorOptions.Builder()
@@ -103,27 +133,82 @@ public final class TelegaLocalTranslator {
             return;
         }
 
+        final String pairKey = sourceCode + "->" + targetCode;
+        final String requestKey = pairKey + "\u0000" + text;
+        synchronized (LOCK) {
+            String cached = RESULT_CACHE.get(requestKey);
+            if (cached != null) {
+                AndroidUtilities.runOnUIThread(() -> callback.run(cached));
+                return;
+            }
+            ArrayList<Utilities.Callback<String>> waiting = IN_FLIGHT.get(requestKey);
+            if (waiting != null) {
+                waiting.add(callback);
+                return;
+            }
+            waiting = new ArrayList<>();
+            waiting.add(callback);
+            IN_FLIGHT.put(requestKey, waiting);
+        }
+
         final Translator translator;
         try {
             translator = getTranslator(sourceCode, targetCode);
         } catch (Exception error) {
             FileLog.e(error);
-            AndroidUtilities.runOnUIThread(() -> callback.run(null));
+            complete(requestKey, null);
             return;
         }
 
-        translator.downloadModelIfNeeded()
-                .addOnSuccessListener(ignored -> translator.translate(text)
-                        .addOnCompleteListener(task -> {
-                            String result = task.isSuccessful() ? task.getResult() : null;
-                            if (!task.isSuccessful() && task.getException() != null) {
-                                FileLog.e(task.getException());
-                            }
-                            AndroidUtilities.runOnUIThread(() -> callback.run(result));
-                        }))
-                .addOnFailureListener(error -> {
+        try {
+            TRANSLATION_EXECUTOR.execute(() -> {
+                String result = null;
+                try {
+                    boolean modelReady;
+                    synchronized (LOCK) {
+                        modelReady = READY_MODELS.contains(pairKey);
+                    }
+                    if (!modelReady) {
+                        Tasks.await(translator.downloadModelIfNeeded());
+                        synchronized (LOCK) {
+                            READY_MODELS.add(pairKey);
+                        }
+                    }
+                    result = Tasks.await(translator.translate(text));
+                } catch (InterruptedException error) {
+                    Thread.currentThread().interrupt();
                     FileLog.e(error);
-                    AndroidUtilities.runOnUIThread(() -> callback.run(null));
-                });
+                } catch (Exception error) {
+                    FileLog.e(error);
+                }
+                complete(requestKey, result);
+            });
+        } catch (Exception error) {
+            FileLog.e(error);
+            complete(requestKey, null);
+        }
+    }
+
+    private static void complete(String requestKey, String result) {
+        final ArrayList<Utilities.Callback<String>> callbacks;
+        synchronized (LOCK) {
+            callbacks = IN_FLIGHT.remove(requestKey);
+            if (!TextUtils.isEmpty(result)) {
+                RESULT_CACHE.put(requestKey, result);
+            }
+        }
+        if (callbacks == null || callbacks.isEmpty()) {
+            return;
+        }
+        final String finalResult = result;
+        AndroidUtilities.runOnUIThread(() -> {
+            for (Utilities.Callback<String> callback : callbacks) {
+                try {
+                    callback.run(finalResult);
+                } catch (Exception error) {
+                    FileLog.e(error);
+                }
+            }
+        });
     }
 }
