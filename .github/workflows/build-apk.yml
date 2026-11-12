@@ -27,12 +27,12 @@ permissions:
 # Prevent duplicate runs from piling up and cap any stuck Android tooling.
 concurrency:
   group: telega-apk-build
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
